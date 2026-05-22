@@ -1,0 +1,13 @@
+.next/
+.npm-cache/
+node_modules/
+out/
+dist/
+build/
+.env*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+gitdir-test/
