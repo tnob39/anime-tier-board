@@ -11,4 +11,7 @@ yarn-error.log*
 pnpm-debug.log*
 *.log
 gitdir-test/
+git-state/
+git-state-active/
 .gh-config/
+.git-broken-empty/
