@@ -251,6 +251,8 @@ button:disabled {
     box-shadow 150ms ease;
 }
 
+.tier-row.is-over .tier-items,
+.pool-lane.is-over .pool-items,
 .tier-items.is-over,
 .pool-items.is-over {
   background: #eefaf6;
@@ -315,6 +317,23 @@ button:disabled {
 .pool-items {
   max-height: 48vh;
   overflow: auto;
+}
+
+.sortable-card-shell {
+  border-radius: 8px;
+  cursor: grab;
+  outline: 0;
+  touch-action: none;
+}
+
+.sortable-card-shell:focus-visible {
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.24);
+}
+
+.sortable-card-shell.is-dragging {
+  cursor: grabbing;
+  position: relative;
+  z-index: 5;
 }
 
 .anime-card {

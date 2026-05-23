@@ -4,12 +4,16 @@ import {
   closestCorners,
   DndContext,
   DragOverlay,
+  pointerWithin,
+  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent
 } from "@dnd-kit/core";
 import {
@@ -100,6 +104,7 @@ export function TierBoardApp() {
   const [exporting, setExporting] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
+  const dragOriginTierIdRef = useRef<string | null>(null);
 
   const storageKey = useMemo(
     () => getStorageKey(seasonYear, season),
@@ -114,6 +119,10 @@ export function TierBoardApp() {
   const unrankedTier = board?.tiers.find((tier) => tier.id === UNRANKED_TIER_ID);
   const rankedTiers =
     board?.tiers.filter((tier) => tier.id !== UNRANKED_TIER_ID) ?? [];
+  const tierIdSet = useMemo(
+    () => new Set(board?.tiers.map((tier) => tier.id) ?? []),
+    [board?.tiers]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -124,6 +133,23 @@ export function TierBoardApp() {
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates
     })
+  );
+  const collisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      const pointerCollisions = pointerWithin(args);
+      const collisions =
+        pointerCollisions.length > 0
+          ? pointerCollisions
+          : rectIntersection(args).length > 0
+            ? rectIntersection(args)
+            : closestCorners(args);
+      const cardCollisions = collisions.filter(
+        (collision) => !tierIdSet.has(String(collision.id))
+      );
+
+      return cardCollisions.length > 0 ? cardCollisions : collisions;
+    },
+    [tierIdSet]
   );
 
   const yearOptions = useMemo(() => {
@@ -192,27 +218,69 @@ export function TierBoardApp() {
         return current;
       }
 
+      const next = updater(current);
+
+      if (next === current) {
+        return current;
+      }
+
       return {
-        ...updater(current),
+        ...next,
         updatedAt: new Date().toISOString()
       };
     });
   }
 
   function handleDragStart(event: DragStartEvent) {
-    setActiveItemId(String(event.active.id));
+    const activeId = String(event.active.id);
+
+    dragOriginTierIdRef.current = board
+      ? findTierIdByItemId(board.tiers, activeId)
+      : null;
+    setActiveItemId(activeId);
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const activeId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : null;
+
+    if (!overId) {
+      return;
+    }
+
+    updateBoard((current) => {
+      const fromTierId = findTierIdByItemId(current.tiers, activeId);
+      const toTierId = getTierIdFromDroppable(current.tiers, overId);
+
+      if (!fromTierId || !toTierId || fromTierId === toTierId) {
+        return current;
+      }
+
+      return moveItemBetweenTiers(current, activeId, overId);
+    });
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const activeId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : null;
+    const originTierId = dragOriginTierIdRef.current;
+
     setActiveItemId(null);
+    dragOriginTierIdRef.current = null;
 
     if (!overId || !board) {
       return;
     }
 
-    updateBoard((current) => moveItemBetweenTiers(current, activeId, overId));
+    updateBoard((current) => {
+      const currentTierId = findTierIdByItemId(current.tiers, activeId);
+
+      if (originTierId && currentTierId && originTierId !== currentTierId) {
+        return current;
+      }
+
+      return moveItemBetweenTiers(current, activeId, overId);
+    });
   }
 
   function handleRenameTier(tierId: string, label: string) {
@@ -452,10 +520,14 @@ export function TierBoardApp() {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveItemId(null)}
+          onDragCancel={() => {
+            setActiveItemId(null);
+            dragOriginTierIdRef.current = null;
+          }}
         >
           <section className="board-section" aria-label="Tier表">
             <div ref={boardRef} className="export-surface">
@@ -535,7 +607,16 @@ function TierLane({
     .filter((item): item is AnimeItem => Boolean(item));
 
   return (
-    <div className={pool ? "pool-lane" : "tier-row"} style={style}>
+    <div
+      ref={setNodeRef}
+      className={[
+        pool ? "pool-lane" : "tier-row",
+        isOver ? "is-over" : ""
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={style}
+    >
       <div className={pool ? "pool-title" : "tier-label"}>
         {pool ? (
           <strong>{tier.label}</strong>
@@ -550,10 +631,8 @@ function TierLane({
 
       <SortableContext items={tier.itemIds} strategy={rectSortingStrategy}>
         <div
-          ref={setNodeRef}
           className={[
             pool ? "pool-items" : "tier-items",
-            isOver ? "is-over" : "",
             items.length === 0 ? "is-empty" : ""
           ]
             .filter(Boolean)
@@ -610,7 +689,13 @@ function SortableAnimeCard({ item }: { item: AnimeItem }) {
   } as React.CSSProperties;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      className={isDragging ? "sortable-card-shell is-dragging" : "sortable-card-shell"}
+      style={style}
+      {...attributes}
+      {...listeners}
+    >
       <AnimeCard item={item} />
     </div>
   );
@@ -632,6 +717,7 @@ function AnimeCard({ item, overlay = false }: { item: AnimeItem; overlay?: boole
             rel="noreferrer"
             title="外部リンク"
             aria-label={`${item.title}の外部リンク`}
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
           >
             <ExternalLink size={13} />
@@ -960,6 +1046,10 @@ function getPublicTierIndex(
 
 function findTierIdByItemId(tiers: TierRow[], itemId: string): string | null {
   return tiers.find((tier) => tier.itemIds.includes(itemId))?.id ?? null;
+}
+
+function getTierIdFromDroppable(tiers: TierRow[], id: string): string | null {
+  return isTierId(tiers, id) ? id : findTierIdByItemId(tiers, id);
 }
 
 function isTierId(tiers: TierRow[], id: string): boolean {
