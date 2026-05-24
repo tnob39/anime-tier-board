@@ -25,6 +25,7 @@ type JikanAnime = {
     title?: string | null;
   }>;
   type?: string | null;
+  episodes?: number | null;
   season?: string | null;
   year?: number | null;
   score?: number | null;
@@ -115,6 +116,7 @@ export async function fetchJikanSeasonalAnime(
         format: entry.type,
         season: entry.season,
         seasonYear: entry.year,
+        episodes: entry.episodes,
         score: entry.score,
         popularity: entry.popularity,
         reputation: {
@@ -131,7 +133,8 @@ export async function fetchJikanSeasonalAnime(
           broadcastDay: entry.broadcast?.day ?? null,
           broadcastTime: entry.broadcast?.time ?? null,
           broadcastTimezone: entry.broadcast?.timezone ?? null,
-          broadcastText: entry.broadcast?.string ?? null
+          broadcastText: entry.broadcast?.string ?? null,
+          courEstimate: estimateCour(entry.episodes)
         },
         streamingEpisodes: []
       });
@@ -155,6 +158,26 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function estimateCour(episodes?: number | null): string | null {
+  if (typeof episodes !== "number" || episodes <= 0) {
+    return null;
+  }
+
+  if (episodes <= 13) {
+    return "1クール";
+  }
+
+  if (episodes <= 26) {
+    return "2クール";
+  }
+
+  if (episodes <= 39) {
+    return "3クール";
+  }
+
+  return "4クール以上";
 }
 
 function dedupeById(items: AnimeItem[]): AnimeItem[] {

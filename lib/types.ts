@@ -20,6 +20,7 @@ export type AnimeItem = {
   format?: string | null;
   season?: AnimeSeason | string | null;
   seasonYear?: number | null;
+  episodes?: number | null;
   score?: number | null;
   popularity?: number | null;
   reputation?: AnimeReputation | null;
@@ -44,6 +45,7 @@ export type AnimeAiringInfo = {
   broadcastTime?: string | null;
   broadcastTimezone?: string | null;
   broadcastText?: string | null;
+  courEstimate?: string | null;
   nextEpisode?: {
     episode: number;
     airingAt: string;

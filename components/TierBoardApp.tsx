@@ -740,26 +740,26 @@ function AiringBadges({ item }: { item: AnimeItem }) {
     return null;
   }
 
-  const startDate = formatDisplayDate(airing.startDate);
+  const scheduleText =
+    formatScheduleFromNextEpisode(airing.nextEpisode?.airingAt) ??
+    formatBroadcastSchedule(airing);
   const nextEpisode = airing.nextEpisode
-    ? `#${airing.nextEpisode.episode} ${formatDisplayDateTime(
+    ? `#${airing.nextEpisode.episode} ${formatWeekdayTime(
         airing.nextEpisode.airingAt
       )}`
     : null;
-  const broadcast = airing.broadcastText
-    ? airing.broadcastText
-    : [airing.broadcastDay, airing.broadcastTime].filter(Boolean).join(" ");
+  const cour = airing.courEstimate ?? estimateCourFromEpisodes(item.episodes);
 
-  if (!startDate && !nextEpisode && !broadcast) {
+  if (!scheduleText && !nextEpisode && !cour) {
     return null;
   }
 
   return (
     <div className="airing-badges">
-      {startDate ? (
-        <span title={`初回: ${startDate}`}>
+      {scheduleText ? (
+        <span title={`放送: ${scheduleText}`}>
           <CalendarDays size={11} />
-          初回 {startDate}
+          {scheduleText}
         </span>
       ) : null}
       {nextEpisode ? (
@@ -767,10 +767,11 @@ function AiringBadges({ item }: { item: AnimeItem }) {
           <CalendarDays size={11} />
           次回 {nextEpisode}
         </span>
-      ) : broadcast ? (
-        <span title={`放送: ${broadcast}`}>
+      ) : null}
+      {cour ? (
+        <span title={`話数からの推定: ${cour}`}>
           <CalendarDays size={11} />
-          {broadcast}
+          {cour}
         </span>
       ) : null}
     </div>
@@ -900,7 +901,27 @@ function formatCompactNumber(value?: number | null): string | null {
   }).format(value);
 }
 
-function formatDisplayDate(value?: string | null): string | null {
+function formatBroadcastSchedule(airing: NonNullable<AnimeItem["airing"]>): string | null {
+  const day = normalizeBroadcastDay(airing.broadcastDay);
+  const time = airing.broadcastTime ? normalizeTime(airing.broadcastTime) : null;
+
+  if (day && time) {
+    return `${day} ${time}`;
+  }
+
+  if (airing.broadcastText) {
+    return simplifyBroadcastText(airing.broadcastText);
+  }
+
+  return day ?? time;
+}
+
+function formatScheduleFromNextEpisode(value?: string | null): string | null {
+  const weekdayTime = formatWeekdayTime(value);
+  return weekdayTime ? `毎週${weekdayTime}` : null;
+}
+
+function formatWeekdayTime(value?: string | null): string | null {
   if (!value) {
     return null;
   }
@@ -912,28 +933,63 @@ function formatDisplayDate(value?: string | null): string | null {
   }
 
   return new Intl.DateTimeFormat("ja-JP", {
-    month: "numeric",
-    day: "numeric"
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit"
   }).format(date);
 }
 
-function formatDisplayDateTime(value?: string | null): string | null {
+function normalizeBroadcastDay(value?: string | null): string | null {
   if (!value) {
     return null;
   }
 
-  const date = new Date(value);
+  const trimmed = value.replace(/s$/i, "").trim().toLowerCase();
+  const dayMap: Record<string, string> = {
+    monday: "月曜",
+    tuesday: "火曜",
+    wednesday: "水曜",
+    thursday: "木曜",
+    friday: "金曜",
+    saturday: "土曜",
+    sunday: "日曜"
+  };
 
-  if (Number.isNaN(date.getTime())) {
-    return value;
+  return dayMap[trimmed] ?? value;
+}
+
+function normalizeTime(value: string): string {
+  return value.replace(/^(\d):/, "0$1:");
+}
+
+function simplifyBroadcastText(value: string): string {
+  return value
+    .replace(/\b(Mondays|Tuesdays|Wednesdays|Thursdays|Fridays|Saturdays|Sundays)\b/gi, (match) =>
+      normalizeBroadcastDay(match) ?? match
+    )
+    .replace(/\s+at\s+/i, " ")
+    .replace(/\s*\(JST\)/i, "")
+    .trim();
+}
+
+function estimateCourFromEpisodes(episodes?: number | null): string | null {
+  if (typeof episodes !== "number" || episodes <= 0) {
+    return null;
   }
 
-  return new Intl.DateTimeFormat("ja-JP", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
+  if (episodes <= 13) {
+    return "1クール";
+  }
+
+  if (episodes <= 26) {
+    return "2クール";
+  }
+
+  if (episodes <= 39) {
+    return "3クール";
+  }
+
+  return "4クール以上";
 }
 
 function createDefaultBoard(

@@ -22,6 +22,7 @@ type AniListMedia = {
   format?: string | null;
   season?: AnimeSeason | null;
   seasonYear?: number | null;
+  episodes?: number | null;
   averageScore?: number | null;
   popularity?: number | null;
   favourites?: number | null;
@@ -95,6 +96,7 @@ const query = `
         format
         season
         seasonYear
+        episodes
         averageScore
         popularity
         favourites
@@ -199,6 +201,7 @@ export async function fetchAniListSeasonalAnime(
         format: entry.format,
         season: entry.season,
         seasonYear: entry.seasonYear,
+        episodes: entry.episodes,
         score: entry.averageScore,
         popularity: entry.popularity,
         reputation: {
@@ -210,6 +213,7 @@ export async function fetchAniListSeasonalAnime(
         },
         airing: {
           startDate: formatAniListDate(entry.startDate),
+          courEstimate: estimateCour(entry.episodes),
           nextEpisode: formatAniListNextEpisode(entry.nextAiringEpisode),
           recentEpisodes: (entry.airingSchedule?.nodes ?? [])
             .filter(
@@ -270,6 +274,26 @@ function formatAniListNextEpisode(
     airingAt: formatUnixSeconds(nextEpisode.airingAt),
     timeUntilAiringSeconds: nextEpisode.timeUntilAiring
   };
+}
+
+function estimateCour(episodes?: number | null): string | null {
+  if (typeof episodes !== "number" || episodes <= 0) {
+    return null;
+  }
+
+  if (episodes <= 13) {
+    return "1クール";
+  }
+
+  if (episodes <= 26) {
+    return "2クール";
+  }
+
+  if (episodes <= 39) {
+    return "3クール";
+  }
+
+  return "4クール以上";
 }
 
 function formatUnixSeconds(value: number): string {
