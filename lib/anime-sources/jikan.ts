@@ -33,6 +33,15 @@ type JikanAnime = {
   members?: number | null;
   favorites?: number | null;
   rank?: number | null;
+  broadcast?: {
+    day?: string | null;
+    time?: string | null;
+    timezone?: string | null;
+    string?: string | null;
+  } | null;
+  aired?: {
+    from?: string | null;
+  } | null;
 };
 
 type JikanResponse = {
@@ -116,7 +125,15 @@ export async function fetchJikanSeasonalAnime(
           members: entry.members,
           favourites: entry.favorites,
           rank: entry.rank
-        }
+        },
+        airing: {
+          startDate: entry.aired?.from ?? null,
+          broadcastDay: entry.broadcast?.day ?? null,
+          broadcastTime: entry.broadcast?.time ?? null,
+          broadcastTimezone: entry.broadcast?.timezone ?? null,
+          broadcastText: entry.broadcast?.string ?? null
+        },
+        streamingEpisodes: []
       });
     }
 

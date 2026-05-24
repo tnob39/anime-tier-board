@@ -23,6 +23,8 @@ export type AnimeItem = {
   score?: number | null;
   popularity?: number | null;
   reputation?: AnimeReputation | null;
+  airing?: AnimeAiringInfo | null;
+  streamingEpisodes?: AnimeStreamingEpisode[];
 };
 
 export type AnimeReputation = {
@@ -34,6 +36,29 @@ export type AnimeReputation = {
   favourites?: number | null;
   trending?: number | null;
   rank?: number | null;
+};
+
+export type AnimeAiringInfo = {
+  startDate?: string | null;
+  broadcastDay?: string | null;
+  broadcastTime?: string | null;
+  broadcastTimezone?: string | null;
+  broadcastText?: string | null;
+  nextEpisode?: {
+    episode: number;
+    airingAt: string;
+    timeUntilAiringSeconds?: number | null;
+  } | null;
+  recentEpisodes?: Array<{
+    episode: number;
+    airingAt: string;
+  }>;
+};
+
+export type AnimeStreamingEpisode = {
+  title?: string | null;
+  site?: string | null;
+  url: string;
 };
 
 export type SeasonalAnimeResult = {

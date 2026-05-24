@@ -438,6 +438,51 @@ button:disabled {
   white-space: nowrap;
 }
 
+.airing-badges,
+.streaming-links {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.airing-badges span,
+.streaming-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+  min-height: 18px;
+  padding: 0 5px;
+  overflow: hidden;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.airing-badges span {
+  background: #f2f0ff;
+  color: #37306a;
+}
+
+.streaming-links a {
+  color: #245443;
+  background: #eef8ef;
+  text-decoration: none;
+}
+
+.streaming-links a:hover {
+  background: #dff0e1;
+}
+
+.streaming-links span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

@@ -25,11 +25,13 @@ import {
 } from "@dnd-kit/sortable";
 import { toPng } from "html-to-image";
 import {
+  CalendarDays,
   Download,
   ExternalLink,
   Heart,
   Loader2,
   Plus,
+  PlayCircle,
   RefreshCw,
   RotateCcw,
   Sparkles,
@@ -724,8 +726,81 @@ function AnimeCard({ item, overlay = false }: { item: AnimeItem; overlay?: boole
           </a>
         </div>
         <ReputationBadges item={item} />
+        <AiringBadges item={item} />
+        <StreamingLinks item={item} />
       </div>
     </article>
+  );
+}
+
+function AiringBadges({ item }: { item: AnimeItem }) {
+  const airing = item.airing;
+
+  if (!airing) {
+    return null;
+  }
+
+  const startDate = formatDisplayDate(airing.startDate);
+  const nextEpisode = airing.nextEpisode
+    ? `#${airing.nextEpisode.episode} ${formatDisplayDateTime(
+        airing.nextEpisode.airingAt
+      )}`
+    : null;
+  const broadcast = airing.broadcastText
+    ? airing.broadcastText
+    : [airing.broadcastDay, airing.broadcastTime].filter(Boolean).join(" ");
+
+  if (!startDate && !nextEpisode && !broadcast) {
+    return null;
+  }
+
+  return (
+    <div className="airing-badges">
+      {startDate ? (
+        <span title={`初回: ${startDate}`}>
+          <CalendarDays size={11} />
+          初回 {startDate}
+        </span>
+      ) : null}
+      {nextEpisode ? (
+        <span title={`次回: ${nextEpisode}`}>
+          <CalendarDays size={11} />
+          次回 {nextEpisode}
+        </span>
+      ) : broadcast ? (
+        <span title={`放送: ${broadcast}`}>
+          <CalendarDays size={11} />
+          {broadcast}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function StreamingLinks({ item }: { item: AnimeItem }) {
+  const links = item.streamingEpisodes?.filter((episode) => episode.url).slice(0, 2);
+
+  if (!links?.length) {
+    return null;
+  }
+
+  return (
+    <div className="streaming-links">
+      {links.map((episode) => (
+        <a
+          key={episode.url}
+          href={episode.url}
+          target="_blank"
+          rel="noreferrer"
+          title={episode.title ?? episode.site ?? "配信リンク"}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <PlayCircle size={11} />
+          <span>{episode.site ?? episode.title ?? "配信"}</span>
+        </a>
+      ))}
+    </div>
   );
 }
 
@@ -823,6 +898,42 @@ function formatCompactNumber(value?: number | null): string | null {
     notation: "compact",
     maximumFractionDigits: 1
   }).format(value);
+}
+
+function formatDisplayDate(value?: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value.slice(0, 10);
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric"
+  }).format(date);
+}
+
+function formatDisplayDateTime(value?: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
 }
 
 function createDefaultBoard(

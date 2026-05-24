@@ -1,4 +1,4 @@
-import type { AnimeItem, AnimeSeason } from "../types";
+import type { AnimeAiringInfo, AnimeItem, AnimeSeason } from "../types";
 import { pickDisplayTitle, proxiedImageUrl } from "./shared";
 
 const ANILIST_ENDPOINT = "https://graphql.anilist.co";
@@ -27,6 +27,29 @@ type AniListMedia = {
   favourites?: number | null;
   trending?: number | null;
   isAdult?: boolean | null;
+  startDate?: AniListDate | null;
+  nextAiringEpisode?: {
+    airingAt?: number | null;
+    timeUntilAiring?: number | null;
+    episode?: number | null;
+  } | null;
+  airingSchedule?: {
+    nodes?: Array<{
+      airingAt?: number | null;
+      episode?: number | null;
+    }>;
+  } | null;
+  streamingEpisodes?: Array<{
+    title?: string | null;
+    site?: string | null;
+    url?: string | null;
+  }>;
+};
+
+type AniListDate = {
+  year?: number | null;
+  month?: number | null;
+  day?: number | null;
 };
 
 type AniListPage = {
@@ -77,6 +100,27 @@ const query = `
         favourites
         trending
         isAdult
+        startDate {
+          year
+          month
+          day
+        }
+        nextAiringEpisode {
+          airingAt
+          timeUntilAiring
+          episode
+        }
+        airingSchedule(notYetAired: false, perPage: 3) {
+          nodes {
+            airingAt
+            episode
+          }
+        }
+        streamingEpisodes {
+          title
+          site
+          url
+        }
       }
     }
   }
@@ -163,7 +207,28 @@ export async function fetchAniListSeasonalAnime(
           popularity: entry.popularity,
           favourites: entry.favourites,
           trending: entry.trending
-        }
+        },
+        airing: {
+          startDate: formatAniListDate(entry.startDate),
+          nextEpisode: formatAniListNextEpisode(entry.nextAiringEpisode),
+          recentEpisodes: (entry.airingSchedule?.nodes ?? [])
+            .filter(
+              (node) =>
+                typeof node.episode === "number" &&
+                typeof node.airingAt === "number"
+            )
+            .map((node) => ({
+              episode: node.episode as number,
+              airingAt: formatUnixSeconds(node.airingAt as number)
+            }))
+        },
+        streamingEpisodes: (entry.streamingEpisodes ?? [])
+          .filter((episode) => Boolean(episode.url))
+          .map((episode) => ({
+            title: episode.title,
+            site: episode.site,
+            url: episode.url as string
+          }))
       });
     }
 
@@ -177,6 +242,38 @@ export async function fetchAniListSeasonalAnime(
   }
 
   return dedupeById(items);
+}
+
+function formatAniListDate(date?: AniListDate | null): string | null {
+  if (!date?.year || !date.month || !date.day) {
+    return null;
+  }
+
+  return `${date.year}-${String(date.month).padStart(2, "0")}-${String(
+    date.day
+  ).padStart(2, "0")}`;
+}
+
+function formatAniListNextEpisode(
+  nextEpisode?: AniListMedia["nextAiringEpisode"]
+): NonNullable<AnimeAiringInfo["nextEpisode"]> | null {
+  if (
+    !nextEpisode ||
+    typeof nextEpisode.episode !== "number" ||
+    typeof nextEpisode.airingAt !== "number"
+  ) {
+    return null;
+  }
+
+  return {
+    episode: nextEpisode.episode,
+    airingAt: formatUnixSeconds(nextEpisode.airingAt),
+    timeUntilAiringSeconds: nextEpisode.timeUntilAiring
+  };
+}
+
+function formatUnixSeconds(value: number): string {
+  return new Date(value * 1000).toISOString();
 }
 
 function dedupeById(items: AnimeItem[]): AnimeItem[] {
