@@ -7,7 +7,8 @@ import {
   pointerWithin,
   rectIntersection,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useDroppable,
   useSensor,
   useSensors,
@@ -24,6 +25,7 @@ import {
   useSortable
 } from "@dnd-kit/sortable";
 import { toPng } from "html-to-image";
+import { signIn, signOut, useSession } from "next-auth/react";
 import {
   CalendarDays,
   Download,
@@ -34,6 +36,7 @@ import {
   PlayCircle,
   RefreshCw,
   RotateCcw,
+  Share2,
   Sparkles,
   Star,
   TrendingUp,
@@ -41,6 +44,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentAnimeSeason } from "@/lib/season";
+import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
 import { SEASON_LABELS, SEASONS } from "@/lib/types";
 
@@ -74,6 +78,29 @@ type SeasonalApiResponse = {
   error?: string;
 };
 
+type BoardApiResponse = {
+  board: BoardState | null;
+  error?: string;
+};
+
+type ShareApiResponse = {
+  shareId?: string;
+  error?: string;
+};
+
+type StatusApiResponse = {
+  statuses?: AnimeStatusRecord[];
+  error?: string;
+};
+
+const viewingStatusOptions: Array<{ value: ViewingStatus; label: string }> = [
+  { value: "planned", label: "Plan" },
+  { value: "watching", label: "Watching" },
+  { value: "completed", label: "Done" },
+  { value: "paused", label: "Paused" },
+  { value: "dropped", label: "Drop" }
+];
+
 const defaultTierTemplates: Array<Omit<TierRow, "itemIds">> = [
   { id: "tier-s", label: "S", color: "#f87171" },
   { id: "tier-a", label: "A", color: "#fbbf24" },
@@ -93,6 +120,7 @@ const nextTierColors = [
 ];
 
 export function TierBoardApp() {
+  const { data: session, status: authStatus } = useSession();
   const currentSeason = useMemo(() => getCurrentAnimeSeason(), []);
   const [seasonYear, setSeasonYear] = useState(currentSeason.year);
   const [season, setSeason] = useState<AnimeSeason>(currentSeason.season);
@@ -103,8 +131,15 @@ export function TierBoardApp() {
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saveState, setSaveState] = useState<"local" | "saving" | "saved" | "error">(
+    "local"
+  );
+  const [statusMap, setStatusMap] = useState<Record<string, ViewingStatus>>({});
+  const [sharing, setSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const dragOriginTierIdRef = useRef<string | null>(null);
 
@@ -112,12 +147,17 @@ export function TierBoardApp() {
     () => getStorageKey(seasonYear, season),
     [seasonYear, season]
   );
+  const isAuthenticated = authStatus === "authenticated";
+  const userLabel = session?.user?.name ?? session?.user?.email ?? "Googleユーザー";
 
   const itemMap = useMemo(() => {
     return new Map(items.map((item) => [item.id, item]));
   }, [items]);
 
   const activeItem = activeItemId ? itemMap.get(activeItemId) ?? null : null;
+  const moveMenuItem = moveMenuItemId ? itemMap.get(moveMenuItemId) ?? null : null;
+  const moveMenuCurrentTierId =
+    board && moveMenuItemId ? findTierIdByItemId(board.tiers, moveMenuItemId) : null;
   const unrankedTier = board?.tiers.find((tier) => tier.id === UNRANKED_TIER_ID);
   const rankedTiers =
     board?.tiers.filter((tier) => tier.id !== UNRANKED_TIER_ID) ?? [];
@@ -127,9 +167,15 @@ export function TierBoardApp() {
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 6
+      }
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 180,
+        tolerance: 8
       }
     }),
     useSensor(KeyboardSensor, {
@@ -160,6 +206,10 @@ export function TierBoardApp() {
   }, [currentSeason.year]);
 
   const loadAnime = useCallback(async () => {
+    if (authStatus === "loading") {
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setWarning(null);
@@ -178,7 +228,9 @@ export function TierBoardApp() {
       }
 
       const nextItems = payload.items;
-      const storedBoard = readStoredBoard(storageKey);
+      const storedBoard = isAuthenticated
+        ? await readRemoteBoard(seasonYear, season)
+        : readStoredBoard(storageKey);
       const nextBoard = reconcileBoard(
         storedBoard ?? createDefaultBoard(seasonYear, season, nextItems),
         nextItems,
@@ -200,11 +252,39 @@ export function TierBoardApp() {
     } finally {
       setLoading(false);
     }
-  }, [season, seasonYear, storageKey]);
+  }, [authStatus, isAuthenticated, season, seasonYear, storageKey]);
 
   useEffect(() => {
     void loadAnime();
   }, [loadAnime]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setStatusMap({});
+      return;
+    }
+
+    let cancelled = false;
+
+    fetch("/api/statuses", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : { statuses: [] }))
+      .then((payload: StatusApiResponse) => {
+        if (cancelled) {
+          return;
+        }
+
+        const nextStatuses: Record<string, ViewingStatus> = {};
+        for (const record of payload.statuses ?? []) {
+          nextStatuses[record.animeId] = record.status;
+        }
+        setStatusMap(nextStatuses);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!board) {
@@ -212,7 +292,29 @@ export function TierBoardApp() {
     }
 
     localStorage.setItem(storageKey, JSON.stringify(board));
-  }, [board, storageKey]);
+
+    if (!isAuthenticated) {
+      setSaveState("local");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      setSaveState("saving");
+      void saveRemoteBoard(board, controller.signal)
+        .then(() => setSaveState("saved"))
+        .catch(() => {
+          if (!controller.signal.aborted) {
+            setSaveState("error");
+          }
+        });
+    }, 500);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [board, isAuthenticated, storageKey]);
 
   function updateBoard(updater: (current: BoardState) => BoardState) {
     setBoard((current) => {
@@ -345,6 +447,82 @@ export function TierBoardApp() {
     });
   }
 
+  function handleMoveItemToTier(itemId: string, targetTierId: string) {
+    updateBoard((current) => {
+      const sourceTierId = findTierIdByItemId(current.tiers, itemId);
+
+      if (!sourceTierId || !isTierId(current.tiers, targetTierId)) {
+        return current;
+      }
+
+      if (sourceTierId === targetTierId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        tiers: current.tiers.map((tier) => {
+          if (tier.id === sourceTierId) {
+            return {
+              ...tier,
+              itemIds: tier.itemIds.filter((id) => id !== itemId)
+            };
+          }
+
+          if (tier.id === targetTierId) {
+            return {
+              ...tier,
+              itemIds: [...tier.itemIds, itemId]
+            };
+          }
+
+          return tier;
+        })
+      };
+    });
+    setMoveMenuItemId(null);
+  }
+
+  async function handleStatusChange(item: AnimeItem, status: ViewingStatus | null) {
+    if (!isAuthenticated) {
+      void signIn("google");
+      return;
+    }
+
+    setStatusMap((current) => {
+      if (status) {
+        return {
+          ...current,
+          [item.id]: status
+        };
+      }
+
+      const next = { ...current };
+      delete next[item.id];
+      return next;
+    });
+
+    try {
+      const response = status
+        ? await fetch("/api/statuses", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ animeId: item.id, status, anime: item })
+          })
+        : await fetch(`/api/statuses?animeId=${encodeURIComponent(item.id)}`, {
+            method: "DELETE"
+          });
+
+      if (!response.ok) {
+        throw new Error("Failed to save status.");
+      }
+    } catch (statusError) {
+      setError(statusError instanceof Error ? statusError.message : String(statusError));
+    }
+  }
+
   function handleReset() {
     localStorage.removeItem(storageKey);
     setBoard(createDefaultBoard(seasonYear, season, items));
@@ -419,6 +597,43 @@ export function TierBoardApp() {
     }
   }
 
+  async function handleCreateShare() {
+    if (!board || !items.length) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      void signIn("google");
+      return;
+    }
+
+    setSharing(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/shares", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ board, items })
+      });
+      const payload = (await response.json()) as ShareApiResponse;
+
+      if (!response.ok || !payload.shareId) {
+        throw new Error(payload.error ?? "Failed to create share.");
+      }
+
+      const nextShareUrl = `${window.location.origin}/share/${payload.shareId}`;
+      setShareUrl(nextShareUrl);
+      await navigator.clipboard?.writeText(nextShareUrl);
+    } catch (shareError) {
+      setError(shareError instanceof Error ? shareError.message : String(shareError));
+    } finally {
+      setSharing(false);
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -432,6 +647,32 @@ export function TierBoardApp() {
         </div>
 
         <div className="control-bar">
+          {isAuthenticated ? (
+            <>
+              <span className="status-line toolbar-status no-export">
+                {userLabel} / {getSaveStateLabel(saveState)}
+              </span>
+              <button
+                className="command-button auth-button"
+                type="button"
+                onClick={() => void signOut()}
+                title="ログアウト"
+              >
+                <span>ログアウト</span>
+              </button>
+            </>
+          ) : (
+            <button
+              className="command-button emphasis-button auth-button"
+              type="button"
+              onClick={() => void signIn("google")}
+              disabled={authStatus === "loading"}
+              title="Googleでログイン"
+            >
+              <span>Googleログイン</span>
+            </button>
+          )}
+
           <label className="field">
             <span>年</span>
             <select
@@ -505,6 +746,17 @@ export function TierBoardApp() {
           </button>
 
           <button
+            className="command-button"
+            type="button"
+            onClick={() => void handleCreateShare()}
+            disabled={!board || sharing || loading || !items.length}
+            title="共有URLを作成"
+          >
+            {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
+            <span>共有</span>
+          </button>
+
+          <button
             className="icon-button"
             type="button"
             onClick={handleReset}
@@ -513,12 +765,23 @@ export function TierBoardApp() {
           >
             <RotateCcw size={18} />
           </button>
+          <a className="command-button dashboard-link" href="/dashboard">
+            <span>Dashboard</span>
+          </a>
         </div>
       </header>
 
       <main className="app-main">
         {warning ? <div className="notice warning">{warning}</div> : null}
         {error ? <div className="notice error">{error}</div> : null}
+        {shareUrl ? (
+          <div className="notice success">
+            共有URLをコピーしました:{" "}
+            <a href={shareUrl} target="_blank" rel="noreferrer">
+              {shareUrl}
+            </a>
+          </div>
+        ) : null}
 
         <DndContext
           sensors={sensors}
@@ -549,6 +812,9 @@ export function TierBoardApp() {
                     onRename={handleRenameTier}
                     onColor={handleColorTier}
                     onDelete={handleDeleteTier}
+                    onOpenMoveMenu={setMoveMenuItemId}
+                    statusMap={statusMap}
+                    onStatusChange={handleStatusChange}
                   />
                 ))}
               </div>
@@ -564,6 +830,9 @@ export function TierBoardApp() {
                 onRename={handleRenameTier}
                 onColor={handleColorTier}
                 onDelete={handleDeleteTier}
+                onOpenMoveMenu={setMoveMenuItemId}
+                statusMap={statusMap}
+                onStatusChange={handleStatusChange}
               />
             </section>
           ) : null}
@@ -572,7 +841,124 @@ export function TierBoardApp() {
             {activeItem ? <AnimeCard item={activeItem} overlay /> : null}
           </DragOverlay>
         </DndContext>
+
+        {board && moveMenuItem ? (
+          <MoveItemSheet
+            item={moveMenuItem}
+            tiers={board.tiers}
+            currentTierId={moveMenuCurrentTierId}
+            status={statusMap[moveMenuItem.id] ?? null}
+            onMove={handleMoveItemToTier}
+            onStatusChange={handleStatusChange}
+            onClose={() => setMoveMenuItemId(null)}
+          />
+        ) : null}
       </main>
+    </div>
+  );
+}
+
+function MoveItemSheet({
+  item,
+  tiers,
+  currentTierId,
+  status,
+  onMove,
+  onStatusChange,
+  onClose
+}: {
+  item: AnimeItem;
+  tiers: TierRow[];
+  currentTierId: string | null;
+  status: ViewingStatus | null;
+  onMove: (itemId: string, tierId: string) => void;
+  onStatusChange: (item: AnimeItem, status: ViewingStatus | null) => void;
+  onClose: () => void;
+}) {
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    cancelButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [onClose]);
+
+  return (
+    <div className="move-sheet-backdrop" role="presentation" onClick={onClose}>
+      <section
+        className="move-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="移動先を選択"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="move-sheet-preview">
+          <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+          <div>
+            <strong>{item.title}</strong>
+            <span>移動先を選択</span>
+          </div>
+        </div>
+
+        <label className="move-status-select">
+          <span>Status</span>
+          <select
+            value={status ?? ""}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              onStatusChange(item, nextValue ? (nextValue as ViewingStatus) : null);
+            }}
+          >
+            <option value="">Unset</option>
+            {viewingStatusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="move-tier-grid">
+          {tiers.map((tier) => (
+            <button
+              key={tier.id}
+              className={tier.id === currentTierId ? "move-tier-button is-current" : "move-tier-button"}
+              type="button"
+              style={
+                {
+                  "--tier-color": tier.color,
+                  "--tier-text": getReadableTextColor(tier.color)
+                } as React.CSSProperties
+              }
+              onClick={() => onMove(item.id, tier.id)}
+            >
+              <span>{tier.label}</span>
+              {tier.id === currentTierId ? <small>現在</small> : null}
+            </button>
+          ))}
+        </div>
+
+        <button
+          ref={cancelButtonRef}
+          className="move-sheet-cancel"
+          type="button"
+          onClick={onClose}
+        >
+          キャンセル
+        </button>
+      </section>
     </div>
   );
 }
@@ -584,7 +970,10 @@ function TierLane({
   pool = false,
   onRename,
   onColor,
-  onDelete
+  onDelete,
+  onOpenMoveMenu,
+  statusMap,
+  onStatusChange
 }: {
   tier: TierRow;
   itemMap: Map<string, AnimeItem>;
@@ -593,6 +982,9 @@ function TierLane({
   onRename: (tierId: string, label: string) => void;
   onColor: (tierId: string, color: string) => void;
   onDelete: (tierId: string) => void;
+  onOpenMoveMenu: (itemId: string) => void;
+  statusMap: Record<string, ViewingStatus>;
+  onStatusChange: (item: AnimeItem, status: ViewingStatus | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: tier.id,
@@ -641,7 +1033,16 @@ function TierLane({
             .join(" ")}
         >
           {items.length ? (
-            items.map((item) => <SortableAnimeCard key={item.id} item={item} />)
+            items.map((item) => (
+              <SortableAnimeCard
+                key={item.id}
+                item={item}
+                compact={!pool}
+                onOpenMoveMenu={onOpenMoveMenu}
+                status={statusMap[item.id] ?? null}
+                onStatusChange={onStatusChange}
+              />
+            ))
           ) : (
             <span className="empty-state">空</span>
           )}
@@ -674,7 +1075,19 @@ function TierLane({
   );
 }
 
-function SortableAnimeCard({ item }: { item: AnimeItem }) {
+function SortableAnimeCard({
+  item,
+  compact = false,
+  onOpenMoveMenu,
+  status,
+  onStatusChange
+}: {
+  item: AnimeItem;
+  compact?: boolean;
+  onOpenMoveMenu: (itemId: string) => void;
+  status: ViewingStatus | null;
+  onStatusChange: (item: AnimeItem, status: ViewingStatus | null) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
       id: item.id,
@@ -695,19 +1108,50 @@ function SortableAnimeCard({ item }: { item: AnimeItem }) {
       ref={setNodeRef}
       className={isDragging ? "sortable-card-shell is-dragging" : "sortable-card-shell"}
       style={style}
+      onClick={() => {
+        if (!isDragging) {
+          onOpenMoveMenu(item.id);
+        }
+      }}
       {...attributes}
       {...listeners}
     >
-      <AnimeCard item={item} />
+      <AnimeCard
+        item={item}
+        compact={compact}
+        status={status}
+        onStatusChange={onStatusChange}
+      />
     </div>
   );
 }
 
-function AnimeCard({ item, overlay = false }: { item: AnimeItem; overlay?: boolean }) {
+function AnimeCard({
+  item,
+  overlay = false,
+  compact = false,
+  status = null,
+  onStatusChange
+}: {
+  item: AnimeItem;
+  overlay?: boolean;
+  compact?: boolean;
+  status?: ViewingStatus | null;
+  onStatusChange?: (item: AnimeItem, status: ViewingStatus | null) => void;
+}) {
   return (
-    <article className={overlay ? "anime-card is-overlay" : "anime-card"}>
+    <article
+      className={[
+        "anime-card",
+        overlay ? "is-overlay" : "",
+        compact ? "is-compact" : ""
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
-      <div className="anime-meta">
+      {!compact ? (
+        <div className="anime-meta">
         <div className="anime-title" title={item.title}>
           {item.title}
         </div>
@@ -726,9 +1170,33 @@ function AnimeCard({ item, overlay = false }: { item: AnimeItem; overlay?: boole
           </a>
         </div>
         <ReputationBadges item={item} />
+        {onStatusChange ? (
+          <label
+            className="status-select"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span>Status</span>
+            <select
+              value={status ?? ""}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                onStatusChange(item, nextValue ? (nextValue as ViewingStatus) : null);
+              }}
+            >
+              <option value="">Unset</option>
+              {viewingStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <AiringBadges item={item} />
         <StreamingLinks item={item} />
-      </div>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -1225,6 +1693,44 @@ function isTierId(tiers: TierRow[], id: string): boolean {
 
 function getStorageKey(year: number, season: AnimeSeason): string {
   return `${STORAGE_PREFIX}:${year}:${season}`;
+}
+
+async function readRemoteBoard(
+  year: number,
+  season: AnimeSeason
+): Promise<BoardState | null> {
+  const response = await fetch(`/api/boards?year=${year}&season=${season}`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as BoardApiResponse;
+  return payload.board && isBoardState(payload.board) ? payload.board : null;
+}
+
+async function saveRemoteBoard(board: BoardState, signal: AbortSignal): Promise<void> {
+  const response = await fetch("/api/boards", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ board }),
+    signal
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save board.");
+  }
+}
+
+function getSaveStateLabel(state: "local" | "saving" | "saved" | "error"): string {
+  if (state === "saving") return "保存中";
+  if (state === "saved") return "Turso保存済み";
+  if (state === "error") return "保存失敗";
+  return "ローカル保存";
 }
 
 function readStoredBoard(storageKey: string): BoardState | null {

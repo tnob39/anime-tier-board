@@ -26,6 +26,26 @@ export type AnimeItem = {
   reputation?: AnimeReputation | null;
   airing?: AnimeAiringInfo | null;
   streamingEpisodes?: AnimeStreamingEpisode[];
+  genres?: string[];
+  studios?: AnimeStudio[];
+  voiceActors?: AnimeVoiceActor[];
+};
+
+export type AnimeStudio = {
+  id?: string | number | null;
+  name: string;
+  siteUrl?: string | null;
+};
+
+export type AnimeVoiceActor = {
+  id?: string | number | null;
+  name: string;
+  nativeName?: string | null;
+  language?: string | null;
+  imageUrl?: string | null;
+  siteUrl?: string | null;
+  characterName?: string | null;
+  characterRole?: string | null;
 };
 
 export type AnimeReputation = {

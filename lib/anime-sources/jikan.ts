@@ -34,6 +34,10 @@ type JikanAnime = {
   members?: number | null;
   favorites?: number | null;
   rank?: number | null;
+  genres?: JikanNamedResource[];
+  explicit_genres?: JikanNamedResource[];
+  themes?: JikanNamedResource[];
+  studios?: JikanNamedResource[];
   broadcast?: {
     day?: string | null;
     time?: string | null;
@@ -43,6 +47,12 @@ type JikanAnime = {
   aired?: {
     from?: string | null;
   } | null;
+};
+
+type JikanNamedResource = {
+  mal_id?: number | null;
+  name?: string | null;
+  url?: string | null;
 };
 
 type JikanResponse = {
@@ -128,6 +138,18 @@ export async function fetchJikanSeasonalAnime(
           favourites: entry.favorites,
           rank: entry.rank
         },
+        genres: cleanStringList([
+          ...(entry.genres ?? []),
+          ...(entry.explicit_genres ?? []),
+          ...(entry.themes ?? [])
+        ].map((genre) => genre.name)),
+        studios: (entry.studios ?? [])
+          .map((studio) => ({
+            id: studio.mal_id,
+            name: studio.name?.trim() ?? "",
+            siteUrl: studio.url
+          }))
+          .filter((studio) => studio.name.length > 0),
         airing: {
           startDate: entry.aired?.from ?? null,
           broadcastDay: entry.broadcast?.day ?? null,
@@ -152,6 +174,23 @@ export async function fetchJikanSeasonalAnime(
   }
 
   return dedupeById(items);
+}
+
+function cleanStringList(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (!trimmed || seen.has(trimmed.toLowerCase())) {
+      continue;
+    }
+
+    seen.add(trimmed.toLowerCase());
+    result.push(trimmed);
+  }
+
+  return result;
 }
 
 function sleep(ms: number): Promise<void> {

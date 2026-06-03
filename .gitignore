@@ -4,6 +4,7 @@ node_modules/
 out/
 dist/
 build/
+tsconfig.tsbuildinfo
 .env*.local
 npm-debug.log*
 yarn-debug.log*
@@ -15,3 +16,13 @@ git-state/
 git-state-active/
 .gh-config/
 .git-broken-empty/
+.vercel/
+.vercel-cache/
+.vercel-config/
+.vercel-data/
+.vercel-local/
+.vercel-roaming/
+.deploy-temp/
+
+.vercel
+.env*
