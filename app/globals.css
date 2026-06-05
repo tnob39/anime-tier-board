@@ -1112,6 +1112,76 @@ button:disabled {
   color: #cbd5e1;
 }
 
+.dashboard-tutorial {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 16px;
+  align-items: start;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.dashboard-tutorial h2 {
+  margin: 6px 0 8px;
+  font-size: clamp(22px, 4vw, 30px);
+  line-height: 1.25;
+}
+
+.dashboard-tutorial p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.tutorial-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tutorial-steps li,
+.tutorial-empty-callout {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.tutorial-steps strong,
+.tutorial-empty-callout strong {
+  color: #111827;
+}
+
+.tutorial-steps span,
+.tutorial-empty-callout span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.tutorial-empty-callout {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.tutorial-empty-callout span {
+  grid-column: 1;
+}
+
+.tutorial-empty-callout .command-button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -1235,7 +1305,9 @@ button:disabled {
 @media (max-width: 640px) {
   .share-actions,
   .comment-form,
-  .dashboard-header {
+  .dashboard-header,
+  .dashboard-tutorial,
+  .tutorial-empty-callout {
     align-items: stretch;
     grid-template-columns: 1fr;
     flex-direction: column;
@@ -1247,5 +1319,11 @@ button:disabled {
 
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tutorial-empty-callout span,
+  .tutorial-empty-callout .command-button {
+    grid-column: auto;
+    grid-row: auto;
   }
 }

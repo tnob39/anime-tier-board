@@ -13,6 +13,7 @@ const statusLabels: Record<ViewingStatus, string> = {
 
 export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
   const maxStatus = Math.max(1, ...Object.values(dashboard.statusCounts));
+  const hasData = dashboard.totalStatuses > 0;
 
   return (
     <main className="app-main dashboard-main">
@@ -26,6 +27,40 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
           Back to board
         </Link>
       </header>
+
+      <section className="dashboard-tutorial" aria-label="Dashboard tutorial">
+        <div>
+          <p className="eyebrow">How it works</p>
+          <h2>ステータスを付けると、好みの偏りが見えるようになります</h2>
+          <p>
+            ダッシュボードは、ボード上で保存した視聴ステータスをもとに、
+            ジャンル・制作会社・声優の傾向を集計します。
+          </p>
+        </div>
+        <ol className="tutorial-steps">
+          <li>
+            <strong>1. ボードへ戻る</strong>
+            <span>作品カードをタップ、またはクリックして移動メニューを開きます。</span>
+          </li>
+          <li>
+            <strong>2. Statusを選ぶ</strong>
+            <span>Plan / Watching / Done などを選ぶとTursoへ保存されます。</span>
+          </li>
+          <li>
+            <strong>3. ダッシュボードを見る</strong>
+            <span>保存した作品から、ステータス数と好みの偏りが集計されます。</span>
+          </li>
+        </ol>
+        {!hasData ? (
+          <div className="tutorial-empty-callout">
+            <strong>まだ集計データがありません</strong>
+            <span>まずは数作品にStatusを付けてから戻ってください。</span>
+            <Link className="command-button emphasis-button" href="/">
+              ボードでStatusを付ける
+            </Link>
+          </div>
+        ) : null}
+      </section>
 
       <section className="dashboard-grid">
         <article className="dashboard-panel status-panel">
