@@ -73,6 +73,45 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
     }
   }
 
+  async function updateStatus(record: AnimeStatusRecord, status: ViewingStatus) {
+    if (!record.anime) {
+      return;
+    }
+
+    const current = record;
+    const next = { ...record, status };
+    setItems((records) =>
+      records.map((item) => (item.animeId === record.animeId ? next : item))
+    );
+    setSavingId(record.animeId);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/statuses", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          animeId: record.animeId,
+          status,
+          anime: record.anime
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("ステータス保存に失敗しました。");
+      }
+    } catch (error) {
+      setItems((records) =>
+        records.map((item) => (item.animeId === record.animeId ? current : item))
+      );
+      setMessage(error instanceof Error ? error.message : "ステータス保存に失敗しました。");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   async function createShare() {
     setSharing(true);
     setMessage(null);
@@ -154,6 +193,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
                 record={record}
                 saving={savingId === record.animeId}
                 onUpdate={(patch) => void updateItem(record.animeId, patch)}
+                onStatusChange={(status) => void updateStatus(record, status)}
               />
             ) : null
           )}
@@ -174,13 +214,15 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
 function WatchlistCard({
   record,
   saving,
-  onUpdate
+  onUpdate,
+  onStatusChange
 }: {
   record: AnimeStatusRecord;
   saving: boolean;
   onUpdate: (
     patch: Partial<Pick<AnimeStatusRecord, "favoriteLevel" | "watchSlot" | "notes">>
   ) => void;
+  onStatusChange: (status: ViewingStatus) => void;
 }) {
   const anime = record.anime as AnimeItem;
   const [draftNotes, setDraftNotes] = useState(record.notes ?? "");
@@ -206,6 +248,8 @@ function WatchlistCard({
             <ExternalLink size={16} />
           </a>
         </div>
+
+        <StatusChips status={record.status} onChange={onStatusChange} />
 
         <div className="watchlist-favorite" aria-label="お気に入り度">
           {[1, 2, 3, 4, 5].map((level) => (
@@ -276,6 +320,29 @@ function WatchlistCard({
         </label>
       </div>
     </article>
+  );
+}
+
+function StatusChips({
+  status,
+  onChange
+}: {
+  status: ViewingStatus;
+  onChange: (status: ViewingStatus) => void;
+}) {
+  return (
+    <div className="status-chip-group watchlist-status-chips" aria-label="視聴ステータス">
+      {(Object.keys(statusLabels) as ViewingStatus[]).map((option) => (
+        <button
+          key={option}
+          className={status === option ? "status-chip is-active" : "status-chip"}
+          type="button"
+          onClick={() => onChange(option)}
+        >
+          {statusLabels[option]}
+        </button>
+      ))}
+    </div>
   );
 }
 

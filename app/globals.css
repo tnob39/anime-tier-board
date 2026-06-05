@@ -631,24 +631,6 @@ button:disabled {
   font-size: 13px;
 }
 
-.move-status-select {
-  display: grid;
-  gap: 6px;
-  margin: 0 12px 12px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--muted);
-}
-
-.move-status-select select {
-  min-height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #ffffff;
-  color: var(--ink);
-  font: inherit;
-}
-
 .move-tier-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -973,21 +955,56 @@ button:disabled {
   gap: 8px;
 }
 
-.status-select {
-  display: grid;
-  gap: 4px;
-  font-size: 10px;
-  color: var(--muted);
+.status-chip-group {
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
-.status-select select {
-  min-height: 30px;
+.status-chip-group::-webkit-scrollbar {
+  display: none;
+}
+
+.status-chip {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: #ffffff;
-  color: var(--ink);
+  color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
+}
+
+.status-chip.is-active {
+  border-color: rgba(15, 118, 110, 0.28);
+  background: #edfaf5;
+  color: var(--accent);
+}
+
+.status-chip-group.is-compact {
+  width: 100%;
+}
+
+.status-chip-group.is-compact .status-chip {
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 10px;
+}
+
+.move-status-chips {
+  margin: 0 12px 12px;
+}
+
+.move-status-chips .status-chip {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 13px;
 }
 
 .share-actions {
@@ -1436,6 +1453,10 @@ button:disabled {
 .watchlist-card-heading a {
   flex: 0 0 auto;
   color: var(--muted);
+}
+
+.watchlist-status-chips {
+  margin-top: -2px;
 }
 
 .watchlist-favorite {

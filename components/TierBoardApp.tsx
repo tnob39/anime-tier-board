@@ -96,11 +96,11 @@ type StatusApiResponse = {
 };
 
 const viewingStatusOptions: Array<{ value: ViewingStatus; label: string }> = [
-  { value: "planned", label: "Plan" },
-  { value: "watching", label: "Watching" },
-  { value: "completed", label: "Done" },
-  { value: "paused", label: "Paused" },
-  { value: "dropped", label: "Drop" }
+  { value: "planned", label: "見たい" },
+  { value: "watching", label: "視聴中" },
+  { value: "completed", label: "完了" },
+  { value: "paused", label: "保留" },
+  { value: "dropped", label: "中止" }
 ];
 
 const defaultTierTemplates: Array<Omit<TierRow, "itemIds">> = [
@@ -927,23 +927,11 @@ function MoveItemSheet({
           </div>
         </div>
 
-        <label className="move-status-select">
-          <span>Status</span>
-          <select
-            value={status ?? ""}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              onStatusChange(item, nextValue ? (nextValue as ViewingStatus) : null);
-            }}
-          >
-            <option value="">Unset</option>
-            {viewingStatusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <StatusChips
+          className="move-status-chips"
+          status={status}
+          onChange={(nextStatus) => onStatusChange(item, nextStatus)}
+        />
 
         <div className="move-tier-grid">
           {tiers.map((tier) => (
@@ -1186,31 +1174,56 @@ function AnimeCard({
         </div>
         <ReputationBadges item={item} />
         {onStatusChange ? (
-          <label
-            className="status-select"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <span>Status</span>
-            <select
-              value={status ?? ""}
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                onStatusChange(item, nextValue ? (nextValue as ViewingStatus) : null);
-              }}
-            >
-              <option value="">Unset</option>
-              {viewingStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <StatusChips
+            status={status}
+            compact
+            onChange={(nextStatus) => onStatusChange(item, nextStatus)}
+          />
         ) : null}
         </div>
       ) : null}
     </article>
+  );
+}
+
+function StatusChips({
+  status,
+  compact = false,
+  className = "",
+  onChange
+}: {
+  status: ViewingStatus | null;
+  compact?: boolean;
+  className?: string;
+  onChange: (status: ViewingStatus | null) => void;
+}) {
+  return (
+    <div
+      className={["status-chip-group", compact ? "is-compact" : "", className]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label="視聴ステータス"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <button
+        className={!status ? "status-chip is-active" : "status-chip"}
+        type="button"
+        onClick={() => onChange(null)}
+      >
+        未設定
+      </button>
+      {viewingStatusOptions.map((option) => (
+        <button
+          key={option.value}
+          className={status === option.value ? "status-chip is-active" : "status-chip"}
+          type="button"
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
