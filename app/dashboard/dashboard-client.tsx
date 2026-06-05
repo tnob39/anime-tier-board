@@ -4,11 +4,11 @@ import Link from "next/link";
 import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 
 const statusLabels: Record<ViewingStatus, string> = {
-  planned: "Plan",
-  watching: "Watching",
-  completed: "Done",
-  paused: "Paused",
-  dropped: "Dropped"
+  planned: "見たい",
+  watching: "視聴中",
+  completed: "完了",
+  paused: "一時停止",
+  dropped: "中止"
 };
 
 export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
@@ -19,18 +19,18 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
     <main className="app-main dashboard-main">
       <header className="dashboard-header">
         <div>
-          <p className="eyebrow">Personal analytics</p>
-          <h1>Anime Bias Dashboard</h1>
-          <p>{dashboard.totalStatuses} saved viewing statuses.</p>
+          <p className="eyebrow">集計</p>
+          <h1>好み分析ダッシュボード</h1>
+          <p>{dashboard.totalStatuses}件の視聴ステータスを保存中</p>
         </div>
         <Link className="command-button" href="/">
-          Back to board
+          ボードに戻る
         </Link>
       </header>
 
-      <section className="dashboard-tutorial" aria-label="Dashboard tutorial">
+      <section className="dashboard-tutorial" aria-label="ダッシュボードの使い方">
         <div>
-          <p className="eyebrow">How it works</p>
+          <p className="eyebrow">使い方</p>
           <h2>ステータスを付けると、好みの偏りが見えるようになります</h2>
           <p>
             ダッシュボードは、ボード上で保存した視聴ステータスをもとに、
@@ -44,7 +44,7 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
           </li>
           <li>
             <strong>2. Statusを選ぶ</strong>
-            <span>Plan / Watching / Done などを選ぶとTursoへ保存されます。</span>
+            <span>「見たい」「視聴中」「完了」などを選ぶとTursoへ保存されます。</span>
           </li>
           <li>
             <strong>3. ダッシュボードを見る</strong>
@@ -64,7 +64,7 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
 
       <section className="dashboard-grid">
         <article className="dashboard-panel status-panel">
-          <h2>Viewing Status</h2>
+          <h2>視聴ステータス</h2>
           <div className="status-bars">
             {(Object.keys(statusLabels) as ViewingStatus[]).map((status) => (
               <div key={status} className="status-bar-row">
@@ -78,13 +78,13 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
           </div>
         </article>
 
-        <RankPanel title="Genres" items={dashboard.topGenres} />
-        <RankPanel title="Studios" items={dashboard.topStudios} />
-        <RankPanel title="Voice Actors" items={dashboard.topVoiceActors} />
+        <RankPanel title="ジャンル傾向" items={dashboard.topGenres} />
+        <RankPanel title="制作会社" items={dashboard.topStudios} />
+        <RankPanel title="声優" items={dashboard.topVoiceActors} />
       </section>
 
       <section className="dashboard-panel recent-panel">
-        <h2>Recent Updates</h2>
+        <h2>最近更新した作品</h2>
         {dashboard.recent.length ? (
           <div className="recent-grid">
             {dashboard.recent.map((record) => (
@@ -100,7 +100,7 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
             ))}
           </div>
         ) : (
-          <p className="comment-empty">Set viewing statuses on the board to build this dashboard.</p>
+          <p className="comment-empty">ボードで作品にStatusを付けると、ここに反映されます。</p>
         )}
       </section>
     </main>
@@ -127,7 +127,7 @@ function RankPanel({
           ))}
         </ol>
       ) : (
-        <p className="comment-empty">No data yet.</p>
+        <p className="comment-empty">データがまだありません。</p>
       )}
     </article>
   );
