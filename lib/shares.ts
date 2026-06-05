@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { getTursoClient } from "@/lib/turso";
+import type { AnimeStatusRecord } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason } from "@/lib/types";
 
 export const REACTION_KINDS = ["like", "agree", "surprised", "want_to_watch"] as const;
@@ -37,6 +38,22 @@ export type BoardShare = {
   shareId: string;
   board: SharedBoard;
   items: AnimeItem[];
+  createdAt: string;
+  updatedAt: string;
+  reactionCounts: ReactionCounts;
+};
+
+export type SharedWatchlist = {
+  version: number;
+  kind: "watchlist";
+  title: string;
+  updatedAt: string;
+};
+
+export type WatchlistShare = {
+  shareId: string;
+  watchlist: SharedWatchlist;
+  items: AnimeStatusRecord[];
   createdAt: string;
   updatedAt: string;
   reactionCounts: ReactionCounts;
@@ -85,6 +102,62 @@ export async function getShare(shareId: string): Promise<BoardShare | null> {
     shareId: String(row.share_id),
     board: JSON.parse(row.board_json) as SharedBoard,
     items: JSON.parse(row.items_json) as AnimeItem[],
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+    reactionCounts: await getReactionCounts(shareId)
+  };
+}
+
+export async function createWatchlistShare(
+  userId: string,
+  items: AnimeStatusRecord[]
+): Promise<string> {
+  await ensureShareSchema();
+
+  const shareId = createShareId();
+  const now = new Date().toISOString();
+  const watchlist: SharedWatchlist = {
+    version: 1,
+    kind: "watchlist",
+    title: "追ってるアニメ",
+    updatedAt: now
+  };
+
+  await getTursoClient().execute({
+    sql: `insert into board_shares
+            (share_id, user_id, board_json, items_json, created_at, updated_at)
+          values (?, ?, ?, ?, ?, ?)`,
+    args: [shareId, userId, JSON.stringify(watchlist), JSON.stringify(items), now, now]
+  });
+
+  return shareId;
+}
+
+export async function getWatchlistShare(shareId: string): Promise<WatchlistShare | null> {
+  await ensureShareSchema();
+
+  const shareResult = await getTursoClient().execute({
+    sql: `select share_id, board_json, items_json, created_at, updated_at
+          from board_shares
+          where share_id = ?
+          limit 1`,
+    args: [shareId]
+  });
+  const row = shareResult.rows[0];
+
+  if (!row || typeof row.board_json !== "string" || typeof row.items_json !== "string") {
+    return null;
+  }
+
+  const watchlist = JSON.parse(row.board_json) as SharedWatchlist;
+  if (watchlist.kind !== "watchlist") {
+    return null;
+  }
+
+  return {
+    shareId: String(row.share_id),
+    watchlist,
+    items: JSON.parse(row.items_json) as AnimeStatusRecord[],
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
     reactionCounts: await getReactionCounts(shareId)

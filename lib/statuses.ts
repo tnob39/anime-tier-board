@@ -9,6 +9,9 @@ export type AnimeStatusRecord = {
   animeId: string;
   status: ViewingStatus;
   anime: AnimeItem | null;
+  favoriteLevel: number | null;
+  watchSlot: string | null;
+  notes: string | null;
   updatedAt: string;
 };
 
@@ -28,7 +31,7 @@ export async function listStatuses(userId: string): Promise<AnimeStatusRecord[]>
   await ensureStatusSchema();
 
   const result = await getTursoClient().execute({
-    sql: `select anime_id, status, anime_json, updated_at
+    sql: `select anime_id, status, anime_json, favorite_level, watch_slot, notes, updated_at
           from user_anime_statuses
           where user_id = ?
           order by updated_at desc
@@ -47,6 +50,9 @@ export async function listStatuses(userId: string): Promise<AnimeStatusRecord[]>
         animeId: String(row.anime_id),
         status,
         anime: parseAnime(row.anime_json),
+        favoriteLevel: normalizeFavoriteLevel(row.favorite_level),
+        watchSlot: row.watch_slot ? String(row.watch_slot) : null,
+        notes: row.notes ? String(row.notes) : null,
         updatedAt: String(row.updated_at)
       };
     })
@@ -88,6 +94,47 @@ export async function deleteStatus(userId: string, animeId: string) {
   });
 }
 
+export async function updateTrackingDetails({
+  userId,
+  animeId,
+  favoriteLevel,
+  watchSlot,
+  notes
+}: {
+  userId: string;
+  animeId: string;
+  favoriteLevel: number | null;
+  watchSlot: string | null;
+  notes: string | null;
+}) {
+  await ensureStatusSchema();
+
+  const normalizedFavoriteLevel =
+    typeof favoriteLevel === "number"
+      ? Math.min(5, Math.max(1, Math.trunc(favoriteLevel)))
+      : null;
+  const normalizedWatchSlot = normalizeOptionalText(watchSlot, 80);
+  const normalizedNotes = normalizeOptionalText(notes, 500);
+  const now = new Date().toISOString();
+
+  await getTursoClient().execute({
+    sql: `update user_anime_statuses
+          set favorite_level = ?,
+              watch_slot = ?,
+              notes = ?,
+              updated_at = ?
+          where user_id = ? and anime_id = ?`,
+    args: [
+      normalizedFavoriteLevel,
+      normalizedWatchSlot,
+      normalizedNotes,
+      now,
+      userId,
+      animeId
+    ]
+  });
+}
+
 export async function getDashboard(userId: string): Promise<DashboardData> {
   const records = await listStatuses(userId);
   const statusCounts = createEmptyStatusCounts();
@@ -125,17 +172,31 @@ export function isViewingStatus(value: string): value is ViewingStatus {
   return VIEWING_STATUSES.includes(value as ViewingStatus);
 }
 
-function ensureStatusSchema() {
-  statusSchemaReady ??= getTursoClient()
-    .execute(`create table if not exists user_anime_statuses (
+export function ensureStatusSchema() {
+  statusSchemaReady ??= (async () => {
+    const client = getTursoClient();
+
+    await client.execute(`create table if not exists user_anime_statuses (
       user_id text not null,
       anime_id text not null,
       status text not null,
       anime_json text not null,
+      favorite_level integer,
+      watch_slot text,
+      notes text,
       updated_at text not null,
       primary key (user_id, anime_id)
-    )`)
-    .then(() => undefined);
+    )`);
+    await client
+      .execute("alter table user_anime_statuses add column favorite_level integer")
+      .catch(() => undefined);
+    await client
+      .execute("alter table user_anime_statuses add column watch_slot text")
+      .catch(() => undefined);
+    await client
+      .execute("alter table user_anime_statuses add column notes text")
+      .catch(() => undefined);
+  })();
 
   return statusSchemaReady;
 }
@@ -160,6 +221,28 @@ function parseAnime(value: unknown): AnimeItem | null {
   } catch {
     return null;
   }
+}
+
+function normalizeFavoriteLevel(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") {
+    return null;
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 1) {
+    return null;
+  }
+
+  return Math.min(5, Math.max(1, Math.trunc(numeric)));
+}
+
+function normalizeOptionalText(value: string | null, maxLength: number): string | null {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.slice(0, maxLength);
 }
 
 function addCount(counts: Map<string, number>, rawName: string) {

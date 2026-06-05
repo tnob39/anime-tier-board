@@ -766,7 +766,10 @@ export function TierBoardApp() {
             <RotateCcw size={18} />
           </button>
           <a className="command-button dashboard-link" href="/dashboard">
-            <span>Dashboard</span>
+            <span>分析</span>
+          </a>
+          <a className="command-button dashboard-link" href="/watchlist">
+            <span>追ってる</span>
           </a>
         </div>
       </header>
@@ -1193,8 +1196,6 @@ function AnimeCard({
             </select>
           </label>
         ) : null}
-        <AiringBadges item={item} />
-        <StreamingLinks item={item} />
         </div>
       ) : null}
     </article>
