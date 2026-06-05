@@ -27,10 +27,12 @@ import {
 import { toPng } from "html-to-image";
 import { signIn, signOut, useSession } from "next-auth/react";
 import {
+  BarChart3,
   CalendarDays,
   Download,
   ExternalLink,
   Heart,
+  ListChecks,
   Loader2,
   Plus,
   PlayCircle,
@@ -765,11 +767,21 @@ export function TierBoardApp() {
           >
             <RotateCcw size={18} />
           </button>
-          <a className="command-button dashboard-link" href="/dashboard">
-            <span>分析</span>
+          <a
+            className="icon-button nav-icon-link"
+            href="/dashboard"
+            title="分析"
+            aria-label="分析ページを開く"
+          >
+            <BarChart3 size={18} />
           </a>
-          <a className="command-button dashboard-link" href="/watchlist">
-            <span>追ってる</span>
+          <a
+            className="icon-button nav-icon-link"
+            href="/watchlist"
+            title="視聴管理"
+            aria-label="視聴管理ページを開く"
+          >
+            <ListChecks size={18} />
           </a>
         </div>
       </header>

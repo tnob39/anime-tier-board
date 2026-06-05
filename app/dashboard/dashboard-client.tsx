@@ -1,6 +1,8 @@
 "use client";
 
+import { Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 
 const statusLabels: Record<ViewingStatus, string> = {
@@ -14,6 +16,31 @@ const statusLabels: Record<ViewingStatus, string> = {
 export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
   const maxStatus = Math.max(1, ...Object.values(dashboard.statusCounts));
   const hasData = dashboard.totalStatuses > 0;
+  const [sharing, setSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function createShare() {
+    setSharing(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/dashboard/shares", { method: "POST" });
+      const payload = (await response.json()) as { shareId?: string; error?: string };
+
+      if (!response.ok || !payload.shareId) {
+        throw new Error(payload.error ?? "共有URLの作成に失敗しました。");
+      }
+
+      const nextShareUrl = `${window.location.origin}/dashboard/share/${payload.shareId}`;
+      setShareUrl(nextShareUrl);
+      await navigator.clipboard?.writeText(nextShareUrl);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "共有URLの作成に失敗しました。");
+    } finally {
+      setSharing(false);
+    }
+  }
 
   return (
     <main className="app-main dashboard-main">
@@ -23,10 +50,32 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
           <h1>好み分析ダッシュボード</h1>
           <p>{dashboard.totalStatuses}件の視聴ステータスを保存中</p>
         </div>
-        <Link className="command-button" href="/">
-          ボードに戻る
-        </Link>
+        <div className="dashboard-actions">
+          <Link className="command-button" href="/">
+            ボードに戻る
+          </Link>
+          <button
+            className="icon-button nav-icon-link"
+            type="button"
+            onClick={() => void createShare()}
+            disabled={sharing || !hasData}
+            title="分析を共有"
+            aria-label="分析を共有"
+          >
+            {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
+          </button>
+        </div>
       </header>
+
+      {message ? <div className="notice error">{message}</div> : null}
+      {shareUrl ? (
+        <div className="notice success">
+          共有URLをコピーしました:{" "}
+          <a href={shareUrl} target="_blank" rel="noreferrer">
+            {shareUrl}
+          </a>
+        </div>
+      ) : null}
 
       <section className="dashboard-tutorial" aria-label="ダッシュボードの使い方">
         <div>
@@ -34,7 +83,7 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
           <h2>ステータスを付けると、好みの偏りが見えるようになります</h2>
           <p>
             ダッシュボードは、ボード上で保存した視聴ステータスをもとに、
-            ジャンル・制作会社・声優の傾向を集計します。
+            ジャンル・制作会社・声優の傾向を集計します。共有すると、この集計結果にコメントをもらえます。
           </p>
         </div>
         <ol className="tutorial-steps">
@@ -47,8 +96,8 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
             <span>「見たい」「視聴中」「完了」などを選ぶとTursoへ保存されます。</span>
           </li>
           <li>
-            <strong>3. ダッシュボードを見る</strong>
-            <span>保存した作品から、ステータス数と好みの偏りが集計されます。</span>
+            <strong>3. 分析を共有する</strong>
+            <span>右上の共有アイコンから、分析結果の共有URLを作成できます。</span>
           </li>
         </ol>
         {!hasData ? (
@@ -62,26 +111,7 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
         ) : null}
       </section>
 
-      <section className="dashboard-grid">
-        <article className="dashboard-panel status-panel">
-          <h2>視聴ステータス</h2>
-          <div className="status-bars">
-            {(Object.keys(statusLabels) as ViewingStatus[]).map((status) => (
-              <div key={status} className="status-bar-row">
-                <span>{statusLabels[status]}</span>
-                <div>
-                  <i style={{ width: `${(dashboard.statusCounts[status] / maxStatus) * 100}%` }} />
-                </div>
-                <strong>{dashboard.statusCounts[status]}</strong>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <RankPanel title="ジャンル傾向" items={dashboard.topGenres} />
-        <RankPanel title="制作会社" items={dashboard.topStudios} />
-        <RankPanel title="声優" items={dashboard.topVoiceActors} />
-      </section>
+      <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
 
       <section className="dashboard-panel recent-panel">
         <h2>最近更新した作品</h2>
@@ -104,6 +134,39 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
         )}
       </section>
     </main>
+  );
+}
+
+export function DashboardSummary({
+  dashboard,
+  maxStatus
+}: {
+  dashboard: DashboardData;
+  maxStatus?: number;
+}) {
+  const safeMaxStatus = maxStatus ?? Math.max(1, ...Object.values(dashboard.statusCounts));
+
+  return (
+    <section className="dashboard-grid">
+      <article className="dashboard-panel status-panel">
+        <h2>視聴ステータス</h2>
+        <div className="status-bars">
+          {(Object.keys(statusLabels) as ViewingStatus[]).map((status) => (
+            <div key={status} className="status-bar-row">
+              <span>{statusLabels[status]}</span>
+              <div>
+                <i style={{ width: `${(dashboard.statusCounts[status] / safeMaxStatus) * 100}%` }} />
+              </div>
+              <strong>{dashboard.statusCounts[status]}</strong>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <RankPanel title="ジャンル傾向" items={dashboard.topGenres} />
+      <RankPanel title="制作会社" items={dashboard.topStudios} />
+      <RankPanel title="声優" items={dashboard.topVoiceActors} />
+    </section>
   );
 }
 

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { getTursoClient } from "@/lib/turso";
-import type { AnimeStatusRecord } from "@/lib/statuses";
+import type { AnimeStatusRecord, DashboardData } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason } from "@/lib/types";
 
 export const REACTION_KINDS = ["like", "agree", "surprised", "want_to_watch"] as const;
@@ -54,6 +54,22 @@ export type WatchlistShare = {
   shareId: string;
   watchlist: SharedWatchlist;
   items: AnimeStatusRecord[];
+  createdAt: string;
+  updatedAt: string;
+  reactionCounts: ReactionCounts;
+};
+
+export type SharedDashboard = {
+  version: number;
+  kind: "dashboard";
+  title: string;
+  updatedAt: string;
+};
+
+export type DashboardShare = {
+  shareId: string;
+  dashboard: SharedDashboard;
+  data: DashboardData;
   createdAt: string;
   updatedAt: string;
   reactionCounts: ReactionCounts;
@@ -158,6 +174,62 @@ export async function getWatchlistShare(shareId: string): Promise<WatchlistShare
     shareId: String(row.share_id),
     watchlist,
     items: JSON.parse(row.items_json) as AnimeStatusRecord[],
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+    reactionCounts: await getReactionCounts(shareId)
+  };
+}
+
+export async function createDashboardShare(
+  userId: string,
+  data: DashboardData
+): Promise<string> {
+  await ensureShareSchema();
+
+  const shareId = createShareId();
+  const now = new Date().toISOString();
+  const dashboard: SharedDashboard = {
+    version: 1,
+    kind: "dashboard",
+    title: "好み分析ダッシュボード",
+    updatedAt: now
+  };
+
+  await getTursoClient().execute({
+    sql: `insert into board_shares
+            (share_id, user_id, board_json, items_json, created_at, updated_at)
+          values (?, ?, ?, ?, ?, ?)`,
+    args: [shareId, userId, JSON.stringify(dashboard), JSON.stringify(data), now, now]
+  });
+
+  return shareId;
+}
+
+export async function getDashboardShare(shareId: string): Promise<DashboardShare | null> {
+  await ensureShareSchema();
+
+  const shareResult = await getTursoClient().execute({
+    sql: `select share_id, board_json, items_json, created_at, updated_at
+          from board_shares
+          where share_id = ?
+          limit 1`,
+    args: [shareId]
+  });
+  const row = shareResult.rows[0];
+
+  if (!row || typeof row.board_json !== "string" || typeof row.items_json !== "string") {
+    return null;
+  }
+
+  const dashboard = JSON.parse(row.board_json) as SharedDashboard;
+  if (dashboard.kind !== "dashboard") {
+    return null;
+  }
+
+  return {
+    shareId: String(row.share_id),
+    dashboard,
+    data: JSON.parse(row.items_json) as DashboardData,
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
     reactionCounts: await getReactionCounts(shareId)

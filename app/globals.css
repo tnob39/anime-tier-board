@@ -961,6 +961,18 @@ button:disabled {
   text-decoration: none;
 }
 
+.nav-icon-link {
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .status-select {
   display: grid;
   gap: 4px;
@@ -1541,6 +1553,7 @@ button:disabled {
   .share-actions,
   .comment-form,
   .dashboard-header,
+  .dashboard-actions,
   .dashboard-tutorial,
   .tutorial-empty-callout,
   .watchlist-header,
@@ -1552,6 +1565,20 @@ button:disabled {
 
   .share-actions .command-button {
     width: 100%;
+  }
+
+  .dashboard-actions {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .dashboard-actions .command-button {
+    flex: 1 1 auto;
+  }
+
+  .dashboard-actions .icon-button {
+    width: 48px;
+    min-width: 48px;
   }
 
   .dashboard-grid {
