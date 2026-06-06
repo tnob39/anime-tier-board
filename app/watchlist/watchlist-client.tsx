@@ -28,6 +28,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageKind, setMessageKind] = useState<"success" | "error">("error");
   const visibleItems = useMemo(() => items.filter((item) => item.anime), [items]);
 
   async function updateItem(
@@ -112,6 +113,71 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
     }
   }
 
+  async function saveTrackingDraft(
+    record: AnimeStatusRecord,
+    draft: Pick<AnimeStatusRecord, "status" | "favoriteLevel" | "watchSlot" | "notes">
+  ) {
+    if (!record.anime) {
+      return;
+    }
+
+    const current = record;
+    const next = { ...record, ...draft };
+    setItems((records) =>
+      records.map((item) => (item.animeId === record.animeId ? next : item))
+    );
+    setSavingId(record.animeId);
+    setMessage(null);
+
+    try {
+      if (draft.status !== record.status) {
+        const statusResponse = await fetch("/api/statuses", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            animeId: record.animeId,
+            status: draft.status,
+            anime: record.anime
+          })
+        });
+
+        if (!statusResponse.ok) {
+          throw new Error("ステータス保存に失敗しました。");
+        }
+      }
+
+      const trackingResponse = await fetch("/api/watchlist", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          animeId: record.animeId,
+          favoriteLevel: draft.favoriteLevel,
+          watchSlot: draft.watchSlot,
+          notes: draft.notes
+        })
+      });
+
+      if (!trackingResponse.ok) {
+        throw new Error("視聴管理の保存に失敗しました。");
+      }
+
+      setMessageKind("success");
+      setMessage("保存しました。同じGoogleアカウントで別端末から確認できます。");
+    } catch (error) {
+      setItems((records) =>
+        records.map((item) => (item.animeId === record.animeId ? current : item))
+      );
+      setMessageKind("error");
+      setMessage(error instanceof Error ? error.message : "視聴管理の保存に失敗しました。");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   async function createShare() {
     setSharing(true);
     setMessage(null);
@@ -174,7 +240,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
         </div>
       </section>
 
-      {message ? <div className="notice error">{message}</div> : null}
+      {message ? <div className={`notice ${messageKind}`}>{message}</div> : null}
       {shareUrl ? (
         <div className="notice success">
           共有URLをコピーしました:{" "}
@@ -194,6 +260,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
                 saving={savingId === record.animeId}
                 onUpdate={(patch) => void updateItem(record.animeId, patch)}
                 onStatusChange={(status) => void updateStatus(record, status)}
+                onSave={(draft) => void saveTrackingDraft(record, draft)}
               />
             ) : null
           )}
@@ -215,7 +282,8 @@ function WatchlistCard({
   record,
   saving,
   onUpdate,
-  onStatusChange
+  onStatusChange,
+  onSave
 }: {
   record: AnimeStatusRecord;
   saving: boolean;
@@ -223,8 +291,14 @@ function WatchlistCard({
     patch: Partial<Pick<AnimeStatusRecord, "favoriteLevel" | "watchSlot" | "notes">>
   ) => void;
   onStatusChange: (status: ViewingStatus) => void;
+  onSave: (
+    draft: Pick<AnimeStatusRecord, "status" | "favoriteLevel" | "watchSlot" | "notes">
+  ) => void;
 }) {
   const anime = record.anime as AnimeItem;
+  const [draftStatus, setDraftStatus] = useState(record.status);
+  const [draftFavoriteLevel, setDraftFavoriteLevel] = useState(record.favoriteLevel);
+  const [draftWatchSlot, setDraftWatchSlot] = useState(record.watchSlot ?? "");
   const [draftNotes, setDraftNotes] = useState(record.notes ?? "");
   const schedule = getScheduleText(anime);
   const nextEpisode = getNextEpisodeText(anime);
@@ -232,8 +306,17 @@ function WatchlistCard({
   const streamingLink = anime.streamingEpisodes?.find((episode) => episode.url);
 
   useEffect(() => {
+    setDraftStatus(record.status);
+    setDraftFavoriteLevel(record.favoriteLevel);
+    setDraftWatchSlot(record.watchSlot ?? "");
     setDraftNotes(record.notes ?? "");
-  }, [record.notes]);
+  }, [record.favoriteLevel, record.notes, record.status, record.watchSlot]);
+
+  const isDirty =
+    draftStatus !== record.status ||
+    draftFavoriteLevel !== record.favoriteLevel ||
+    draftWatchSlot !== (record.watchSlot ?? "") ||
+    draftNotes !== (record.notes ?? "");
 
   return (
     <article className="watchlist-card">
@@ -242,26 +325,22 @@ function WatchlistCard({
         <div className="watchlist-card-heading">
           <div>
             <strong>{anime.title}</strong>
-            <span>{statusLabels[record.status]}</span>
+            <span>{statusLabels[draftStatus]}</span>
           </div>
           <a href={anime.siteUrl} target="_blank" rel="noreferrer" aria-label="作品ページを開く">
             <ExternalLink size={16} />
           </a>
         </div>
 
-        <StatusChips status={record.status} onChange={onStatusChange} />
+        <StatusChips status={draftStatus} onChange={setDraftStatus} />
 
         <div className="watchlist-favorite" aria-label="お気に入り度">
           {[1, 2, 3, 4, 5].map((level) => (
             <button
               key={level}
               type="button"
-              className={level <= (record.favoriteLevel ?? 0) ? "is-active" : ""}
-              onClick={() =>
-                onUpdate({
-                  favoriteLevel: record.favoriteLevel === level ? null : level
-                })
-              }
+              className={level <= (draftFavoriteLevel ?? 0) ? "is-active" : ""}
+              onClick={() => setDraftFavoriteLevel(draftFavoriteLevel === level ? null : level)}
               title={`${level}`}
             >
               <Star size={18} fill="currentColor" />
@@ -289,12 +368,8 @@ function WatchlistCard({
         <label className="watchlist-field">
           <span>いつ見る？</span>
           <select
-            value={record.watchSlot ?? ""}
-            onChange={(event) =>
-              onUpdate({
-                watchSlot: event.target.value || null
-              })
-            }
+            value={draftWatchSlot}
+            onChange={(event) => setDraftWatchSlot(event.target.value)}
           >
             {watchSlotOptions.map((option) => (
               <option key={option || "empty"} value={option}>
@@ -309,15 +384,26 @@ function WatchlistCard({
           <textarea
             value={draftNotes}
             onChange={(event) => setDraftNotes(event.target.value)}
-            onBlur={() => {
-              if (draftNotes !== (record.notes ?? "")) {
-                onUpdate({ notes: draftNotes });
-              }
-            }}
             placeholder="例: 週末に2話まとめて見る"
             maxLength={500}
           />
         </label>
+        <button
+          className="command-button emphasis-button watchlist-save-button"
+          type="button"
+          disabled={!isDirty || saving}
+          onClick={() =>
+            onSave({
+              status: draftStatus,
+              favoriteLevel: draftFavoriteLevel,
+              watchSlot: draftWatchSlot || null,
+              notes: draftNotes || null
+            })
+          }
+        >
+          {saving ? <Loader2 className="spin" size={16} /> : null}
+          <span>{isDirty ? "保存する" : "保存済み"}</span>
+        </button>
       </div>
     </article>
   );

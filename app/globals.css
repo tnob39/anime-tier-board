@@ -1603,6 +1603,11 @@ button:disabled {
   font-weight: 700;
 }
 
+.watchlist-save-button {
+  width: 100%;
+  margin-top: 2px;
+}
+
 .watchlist-field {
   display: grid;
   gap: 5px;
