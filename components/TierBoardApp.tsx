@@ -29,11 +29,13 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import {
   BarChart3,
   CalendarDays,
+  Compass,
   Download,
   ExternalLink,
   Heart,
   ListChecks,
   Loader2,
+  Mic2,
   Plus,
   PlayCircle,
   RefreshCw,
@@ -142,6 +144,8 @@ export function TierBoardApp() {
   const [exporting, setExporting] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
+  const [hideMovies, setHideMovies] = useState(false);
+  const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const dragOriginTierIdRef = useRef<string | null>(null);
 
@@ -152,17 +156,32 @@ export function TierBoardApp() {
   const isAuthenticated = authStatus === "authenticated";
   const userLabel = session?.user?.name ?? session?.user?.email ?? "Googleユーザー";
 
+  const visibleItems = useMemo(
+    () => filterAnimeItems(items, { hideMovies, hideRerunCandidates, seasonYear }),
+    [hideMovies, hideRerunCandidates, items, seasonYear]
+  );
+  const visibleItemIds = useMemo(
+    () => new Set(visibleItems.map((item) => item.id)),
+    [visibleItems]
+  );
   const itemMap = useMemo(() => {
-    return new Map(items.map((item) => [item.id, item]));
-  }, [items]);
+    return new Map(visibleItems.map((item) => [item.id, item]));
+  }, [visibleItems]);
 
   const activeItem = activeItemId ? itemMap.get(activeItemId) ?? null : null;
   const moveMenuItem = moveMenuItemId ? itemMap.get(moveMenuItemId) ?? null : null;
   const moveMenuCurrentTierId =
     board && moveMenuItemId ? findTierIdByItemId(board.tiers, moveMenuItemId) : null;
-  const unrankedTier = board?.tiers.find((tier) => tier.id === UNRANKED_TIER_ID);
-  const rankedTiers =
-    board?.tiers.filter((tier) => tier.id !== UNRANKED_TIER_ID) ?? [];
+  const visibleTiers = useMemo(
+    () =>
+      board?.tiers.map((tier) => ({
+        ...tier,
+        itemIds: tier.itemIds.filter((itemId) => visibleItemIds.has(itemId))
+      })) ?? [],
+    [board?.tiers, visibleItemIds]
+  );
+  const unrankedTier = visibleTiers.find((tier) => tier.id === UNRANKED_TIER_ID);
+  const rankedTiers = visibleTiers.filter((tier) => tier.id !== UNRANKED_TIER_ID);
   const tierIdSet = useMemo(
     () => new Set(board?.tiers.map((tier) => tier.id) ?? []),
     [board?.tiers]
@@ -703,6 +722,27 @@ export function TierBoardApp() {
             </select>
           </label>
 
+          <div className="filter-chip-group no-export" aria-label="表示フィルター">
+            <button
+              className={hideMovies ? "filter-chip is-active" : "filter-chip"}
+              type="button"
+              onClick={() => setHideMovies((current) => !current)}
+              aria-pressed={hideMovies}
+              title="映画を非表示"
+            >
+              映画OFF
+            </button>
+            <button
+              className={hideRerunCandidates ? "filter-chip is-active" : "filter-chip"}
+              type="button"
+              onClick={() => setHideRerunCandidates((current) => !current)}
+              aria-pressed={hideRerunCandidates}
+              title="旧作・再放送候補を非表示"
+            >
+              旧作OFF
+            </button>
+          </div>
+
           <button
             className="command-button"
             type="button"
@@ -782,6 +822,22 @@ export function TierBoardApp() {
             aria-label="視聴管理ページを開く"
           >
             <ListChecks size={18} />
+          </a>
+          <a
+            className="icon-button nav-icon-link"
+            href="/explore"
+            title="過去作品探索"
+            aria-label="過去作品探索ページを開く"
+          >
+            <Compass size={18} />
+          </a>
+          <a
+            className="icon-button nav-icon-link"
+            href="/voice-actors"
+            title="声優"
+            aria-label="声優ページを開く"
+          >
+            <Mic2 size={18} />
           </a>
         </div>
       </header>
@@ -1173,6 +1229,8 @@ function AnimeCard({
           </a>
         </div>
         <ReputationBadges item={item} />
+        <AiringBadges item={item} />
+        <StreamingPlatformLinks item={item} />
         {onStatusChange ? (
           <StatusChips
             status={status}
@@ -1295,6 +1353,36 @@ function StreamingLinks({ item }: { item: AnimeItem }) {
           <span>{episode.site ?? episode.title ?? "配信"}</span>
         </a>
       ))}
+    </div>
+  );
+}
+
+function StreamingPlatformLinks({ item }: { item: AnimeItem }) {
+  const platforms = getStreamingPlatforms(item);
+  const visiblePlatforms = platforms.slice(0, 2);
+  const remainingCount = Math.max(0, platforms.length - visiblePlatforms.length);
+
+  if (!visiblePlatforms.length) {
+    return null;
+  }
+
+  return (
+    <div className="streaming-links">
+      {visiblePlatforms.map((platform) => (
+        <a
+          key={`${platform.name}:${platform.url}`}
+          href={platform.url}
+          target="_blank"
+          rel="noreferrer"
+          title={`${platform.name}で配信候補を見る`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <PlayCircle size={11} />
+          <span>{platform.name}</span>
+        </a>
+      ))}
+      {remainingCount ? <span className="streaming-more">+{remainingCount}</span> : null}
     </div>
   );
 }
@@ -1484,6 +1572,95 @@ function estimateCourFromEpisodes(episodes?: number | null): string | null {
   }
 
   return "4クール以上";
+}
+
+function filterAnimeItems(
+  items: AnimeItem[],
+  options: {
+    hideMovies: boolean;
+    hideRerunCandidates: boolean;
+    seasonYear: number;
+  }
+): AnimeItem[] {
+  return items.filter((item) => {
+    if (options.hideMovies && isMovie(item)) {
+      return false;
+    }
+
+    if (options.hideRerunCandidates && isRerunCandidate(item, options.seasonYear)) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function isMovie(item: AnimeItem): boolean {
+  return normalizeFormat(item.format) === "MOVIE";
+}
+
+function isRerunCandidate(item: AnimeItem, selectedYear: number): boolean {
+  if (item.isRebroadcast) {
+    return true;
+  }
+
+  const format = normalizeFormat(item.format);
+  if (!["TV", "TV_SHORT", "ONA", "SPECIAL"].includes(format)) {
+    return false;
+  }
+
+  const originalYear = getOriginalStartYear(item);
+  return typeof originalYear === "number" && originalYear < selectedYear;
+}
+
+function getOriginalStartYear(item: AnimeItem): number | null {
+  if (item.airing?.startDate) {
+    const parsed = new Date(item.airing.startDate);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.getUTCFullYear();
+    }
+  }
+
+  return item.seasonYear ?? null;
+}
+
+function normalizeFormat(format?: string | null): string {
+  return format?.trim().replace(/\s+/g, "_").toUpperCase() ?? "";
+}
+
+function getStreamingPlatforms(item: AnimeItem) {
+  if (item.streamingPlatforms?.length) {
+    return item.streamingPlatforms.filter((platform) => platform.url && platform.name);
+  }
+
+  const platforms = new Map<string, { name: string; url: string }>();
+  for (const episode of item.streamingEpisodes ?? []) {
+    if (!episode.url) {
+      continue;
+    }
+
+    const name = episode.site?.trim() || getHostLabel(episode.url);
+    if (!name) {
+      continue;
+    }
+
+    const key = name.toLowerCase();
+    if (!platforms.has(key)) {
+      platforms.set(key, { name, url: episode.url });
+    }
+  }
+
+  return Array.from(platforms.values()).slice(0, 5);
+}
+
+function getHostLabel(url: string): string | null {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    const [label] = host.split(".");
+    return label ? label.charAt(0).toUpperCase() + label.slice(1) : null;
+  } catch {
+    return null;
+  }
 }
 
 function createDefaultBoard(

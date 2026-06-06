@@ -158,7 +158,9 @@ export async function fetchJikanSeasonalAnime(
           broadcastText: entry.broadcast?.string ?? null,
           courEstimate: estimateCour(entry.episodes)
         },
-        streamingEpisodes: []
+        isRebroadcast: isLikelyRebroadcast(entry),
+        streamingEpisodes: [],
+        streamingPlatforms: []
       });
     }
 
@@ -174,6 +176,20 @@ export async function fetchJikanSeasonalAnime(
   }
 
   return dedupeById(items);
+}
+
+function isLikelyRebroadcast(entry: JikanAnime): boolean {
+  const combinedText = [
+    entry.title,
+    entry.title_english,
+    entry.title_japanese,
+    ...(entry.titles ?? []).map((title) => title.title),
+    entry.broadcast?.string
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return /再放送|再配信|rerun|rebroadcast|re-air/i.test(combinedText);
 }
 
 function cleanStringList(values: Array<string | null | undefined>): string[] {

@@ -305,6 +305,14 @@ export async function fetchAniListSeasonalAnime(
         english: entry.title.english
       };
 
+      const streamingEpisodes = (entry.streamingEpisodes ?? [])
+        .filter((episode) => Boolean(episode.url))
+        .map((episode) => ({
+          title: episode.title,
+          site: episode.site,
+          url: episode.url as string
+        }));
+
       items.push({
         id: `anilist-${entry.id}`,
         source: "anilist",
@@ -351,13 +359,9 @@ export async function fetchAniListSeasonalAnime(
               airingAt: formatUnixSeconds(node.airingAt as number)
             }))
         },
-        streamingEpisodes: (entry.streamingEpisodes ?? [])
-          .filter((episode) => Boolean(episode.url))
-          .map((episode) => ({
-            title: episode.title,
-            site: episode.site,
-            url: episode.url as string
-          }))
+        isRebroadcast: isLikelyRebroadcast(entry),
+        streamingEpisodes,
+        streamingPlatforms: normalizeStreamingPlatforms(streamingEpisodes)
       });
     }
 
@@ -371,6 +375,66 @@ export async function fetchAniListSeasonalAnime(
   }
 
   return dedupeById(items);
+}
+
+function normalizeStreamingPlatforms(
+  episodes: Array<{ title?: string | null; site?: string | null; url: string }>
+) {
+  const platforms = new Map<string, { name: string; url: string; source: "anilist" }>();
+
+  for (const episode of episodes) {
+    const name = normalizePlatformName(episode.site ?? inferPlatformName(episode.url));
+    if (!name) {
+      continue;
+    }
+
+    const key = name.toLowerCase();
+    if (!platforms.has(key)) {
+      platforms.set(key, {
+        name,
+        url: episode.url,
+        source: "anilist"
+      });
+    }
+  }
+
+  return Array.from(platforms.values()).slice(0, 5);
+}
+
+function normalizePlatformName(value?: string | null): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed
+    .replace(/\s*-\s*Watch\s*$/i, "")
+    .replace(/\s+streaming$/i, "")
+    .trim();
+}
+
+function inferPlatformName(url: string): string | null {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    const [name] = host.split(".");
+    return name ? name.charAt(0).toUpperCase() + name.slice(1) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isLikelyRebroadcast(entry: AniListMedia): boolean {
+  const combinedText = [
+    entry.title.native,
+    entry.title.userPreferred,
+    entry.title.romaji,
+    entry.title.english,
+    ...(entry.streamingEpisodes ?? []).flatMap((episode) => [episode.title, episode.site])
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return /再放送|再配信|rerun|rebroadcast|re-air/i.test(combinedText);
 }
 
 async function fetchAniListPage(variables: {

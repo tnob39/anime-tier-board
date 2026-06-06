@@ -26,6 +26,8 @@ export type AnimeItem = {
   reputation?: AnimeReputation | null;
   airing?: AnimeAiringInfo | null;
   streamingEpisodes?: AnimeStreamingEpisode[];
+  streamingPlatforms?: AnimeStreamingPlatform[];
+  isRebroadcast?: boolean | null;
   genres?: string[];
   studios?: AnimeStudio[];
   voiceActors?: AnimeVoiceActor[];
@@ -81,6 +83,13 @@ export type AnimeStreamingEpisode = {
   title?: string | null;
   site?: string | null;
   url: string;
+};
+
+export type AnimeStreamingPlatform = {
+  name: string;
+  url: string;
+  source?: AnimeSourceName | "manual" | string;
+  region?: string | null;
 };
 
 export type SeasonalAnimeResult = {
