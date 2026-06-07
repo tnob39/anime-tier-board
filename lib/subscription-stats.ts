@@ -33,6 +33,12 @@ export type SubscriptionStats = {
 export function getAnimeTmdbProviderIds(anime: AnimeItem): number[] {
   const providerIds = new Set<number>();
 
+  // TMDb JP provider data embedded in anime_json (most reliable)
+  for (const provider of anime.streamingProvidersJp?.flatrate ?? []) {
+    providerIds.add(provider.id);
+  }
+
+  // AniList streaming data fallback
   for (const platform of anime.streamingPlatforms ?? []) {
     addProviderId(providerIds, platform.name);
   }
