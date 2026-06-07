@@ -3,7 +3,6 @@
 import { Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { ChangelogSection } from "./changelog-section";
 import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 
 const statusLabels: Record<ViewingStatus, string> = {
@@ -138,7 +137,11 @@ export function DashboardClient({
         </Link>
       </section>
 
-      <ChangelogSection />
+      <Link className="dashboard-updates-link" href="/updates">
+        <span className="dashboard-updates-badge">NEW</span>
+        v0.7 — サブスク最適化・布教カードを追加しました
+        <span className="dashboard-updates-arrow">›</span>
+      </Link>
 
       <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
 
