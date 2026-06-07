@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { fetchSeasonalAnime } from "@/lib/anime-sources";
 import { getCurrentAnimeSeason, normalizeSeason } from "@/lib/season";
+import {
+  buildProviderMapForItems,
+  enrichWithStreamingProviders,
+} from "@/lib/streaming-providers";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +25,14 @@ export async function GET(request: Request) {
 
   try {
     const result = await fetchSeasonalAnime(year, season);
-
+    const providerMap = await buildProviderMapForItems(result.items);
+    const enrichedItems = enrichWithStreamingProviders(result.items, providerMap);
     return NextResponse.json({
       year,
       season,
       generatedAt: new Date().toISOString(),
-      ...result
+      ...result,
+      items: enrichedItems,
     });
   } catch (error) {
     return NextResponse.json(
