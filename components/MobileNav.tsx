@@ -9,7 +9,7 @@ const navItems = [
   { href: "/watchlist", label: "視聴中", icon: ListChecks },
   { href: "/explore", label: "探す", icon: Compass },
   { href: "/subscriptions", label: "サブスク", icon: CreditCard },
-  { href: "/dashboard", label: "分析", icon: BarChart3 }
+  { href: "/dashboard", label: "分析", icon: BarChart3, badge: true }
 ];
 
 export function MobileNav() {
@@ -28,7 +28,10 @@ export function MobileNav() {
             className={active ? "mobile-bottom-nav-link is-active" : "mobile-bottom-nav-link"}
             href={item.href}
           >
-            <Icon size={19} />
+            <span className="mobile-nav-icon-wrap">
+              <Icon size={19} />
+              {item.badge ? <span className="mobile-nav-badge" aria-hidden="true" /> : null}
+            </span>
             <span>{item.label}</span>
           </Link>
         );
