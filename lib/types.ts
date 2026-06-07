@@ -27,6 +27,7 @@ export type AnimeItem = {
   airing?: AnimeAiringInfo | null;
   streamingEpisodes?: AnimeStreamingEpisode[];
   streamingPlatforms?: AnimeStreamingPlatform[];
+  streamingProvidersJp?: StreamingProvidersJp;
   isRebroadcast?: boolean | null;
   genres?: string[];
   studios?: AnimeStudio[];
@@ -92,6 +93,17 @@ export type AnimeStreamingPlatform = {
   region?: string | null;
 };
 
+export type StreamingProvider = {
+  id: number;
+  name: string;
+  logoUrl: string | null;
+};
+
+export type StreamingProvidersJp = {
+  flatrate: StreamingProvider[];
+  providerLink?: string | null;
+};
+
 export type SeasonalAnimeResult = {
   items: AnimeItem[];
   source: AnimeSourceName;
@@ -105,5 +117,5 @@ export const SEASON_LABELS: Record<AnimeSeason, string> = {
   WINTER: "冬",
   SPRING: "春",
   SUMMER: "夏",
-  FALL: "秋"
+  FALL: "秋",
 };

@@ -53,14 +53,15 @@ export function ExploreClient({
   const [message, setMessage] = useState<string | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
+  const [onlyInstantWatch, setOnlyInstantWatch] = useState(false);
   const preferences = useMemo(() => buildPreferences(initialStatuses), [initialStatuses]);
   const yearOptions = useMemo(() => {
     const start = 1990;
     return Array.from({ length: currentYear - start + 1 }, (_, index) => currentYear - index);
   }, [currentYear]);
   const filteredItems = useMemo(
-    () => filterAnimeItems(items, { hideMovies, hideRerunCandidates, seasonYear: year }),
-    [hideMovies, hideRerunCandidates, items, year]
+    () => filterAnimeItems(items, { hideMovies, hideRerunCandidates, seasonYear: year, onlyInstantWatch }),
+    [hideMovies, hideRerunCandidates, items, year, onlyInstantWatch]
   );
   const rankedItems = useMemo(
     () => rankItems(filteredItems, preferences, statusMap, sortMode),
@@ -185,6 +186,14 @@ export function ExploreClient({
           >
             旧作OFF
           </button>
+          <button
+            className={onlyInstantWatch ? "filter-chip is-active" : "filter-chip"}
+            type="button"
+            onClick={() => setOnlyInstantWatch((current) => !current)}
+            aria-pressed={onlyInstantWatch}
+          >
+            今すぐ見放題
+          </button>
         </div>
         <button
           className="command-button emphasis-button"
@@ -292,6 +301,7 @@ function filterAnimeItems(
     hideMovies: boolean;
     hideRerunCandidates: boolean;
     seasonYear: number;
+    onlyInstantWatch?: boolean;
   }
 ): AnimeItem[] {
   return items.filter((item) => {
@@ -303,8 +313,17 @@ function filterAnimeItems(
       return false;
     }
 
+    if (options.onlyInstantWatch && !hasInstantWatch(item)) {
+      return false;
+    }
+
     return true;
   });
+}
+
+function hasInstantWatch(item: AnimeItem): boolean {
+  const flatrate = item.streamingProvidersJp?.flatrate;
+  return Array.isArray(flatrate) && flatrate.length > 0;
 }
 
 function isMovie(item: AnimeItem): boolean {
