@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getDashboard } from "@/lib/statuses";
+import { getDashboard, listStatuses } from "@/lib/statuses";
+import { getSubscriptionState } from "@/lib/subscriptions";
+import { calcSubscriptionStats } from "@/lib/subscription-stats";
+import type { AnimeItem } from "@/lib/types";
 import { DashboardClient } from "./dashboard-client";
 
 export default async function DashboardPage() {
@@ -11,7 +14,27 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const dashboard = await getDashboard(userId);
+  const [dashboard, subscriptionState, statuses] = await Promise.all([
+    getDashboard(userId),
+    getSubscriptionState(userId),
+    listStatuses(userId)
+  ]);
 
-  return <DashboardClient dashboard={dashboard} />;
+  if (!subscriptionState.onboardingDone) {
+    redirect("/onboarding");
+  }
+
+  const watchlist = statuses
+    .map((record) => record.anime)
+    .filter((anime): anime is AnimeItem => Boolean(anime));
+
+  const subscriptionStats = calcSubscriptionStats(watchlist, subscriptionState.subscriptions);
+
+  return (
+    <DashboardClient
+      dashboard={dashboard}
+      subscriptionCoverage={subscriptionStats.coveragePercentage}
+      hasSubscriptions={subscriptionState.subscriptions.length > 0}
+    />
+  );
 }

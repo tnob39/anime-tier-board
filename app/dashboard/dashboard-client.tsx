@@ -13,7 +13,15 @@ const statusLabels: Record<ViewingStatus, string> = {
   dropped: "中止"
 };
 
-export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
+export function DashboardClient({
+  dashboard,
+  subscriptionCoverage,
+  hasSubscriptions
+}: {
+  dashboard: DashboardData;
+  subscriptionCoverage: number;
+  hasSubscriptions: boolean;
+}) {
   const maxStatus = Math.max(1, ...Object.values(dashboard.statusCounts));
   const hasData = dashboard.totalStatuses > 0;
   const [sharing, setSharing] = useState(false);
@@ -109,6 +117,21 @@ export function DashboardClient({ dashboard }: { dashboard: DashboardData }) {
             </Link>
           </div>
         ) : null}
+      </section>
+
+      <section className="dashboard-subscription-card" aria-label="サブスク診断サマリー">
+        <div>
+          <p className="eyebrow">サブスク</p>
+          <h2>見放題カバー率 {hasSubscriptions ? `${subscriptionCoverage}%` : "未設定"}</h2>
+          <p>
+            {hasSubscriptions
+              ? "ウォッチリストと加入中サービスを照合した結果です。"
+              : "加入中のサブスクを登録するとカバー率を表示できます。"}
+          </p>
+        </div>
+        <Link className="command-button emphasis-button" href="/subscriptions">
+          サブスク診断を見る →
+        </Link>
       </section>
 
       <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
