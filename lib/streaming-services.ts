@@ -1,24 +1,12 @@
-export type StreamingService = {
-  id: string;
-  name: string;
-  monthlyPrice: number;
-  logoUrl: string;
-  tmdbProviderId: number;
-  baseUrl: string;
-  affiliateUrl: string | null;
-  affiliateTag: string | null;
-};
-
-export const STREAMING_SERVICES: StreamingService[] = [
+export const STREAMING_SERVICES = [
   {
     id: "netflix",
     name: "Netflix",
     monthlyPrice: 1590,
     logoUrl: "/icons/netflix.svg",
     tmdbProviderId: 8,
-    baseUrl: "https://www.netflix.com/jp/",
     affiliateUrl: null,
-    affiliateTag: null
+    affiliateTag: null,
   },
   {
     id: "amazon_prime",
@@ -26,9 +14,8 @@ export const STREAMING_SERVICES: StreamingService[] = [
     monthlyPrice: 600,
     logoUrl: "/icons/prime.svg",
     tmdbProviderId: 9,
-    baseUrl: "https://www.amazon.co.jp/gp/video/storefront",
     affiliateUrl: null,
-    affiliateTag: null
+    affiliateTag: null,
   },
   {
     id: "unext",
@@ -36,9 +23,8 @@ export const STREAMING_SERVICES: StreamingService[] = [
     monthlyPrice: 2189,
     logoUrl: "/icons/unext.svg",
     tmdbProviderId: 97,
-    baseUrl: "https://video.unext.jp/",
     affiliateUrl: null,
-    affiliateTag: null
+    affiliateTag: null,
   },
   {
     id: "danime",
@@ -46,9 +32,8 @@ export const STREAMING_SERVICES: StreamingService[] = [
     monthlyPrice: 440,
     logoUrl: "/icons/danime.svg",
     tmdbProviderId: 391,
-    baseUrl: "https://animestore.docomo.ne.jp/",
     affiliateUrl: null,
-    affiliateTag: null
+    affiliateTag: null,
   },
   {
     id: "abema",
@@ -56,9 +41,8 @@ export const STREAMING_SERVICES: StreamingService[] = [
     monthlyPrice: 960,
     logoUrl: "/icons/abema.svg",
     tmdbProviderId: 223,
-    baseUrl: "https://abema.tv/about/premium",
     affiliateUrl: null,
-    affiliateTag: null
+    affiliateTag: null,
   },
   {
     id: "hulu_disney",
@@ -66,25 +50,21 @@ export const STREAMING_SERVICES: StreamingService[] = [
     monthlyPrice: 1026,
     logoUrl: "/icons/hulu.svg",
     tmdbProviderId: 258,
-    baseUrl: "https://www.hulu.jp/",
     affiliateUrl: null,
-    affiliateTag: null
-  }
-];
+    affiliateTag: null,
+  },
+] as const;
 
-export function getServiceById(serviceId: string): StreamingService | undefined {
-  return STREAMING_SERVICES.find((service) => service.id === serviceId);
-}
+export type StreamingService = typeof STREAMING_SERVICES[number];
 
 export function getServiceUrl(serviceId: string): string | null {
-  const service = getServiceById(serviceId);
-  if (!service) {
-    return null;
-  }
-
-  return service.affiliateUrl ?? service.baseUrl ?? null;
+  const service = STREAMING_SERVICES.find(s => s.id === serviceId);
+  if (!service) return null;
+  return service.affiliateUrl ?? null;
 }
 
-export function isValidServiceId(serviceId: string): boolean {
-  return STREAMING_SERVICES.some((service) => service.id === serviceId);
+const SERVICE_IDS = new Set(STREAMING_SERVICES.map(s => s.id));
+
+export function isValidServiceId(id: string): boolean {
+  return SERVICE_IDS.has(id as StreamingService["id"]);
 }
