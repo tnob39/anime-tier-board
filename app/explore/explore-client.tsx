@@ -364,6 +364,13 @@ function getStreamingPlatforms(item: AnimeItem) {
     return item.streamingPlatforms.filter((platform) => platform.url && platform.name);
   }
 
+  if (item.streamingProvidersJp?.flatrate?.length) {
+    const link = item.streamingProvidersJp.providerLink ?? "#";
+    return item.streamingProvidersJp.flatrate
+      .slice(0, 5)
+      .map((provider) => ({ name: provider.name, url: link }));
+  }
+
   const platforms = new Map<string, { name: string; url: string }>();
   for (const episode of item.streamingEpisodes ?? []) {
     if (!episode.url) {

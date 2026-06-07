@@ -177,6 +177,52 @@ export async function getStreamingProvidersByTmdbId(tmdbId: number): Promise<Str
   };
 }
 
+function hasTmdbCredentials() {
+  return Boolean(process.env.TMDB_API_KEY || process.env.TMDB_BEARER_TOKEN || process.env.TMDB_READ_ACCESS_TOKEN);
+}
+
+export async function buildProviderMapForItems(
+  items: AnimeItem[],
+  options?: { limit?: number; concurrency?: number }
+): Promise<Map<string, StreamingProvidersJp>> {
+  const map = new Map<string, StreamingProvidersJp>();
+  if (!hasTmdbCredentials()) {
+    return map;
+  }
+
+  const limit = options?.limit ?? 25;
+  const concurrency = Math.max(1, options?.concurrency ?? 3);
+  const targets = items.slice(0, limit);
+
+  for (let index = 0; index < targets.length; index += concurrency) {
+    const batch = targets.slice(index, index + concurrency);
+    const results = await Promise.all(
+      batch.map(async (item) => {
+        try {
+          const providers = await fetchAndSaveStreamingProviders(item.title);
+          return { item, providers };
+        } catch {
+          return { item, providers: null };
+        }
+      })
+    );
+
+    for (const { item, providers } of results) {
+      if (!providers?.flatrate?.length) {
+        continue;
+      }
+
+      const romajiKey = item.titles?.romaji?.trim();
+      if (romajiKey) {
+        map.set(romajiKey, providers);
+      }
+      map.set(item.title, providers);
+    }
+  }
+
+  return map;
+}
+
 export function enrichWithStreamingProviders(
   items: AnimeItem[],
   providerMap: Map<string, StreamingProvidersJp>
