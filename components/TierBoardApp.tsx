@@ -35,6 +35,7 @@ import {
   Heart,
   ListChecks,
   Loader2,
+  Megaphone,
   Mic2,
   Plus,
   PlayCircle,
@@ -839,6 +840,15 @@ export function TierBoardApp() {
             aria-label="声優ページを開く"
           >
             <Mic2 size={18} />
+          </a>
+          <a
+            className="icon-button nav-icon-link nav-updates-link"
+            href="/updates"
+            title="更新情報"
+            aria-label="更新情報を見る"
+          >
+            <Megaphone size={18} />
+            <span className="nav-updates-dot" aria-hidden="true" />
           </a>
         </div>
       </header>
