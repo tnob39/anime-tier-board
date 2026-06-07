@@ -3,6 +3,7 @@
 import { Compass, Loader2, PlayCircle, Plus, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { filterAnimeItems } from "@/lib/anime-filters";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
 
@@ -60,7 +61,13 @@ export function ExploreClient({
     return Array.from({ length: currentYear - start + 1 }, (_, index) => currentYear - index);
   }, [currentYear]);
   const filteredItems = useMemo(
-    () => filterAnimeItems(items, { hideMovies, hideRerunCandidates, seasonYear: year, onlyInstantWatch }),
+    () =>
+      filterAnimeItems(items, {
+        hideMovies,
+        hideRerunCandidates,
+        seasonYear: year,
+        onlyInstantWatch
+      }),
     [hideMovies, hideRerunCandidates, items, year, onlyInstantWatch]
   );
   const rankedItems = useMemo(
@@ -293,70 +300,6 @@ function StreamingPlatformPills({ item }: { item: AnimeItem }) {
       {remainingCount ? <span className="streaming-more">+{remainingCount}</span> : null}
     </div>
   );
-}
-
-function filterAnimeItems(
-  items: AnimeItem[],
-  options: {
-    hideMovies: boolean;
-    hideRerunCandidates: boolean;
-    seasonYear: number;
-    onlyInstantWatch?: boolean;
-  }
-): AnimeItem[] {
-  return items.filter((item) => {
-    if (options.hideMovies && isMovie(item)) {
-      return false;
-    }
-
-    if (options.hideRerunCandidates && isRerunCandidate(item, options.seasonYear)) {
-      return false;
-    }
-
-    if (options.onlyInstantWatch && !hasInstantWatch(item)) {
-      return false;
-    }
-
-    return true;
-  });
-}
-
-function hasInstantWatch(item: AnimeItem): boolean {
-  const flatrate = item.streamingProvidersJp?.flatrate;
-  return Array.isArray(flatrate) && flatrate.length > 0;
-}
-
-function isMovie(item: AnimeItem): boolean {
-  return normalizeFormat(item.format) === "MOVIE";
-}
-
-function isRerunCandidate(item: AnimeItem, selectedYear: number): boolean {
-  if (item.isRebroadcast) {
-    return true;
-  }
-
-  const format = normalizeFormat(item.format);
-  if (!["TV", "TV_SHORT", "ONA", "SPECIAL"].includes(format)) {
-    return false;
-  }
-
-  const originalYear = getOriginalStartYear(item);
-  return typeof originalYear === "number" && originalYear < selectedYear;
-}
-
-function getOriginalStartYear(item: AnimeItem): number | null {
-  if (item.airing?.startDate) {
-    const parsed = new Date(item.airing.startDate);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed.getUTCFullYear();
-    }
-  }
-
-  return item.seasonYear ?? null;
-}
-
-function normalizeFormat(format?: string | null): string {
-  return format?.trim().replace(/\s+/g, "_").toUpperCase() ?? "";
 }
 
 function getStreamingPlatforms(item: AnimeItem) {
