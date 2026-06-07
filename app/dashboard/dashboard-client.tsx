@@ -60,6 +60,9 @@ export function DashboardClient({
           <p>{dashboard.totalStatuses}件の視聴ステータスを保存中</p>
         </div>
         <div className="dashboard-actions">
+          <Link className="command-button" href="/voice-actors">
+            声優
+          </Link>
           <Link className="command-button" href="/">
             ボードに戻る
           </Link>

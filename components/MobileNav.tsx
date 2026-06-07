@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Compass, CreditCard, ListChecks, Mic2, Table2 } from "lucide-react";
+import { BarChart3, Compass, CreditCard, ListChecks, Table2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,7 +9,6 @@ const navItems = [
   { href: "/watchlist", label: "視聴中", icon: ListChecks },
   { href: "/explore", label: "探す", icon: Compass },
   { href: "/subscriptions", label: "サブスク", icon: CreditCard },
-  { href: "/voice-actors", label: "声優", icon: Mic2 },
   { href: "/dashboard", label: "分析", icon: BarChart3 }
 ];
 
