@@ -3,6 +3,7 @@
 import { Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { ChangelogSection } from "./changelog-section";
 import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 
 const statusLabels: Record<ViewingStatus, string> = {
@@ -134,7 +135,7 @@ export function DashboardClient({
         </Link>
       </section>
 
-      <WhatsNewSection />
+      <ChangelogSection />
 
       <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
 
@@ -195,52 +196,6 @@ export function DashboardSummary({
   );
 }
 
-const WHATS_NEW = [
-  {
-    date: "2026-06-07",
-    items: [
-      {
-        label: "サブスク最適化",
-        description: "加入中のサービスとウォッチリストを照合し、見放題カバー率を表示。ナビの「サブスク」から確認できます。",
-        href: "/subscriptions"
-      },
-      {
-        label: "布教カード",
-        description: "ウォッチリストの作品カード（⋮メニュー）から「布教カードを作る」で、おすすめコメント付きのシェア画像を作成できます。",
-        href: "/watchlist"
-      },
-      {
-        label: "オンボーディング",
-        description: "初回ログイン時にサブスクサービスを登録する画面を追加しました。",
-        href: "/onboarding"
-      }
-    ]
-  }
-] as const;
-
-function WhatsNewSection() {
-  return (
-    <section className="dashboard-whats-new" aria-label="最新リリース">
-      <header className="whats-new-header">
-        <span className="whats-new-badge">NEW</span>
-        <h2>最新リリース — {WHATS_NEW[0].date}</h2>
-      </header>
-      <ul className="whats-new-list">
-        {WHATS_NEW[0].items.map((item) => (
-          <li key={item.label} className="whats-new-item">
-            <Link className="whats-new-title" href={item.href}>
-              {item.label} →
-            </Link>
-            <p>{item.description}</p>
-          </li>
-        ))}
-      </ul>
-      <Link className="whats-new-history-link" href="/changelog">
-        すべての更新履歴を見る →
-      </Link>
-    </section>
-  );
-}
 
 function RankPanel({
   title,
