@@ -110,7 +110,12 @@ export async function fetchAndSaveStreamingProviders(title: string): Promise<Str
     findTmdbAvailability(title, "movie").catch(() => null),
   ]);
 
-  const best = tv ?? movie;
+  // Prefer the result with actual JP flatrate providers; TV wins over movie for ties
+  const best =
+    (tv?.flatrate?.length ? tv : null) ??
+    (movie?.flatrate?.length ? movie : null) ??
+    tv ??
+    movie;
   if (!best) return null;
 
   const client = getTursoClient();
