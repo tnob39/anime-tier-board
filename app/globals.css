@@ -1755,6 +1755,317 @@ button:disabled {
   line-height: 1.55;
 }
 
+.watchlist-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.watchlist-card-menu {
+  position: relative;
+}
+
+.watchlist-card-menu-trigger {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.watchlist-card-menu-trigger:hover,
+.watchlist-card-menu-trigger[aria-expanded="true"] {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.watchlist-card-menu-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.watchlist-card-menu-panel button {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 600;
+}
+
+.watchlist-card-menu-panel button:hover {
+  background: var(--surface-soft);
+}
+
+.evangelist-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(17, 24, 39, 0.38);
+}
+
+.evangelist-sheet {
+  width: min(520px, 100%);
+  max-height: min(720px, calc(100vh - 32px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 10px 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.evangelist-sheet-preview {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.evangelist-sheet-preview img {
+  width: 54px;
+  height: 76px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #e7eaed;
+}
+
+.evangelist-sheet-preview strong,
+.evangelist-sheet-preview span {
+  display: block;
+  min-width: 0;
+}
+
+.evangelist-sheet-preview strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evangelist-sheet-preview span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.evangelist-sheet-content {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.evangelist-sheet-field {
+  display: grid;
+  gap: 6px;
+}
+
+.evangelist-sheet-field span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evangelist-sheet-field textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  resize: vertical;
+  background: var(--surface-soft);
+}
+
+.evangelist-sheet-counter {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.evangelist-sheet-providers {
+  display: grid;
+  gap: 6px;
+}
+
+.evangelist-sheet-providers > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.evangelist-sheet-providers div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.evangelist-sheet-providers div span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.evangelist-sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.evangelist-sheet-actions .command-button {
+  min-height: 48px;
+}
+
+.evangelist-share-main {
+  display: grid;
+  justify-items: center;
+  padding: clamp(16px, 4vw, 32px);
+}
+
+.evangelist-share-card {
+  width: min(520px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.evangelist-share-hero img,
+.evangelist-share-hero-placeholder {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: #e7eaed;
+}
+
+.evangelist-share-body {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.evangelist-share-body h1 {
+  margin: 0;
+  font-size: clamp(24px, 5vw, 30px);
+  line-height: 1.2;
+}
+
+.evangelist-share-subtitle {
+  margin: -8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.evangelist-share-recommendation {
+  display: grid;
+  gap: 10px;
+  padding: 14px 0;
+  border-block: 1px solid var(--line);
+}
+
+.evangelist-share-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.evangelist-share-author img,
+.evangelist-share-author-fallback {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.evangelist-share-author-fallback {
+  display: grid;
+  place-items: center;
+  background: var(--surface-soft);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.evangelist-share-recommendation blockquote {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.evangelist-share-providers {
+  display: grid;
+  gap: 8px;
+}
+
+.evangelist-provider-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.evangelist-provider-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.evangelist-share-views {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.evangelist-share-cta {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-soft);
+  text-align: center;
+}
+
+.evangelist-share-cta p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.evangelist-share-cta .command-button {
+  min-height: 48px;
+}
+
 .explore-main,
 .voice-main {
   display: grid;
@@ -2083,6 +2394,23 @@ button:disabled {
   .explore-card > img {
     width: 82px;
     height: 116px;
+  }
+
+  .evangelist-sheet-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .evangelist-sheet {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .evangelist-sheet-actions,
+  .evangelist-share-cta .command-button,
+  .evangelist-provider-button {
+    width: 100%;
   }
 }
 
