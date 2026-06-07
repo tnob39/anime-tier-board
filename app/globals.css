@@ -835,7 +835,7 @@ button:disabled {
     left: 10px;
     z-index: 60;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
     padding: 8px;
     padding-bottom: calc(8px + env(safe-area-inset-bottom));
@@ -1482,6 +1482,87 @@ button:disabled {
   font-weight: 700;
 }
 
+.flatrate-candidates {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 118, 110, 0.2);
+  background: #f3faf8;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--accent);
+}
+
+.watchlist-weekly-calendar {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+}
+
+.watchlist-weekly-calendar h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.watchlist-weekly-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.watchlist-weekly-calendar-column {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfbfa;
+}
+
+.watchlist-weekly-calendar-column h3 {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+.watchlist-weekly-calendar-column ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.watchlist-weekly-calendar-column li {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watchlist-weekly-calendar-empty {
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .watchlist-weekly-calendar-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .watchlist-weekly-calendar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .watchlist-grid,
 .shared-watchlist-grid {
   display: grid;
@@ -1606,6 +1687,27 @@ button:disabled {
 .watchlist-save-button {
   width: 100%;
   margin-top: 2px;
+}
+
+.watchlist-save-status {
+  min-height: 18px;
+  margin: -4px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.watchlist-save-status.is-dirty,
+.watchlist-save-status.is-saving {
+  color: #92400e;
+}
+
+.watchlist-save-status.is-saved {
+  color: var(--accent);
+}
+
+.watchlist-save-status.is-error {
+  color: #b91c1c;
 }
 
 .watchlist-field {

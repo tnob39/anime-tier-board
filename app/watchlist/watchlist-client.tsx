@@ -22,6 +22,19 @@ const watchSlotOptions = [
   "時間がある時に見る"
 ];
 
+const BROADCAST_WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"] as const;
+type BroadcastWeekday = (typeof BROADCAST_WEEKDAYS)[number];
+
+type TrackingDraft = Pick<
+  AnimeStatusRecord,
+  "status" | "favoriteLevel" | "watchSlot" | "notes"
+>;
+
+type SaveResult = {
+  ok: boolean;
+  message: string;
+};
+
 export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRecord[] }) {
   const [items, setItems] = useState(initialItems);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -30,6 +43,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
   const [message, setMessage] = useState<string | null>(null);
   const [messageKind, setMessageKind] = useState<"success" | "error">("error");
   const visibleItems = useMemo(() => items.filter((item) => item.anime), [items]);
+  const broadcastCalendar = useMemo(() => groupItemsByBroadcastDay(visibleItems), [visibleItems]);
 
   async function updateItem(
     animeId: string,
@@ -115,10 +129,10 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
 
   async function saveTrackingDraft(
     record: AnimeStatusRecord,
-    draft: Pick<AnimeStatusRecord, "status" | "favoriteLevel" | "watchSlot" | "notes">
-  ) {
+    draft: TrackingDraft
+  ): Promise<SaveResult> {
     if (!record.anime) {
-      return;
+      return { ok: false, message: "作品情報が見つかりません。" };
     }
 
     const current = record;
@@ -167,12 +181,16 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
 
       setMessageKind("success");
       setMessage("保存しました。同じGoogleアカウントで別端末から確認できます。");
+      return { ok: true, message: "保存済み" };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "視聴管理の保存に失敗しました。";
       setItems((records) =>
         records.map((item) => (item.animeId === record.animeId ? current : item))
       );
       setMessageKind("error");
-      setMessage(error instanceof Error ? error.message : "視聴管理の保存に失敗しました。");
+      setMessage(errorMessage);
+      return { ok: false, message: errorMessage };
     } finally {
       setSavingId(null);
     }
@@ -240,6 +258,10 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
         </div>
       </section>
 
+      {visibleItems.length ? (
+        <WeeklyBroadcastCalendar grouped={broadcastCalendar.grouped} />
+      ) : null}
+
       {message ? <div className={`notice ${messageKind}`}>{message}</div> : null}
       {shareUrl ? (
         <div className="notice success">
@@ -260,7 +282,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
                 saving={savingId === record.animeId}
                 onUpdate={(patch) => void updateItem(record.animeId, patch)}
                 onStatusChange={(status) => void updateStatus(record, status)}
-                onSave={(draft) => void saveTrackingDraft(record, draft)}
+                onSave={(draft) => saveTrackingDraft(record, draft)}
               />
             ) : null
           )}
@@ -291,15 +313,14 @@ function WatchlistCard({
     patch: Partial<Pick<AnimeStatusRecord, "favoriteLevel" | "watchSlot" | "notes">>
   ) => void;
   onStatusChange: (status: ViewingStatus) => void;
-  onSave: (
-    draft: Pick<AnimeStatusRecord, "status" | "favoriteLevel" | "watchSlot" | "notes">
-  ) => void;
+  onSave: (draft: TrackingDraft) => Promise<SaveResult>;
 }) {
   const anime = record.anime as AnimeItem;
   const [draftStatus, setDraftStatus] = useState(record.status);
   const [draftFavoriteLevel, setDraftFavoriteLevel] = useState(record.favoriteLevel);
   const [draftWatchSlot, setDraftWatchSlot] = useState(record.watchSlot ?? "");
   const [draftNotes, setDraftNotes] = useState(record.notes ?? "");
+  const [lastSaveResult, setLastSaveResult] = useState<SaveResult | null>(null);
   const schedule = getScheduleText(anime);
   const nextEpisode = getNextEpisodeText(anime);
   const cour = anime.airing?.courEstimate ?? estimateCourFromEpisodes(anime.episodes);
@@ -317,6 +338,35 @@ function WatchlistCard({
     draftFavoriteLevel !== record.favoriteLevel ||
     draftWatchSlot !== (record.watchSlot ?? "") ||
     draftNotes !== (record.notes ?? "");
+
+  useEffect(() => {
+    if (isDirty) {
+      setLastSaveResult(null);
+    }
+  }, [isDirty]);
+
+  const saveStatus = saving
+    ? "保存中..."
+    : isDirty
+      ? "未保存の変更があります"
+      : lastSaveResult?.message ?? "保存済み";
+  const saveStatusClass = saving
+    ? "is-saving"
+    : isDirty
+      ? "is-dirty"
+      : lastSaveResult?.ok === false
+        ? "is-error"
+        : "is-saved";
+
+  async function handleSave() {
+    const result = await onSave({
+      status: draftStatus,
+      favoriteLevel: draftFavoriteLevel,
+      watchSlot: draftWatchSlot || null,
+      notes: draftNotes || null
+    });
+    setLastSaveResult(result);
+  }
 
   return (
     <article className="watchlist-card">
@@ -392,21 +442,91 @@ function WatchlistCard({
           className="command-button emphasis-button watchlist-save-button"
           type="button"
           disabled={!isDirty || saving}
-          onClick={() =>
-            onSave({
-              status: draftStatus,
-              favoriteLevel: draftFavoriteLevel,
-              watchSlot: draftWatchSlot || null,
-              notes: draftNotes || null
-            })
-          }
+          onClick={() => void handleSave()}
         >
           {saving ? <Loader2 className="spin" size={16} /> : null}
-          <span>{isDirty ? "保存する" : "保存済み"}</span>
+          <span>{saving ? "保存中" : isDirty ? "保存する" : "保存済み"}</span>
         </button>
+        <p className={`watchlist-save-status ${saveStatusClass}`} aria-live="polite">
+          {saveStatus}
+        </p>
       </div>
     </article>
   );
+}
+
+function WeeklyBroadcastCalendar({
+  grouped
+}: {
+  grouped: Record<BroadcastWeekday, AnimeStatusRecord[]>;
+}) {
+  return (
+    <section className="watchlist-weekly-calendar" aria-label="今週の放映カレンダー">
+      <h2>今週の放映カレンダー</h2>
+      <div className="watchlist-weekly-calendar-grid">
+        {BROADCAST_WEEKDAYS.map((day) => (
+          <div key={day} className="watchlist-weekly-calendar-column">
+            <h3>{day}</h3>
+            {grouped[day].length ? (
+              <ul>
+                {grouped[day].map((record) => (
+                  <li key={record.animeId}>{record.anime?.title}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="watchlist-weekly-calendar-empty">—</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function groupItemsByBroadcastDay(items: AnimeStatusRecord[]) {
+  const grouped = Object.fromEntries(
+    BROADCAST_WEEKDAYS.map((day) => [day, [] as AnimeStatusRecord[]])
+  ) as Record<BroadcastWeekday, AnimeStatusRecord[]>;
+
+  for (const record of items) {
+    if (!record.anime) {
+      continue;
+    }
+
+    const day = getBroadcastDayLabel(record.anime);
+    if (day && grouped[day]) {
+      grouped[day].push(record);
+    }
+  }
+
+  return { grouped };
+}
+
+function getBroadcastDayLabel(item: AnimeItem): BroadcastWeekday | null {
+  const nextAiring = item.airing?.nextEpisode?.airingAt;
+  if (nextAiring) {
+    const weekday = extractWeekdayLabel(nextAiring);
+    if (weekday) {
+      return weekday;
+    }
+  }
+
+  const broadcastDay = normalizeBroadcastDay(item.airing?.broadcastDay);
+  if (broadcastDay && BROADCAST_WEEKDAYS.includes(broadcastDay as BroadcastWeekday)) {
+    return broadcastDay as BroadcastWeekday;
+  }
+
+  return null;
+}
+
+function extractWeekdayLabel(value: string): BroadcastWeekday | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const labels: BroadcastWeekday[] = ["日", "月", "火", "水", "木", "金", "土"];
+  return labels[date.getDay()] ?? null;
 }
 
 function StatusChips({
