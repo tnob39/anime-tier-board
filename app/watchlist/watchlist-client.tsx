@@ -1,8 +1,9 @@
 "use client";
 
-import { CalendarDays, ExternalLink, Loader2, Share2, Star } from "lucide-react";
+import { CalendarDays, ExternalLink, Loader2, MoreVertical, Share2, Star } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
@@ -29,6 +30,8 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [messageKind, setMessageKind] = useState<"success" | "error">("error");
+  const [evangelistAnime, setEvangelistAnime] = useState<AnimeItem | null>(null);
+  const [evangelistShareUrl, setEvangelistShareUrl] = useState<string | null>(null);
   const visibleItems = useMemo(() => items.filter((item) => item.anime), [items]);
 
   async function updateItem(
@@ -249,6 +252,14 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
           </a>
         </div>
       ) : null}
+      {evangelistShareUrl ? (
+        <div className="notice success">
+          布教カードのURLをコピーしました:{" "}
+          <a href={evangelistShareUrl} target="_blank" rel="noreferrer">
+            {evangelistShareUrl}
+          </a>
+        </div>
+      ) : null}
 
       {visibleItems.length ? (
         <section className="watchlist-grid" aria-label="追ってる作品リスト">
@@ -261,6 +272,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
                 onUpdate={(patch) => void updateItem(record.animeId, patch)}
                 onStatusChange={(status) => void updateStatus(record, status)}
                 onSave={(draft) => void saveTrackingDraft(record, draft)}
+                onCreateEvangelistCard={() => setEvangelistAnime(record.anime as AnimeItem)}
               />
             ) : null
           )}
@@ -274,6 +286,19 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
           </Link>
         </section>
       )}
+
+      {evangelistAnime ? (
+        <EvangelistCreateModal
+          anime={evangelistAnime}
+          open={Boolean(evangelistAnime)}
+          onClose={() => setEvangelistAnime(null)}
+          onCreated={(url) => {
+            setEvangelistShareUrl(url);
+            setMessageKind("success");
+            setMessage("布教カードを作成しました。URLをコピー済みです。");
+          }}
+        />
+      ) : null}
     </main>
   );
 }
@@ -283,7 +308,8 @@ function WatchlistCard({
   saving,
   onUpdate,
   onStatusChange,
-  onSave
+  onSave,
+  onCreateEvangelistCard
 }: {
   record: AnimeStatusRecord;
   saving: boolean;
@@ -294,8 +320,10 @@ function WatchlistCard({
   onSave: (
     draft: Pick<AnimeStatusRecord, "status" | "favoriteLevel" | "watchSlot" | "notes">
   ) => void;
+  onCreateEvangelistCard: () => void;
 }) {
   const anime = record.anime as AnimeItem;
+  const [menuOpen, setMenuOpen] = useState(false);
   const [draftStatus, setDraftStatus] = useState(record.status);
   const [draftFavoriteLevel, setDraftFavoriteLevel] = useState(record.favoriteLevel);
   const [draftWatchSlot, setDraftWatchSlot] = useState(record.watchSlot ?? "");
@@ -312,6 +340,22 @@ function WatchlistCard({
     setDraftNotes(record.notes ?? "");
   }, [record.favoriteLevel, record.notes, record.status, record.watchSlot]);
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Element) || !target.closest(".watchlist-card-menu")) {
+        setMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [menuOpen]);
+
   const isDirty =
     draftStatus !== record.status ||
     draftFavoriteLevel !== record.favoriteLevel ||
@@ -327,9 +371,36 @@ function WatchlistCard({
             <strong>{anime.title}</strong>
             <span>{statusLabels[draftStatus]}</span>
           </div>
-          <a href={anime.siteUrl} target="_blank" rel="noreferrer" aria-label="作品ページを開く">
-            <ExternalLink size={16} />
-          </a>
+          <div className="watchlist-card-actions">
+            <a href={anime.siteUrl} target="_blank" rel="noreferrer" aria-label="作品ページを開く">
+              <ExternalLink size={16} />
+            </a>
+            <div className="watchlist-card-menu">
+              <button
+                type="button"
+                className="watchlist-card-menu-trigger"
+                aria-label="メニューを開く"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <MoreVertical size={16} />
+              </button>
+              {menuOpen ? (
+                <div className="watchlist-card-menu-panel" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onCreateEvangelistCard();
+                    }}
+                  >
+                    布教カードを作る
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
 
         <StatusChips status={draftStatus} onChange={setDraftStatus} />
