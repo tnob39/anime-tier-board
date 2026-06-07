@@ -11,7 +11,7 @@ export function pickDisplayTitle(titles: AnimeTitleSet): string {
 }
 
 export function proxiedImageUrl(imageUrl: string): string {
-  return `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+  return imageUrl;
 }
 
 function cleanTitle(value?: string | null): string | null {
