@@ -235,6 +235,9 @@ function WhatsNewSection() {
           </li>
         ))}
       </ul>
+      <Link className="whats-new-history-link" href="/changelog">
+        すべての更新履歴を見る →
+      </Link>
     </section>
   );
 }
