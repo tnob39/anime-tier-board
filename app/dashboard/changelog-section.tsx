@@ -1,34 +1,33 @@
 "use client";
 
+import {
+  BarChart3,
+  CreditCard,
+  Share2,
+  Sparkles,
+  UserCheck,
+  Zap,
+  Star,
+  Compass,
+  ListChecks,
+  Mic2,
+  CalendarDays,
+  type LucideIcon
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-
-type ChangeType = "feat" | "fix" | "perf" | "refactor";
 
 type Release = {
   version: string;
   date: string;
   label: string;
   changes: Array<{
-    type: ChangeType;
+    icon: LucideIcon;
+    iconColor: string;
     title: string;
     description: string;
     href?: string;
   }>;
-};
-
-const TYPE_LABELS: Record<ChangeType, string> = {
-  feat: "新機能",
-  fix: "修正",
-  perf: "改善",
-  refactor: "内部"
-};
-
-const TYPE_CLASS: Record<ChangeType, string> = {
-  feat: "cl-tag-feat",
-  fix: "cl-tag-fix",
-  perf: "cl-tag-perf",
-  refactor: "cl-tag-refactor"
 };
 
 const RELEASES: Release[] = [
@@ -38,32 +37,31 @@ const RELEASES: Release[] = [
     label: "サブスク最適化 & 布教カード",
     changes: [
       {
-        type: "feat",
+        icon: CreditCard,
+        iconColor: "#4f8ef7",
         title: "サブスク最適化",
         description: "加入中サービスとウォッチリストを照合し、見放題カバー率を表示。",
         href: "/subscriptions"
       },
       {
-        type: "feat",
+        icon: Share2,
+        iconColor: "#f76f4f",
         title: "布教カード",
         description: "ウォッチリストの ⋮ メニューからおすすめコメント付きシェアURLを作成。",
         href: "/watchlist"
       },
       {
-        type: "feat",
+        icon: UserCheck,
+        iconColor: "#4fc48e",
         title: "オンボーディング",
         description: "初回ログイン時にサブスクサービスを登録する画面を追加。",
         href: "/onboarding"
       },
       {
-        type: "feat",
-        title: "ナビに「サブスク」追加",
-        description: "モバイルナビバーから直接サブスク最適化ページへアクセス可能に。"
-      },
-      {
-        type: "perf",
-        title: "画像配信の最適化",
-        description: "サーバープロキシを廃止し AniList CDN から直接配信。表示速度が向上。"
+        icon: Zap,
+        iconColor: "#f7b24f",
+        title: "画像配信の高速化",
+        description: "サーバープロキシを廃止し CDN から直接配信。表示が速くなりました。"
       }
     ]
   },
@@ -73,26 +71,24 @@ const RELEASES: Release[] = [
     label: "TMDb 連携 & 視聴管理強化",
     changes: [
       {
-        type: "feat",
+        icon: Sparkles,
+        iconColor: "#4f8ef7",
         title: "TMDb Watch Providers 連携",
-        description: "季節アニメカードに見放題サービス（Netflix・Amazon 等）のリンクを表示。"
+        description: "季節アニメカードに Netflix・Amazon 等の見放題リンクを表示。"
       },
       {
-        type: "feat",
-        title: "Explore「今すぐ見放題」フィルタ",
-        description: "探す画面で見放題作品だけに絞り込むフィルタを追加。",
+        icon: Compass,
+        iconColor: "#4fc48e",
+        title: "「今すぐ見放題」フィルタ",
+        description: "探す画面で見放題作品だけに絞り込めるフィルタを追加。",
         href: "/explore"
       },
       {
-        type: "feat",
+        icon: CalendarDays,
+        iconColor: "#a07ef7",
         title: "放送カレンダー",
         description: "視聴管理リストに今週の放映スケジュールカレンダーを追加。",
         href: "/watchlist"
-      },
-      {
-        type: "feat",
-        title: "視聴管理の保存ボタン",
-        description: "ウォッチリストカードに明示的な「保存する」ボタンを追加。"
       }
     ]
   },
@@ -102,21 +98,18 @@ const RELEASES: Release[] = [
     label: "声優・探索・モバイルナビ",
     changes: [
       {
-        type: "feat",
+        icon: Mic2,
+        iconColor: "#f76f4f",
         title: "声優ページ",
         description: "視聴作品に出演する声優の傾向を一覧表示。",
         href: "/voice-actors"
       },
       {
-        type: "feat",
+        icon: Compass,
+        iconColor: "#4f8ef7",
         title: "探すページ",
-        description: "季節アニメをジャンル・フォーマット・視聴可否で絞り込んで探せるページを追加。",
+        description: "季節アニメをジャンル・視聴可否で絞り込んで探せるページを追加。",
         href: "/explore"
-      },
-      {
-        type: "feat",
-        title: "モバイルボトムナビ",
-        description: "スマートフォンでの操作性向上のため画面下部にナビバーを追加。"
       }
     ]
   },
@@ -126,15 +119,11 @@ const RELEASES: Release[] = [
     label: "視聴管理リスト",
     changes: [
       {
-        type: "feat",
+        icon: ListChecks,
+        iconColor: "#4fc48e",
         title: "ウォッチリスト",
         description: "追っている作品の「いつ見るか」「お気に入り度」「メモ」を管理するページを追加。",
         href: "/watchlist"
-      },
-      {
-        type: "feat",
-        title: "放送日・クール情報",
-        description: "アニメカードに放送曜日・次回放送日・クール数を表示。"
       }
     ]
   },
@@ -144,15 +133,11 @@ const RELEASES: Release[] = [
     label: "ダッシュボード & ソーシャル",
     changes: [
       {
-        type: "feat",
+        icon: BarChart3,
+        iconColor: "#4f8ef7",
         title: "好み分析ダッシュボード",
         description: "視聴ステータスをもとにジャンル・制作会社・声優の傾向を集計。",
         href: "/dashboard"
-      },
-      {
-        type: "feat",
-        title: "共有・コメント機能",
-        description: "Tier ボードや分析結果を URL で共有し、コメントやリアクションをもらえる機能を追加。"
       }
     ]
   },
@@ -162,14 +147,10 @@ const RELEASES: Release[] = [
     label: "モバイル対応 & UI 改善",
     changes: [
       {
-        type: "feat",
-        title: "ステータス選択のチップ UI",
+        icon: Star,
+        iconColor: "#f7b24f",
+        title: "お気に入り度・チップUI",
         description: "視聴ステータスの変更をチップ型ボタンで操作できるよう改善。"
-      },
-      {
-        type: "feat",
-        title: "ドラッグ & ドロップ改善",
-        description: "Tier ボード上でのカード並び替えをより快適に操作できるように改善。"
       }
     ]
   },
@@ -179,9 +160,10 @@ const RELEASES: Release[] = [
     label: "MVP リリース",
     changes: [
       {
-        type: "feat",
+        icon: Sparkles,
+        iconColor: "#a07ef7",
         title: "アニメ Tier ボード",
-        description: "AniList から季節アニメを取得し S / A / B / C / D の Tier に分類して保存できる最初のバージョン。",
+        description: "AniList から季節アニメを取得し S〜D の Tier に分類して保存できる最初のバージョン。",
         href: "/"
       }
     ]
@@ -198,17 +180,75 @@ export function ChangelogSection() {
       <header className="cl-header">
         <div className="cl-header-left">
           <span className="cl-badge">NEW</span>
-          <h2>更新履歴</h2>
+          <div>
+            <h2 className="cl-header-title">v{latest.version} — {latest.label}</h2>
+            <time className="cl-header-date">{latest.date}</time>
+          </div>
         </div>
       </header>
 
-      <div className="cl-timeline">
-        <ReleaseItem release={latest} isLatest />
+      <ul className="cl-icon-grid">
+        {latest.changes.map((change) => {
+          const Icon = change.icon;
+          const inner = (
+            <>
+              <span className="cl-icon-wrap" style={{ background: `${change.iconColor}1a` }}>
+                <Icon size={20} color={change.iconColor} />
+              </span>
+              <div className="cl-icon-text">
+                <strong>{change.title}</strong>
+                <p>{change.description}</p>
+              </div>
+              {change.href ? <span className="cl-icon-arrow">›</span> : null}
+            </>
+          );
+          return (
+            <li key={change.title}>
+              {change.href ? (
+                <Link className="cl-icon-item" href={change.href}>{inner}</Link>
+              ) : (
+                <div className="cl-icon-item">{inner}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
 
-        {expanded
-          ? history.map((r) => <ReleaseItem key={r.version} release={r} />)
-          : null}
-      </div>
+      {expanded ? (
+        <div className="cl-history">
+          {history.map((release) => (
+            <article key={release.version} className="cl-history-release">
+              <div className="cl-history-meta">
+                <span className="cl-version">v{release.version}</span>
+                <span className="cl-history-label">{release.label}</span>
+                <time className="cl-date">{release.date}</time>
+              </div>
+              <ul className="cl-history-changes">
+                {release.changes.map((change) => {
+                  const Icon = change.icon;
+                  return (
+                    <li key={change.title} className="cl-history-item">
+                      <span
+                        className="cl-history-icon"
+                        style={{ background: `${change.iconColor}1a` }}
+                      >
+                        <Icon size={14} color={change.iconColor} />
+                      </span>
+                      {change.href ? (
+                        <Link className="cl-history-title" href={change.href}>
+                          {change.title}
+                        </Link>
+                      ) : (
+                        <span className="cl-history-title">{change.title}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </article>
+          ))}
+        </div>
+      ) : null}
 
       <button
         type="button"
@@ -219,38 +259,5 @@ export function ChangelogSection() {
         {expanded ? "▲ 閉じる" : `▼ 過去 ${history.length} バージョンを見る`}
       </button>
     </section>
-  );
-}
-
-function ReleaseItem({ release, isLatest = false }: { release: Release; isLatest?: boolean }) {
-  return (
-    <article className={`cl-release ${isLatest ? "is-latest" : ""}`}>
-      <div className="cl-release-meta">
-        <span className={`cl-version ${isLatest ? "is-latest" : ""}`}>v{release.version}</span>
-        <time className="cl-date">{release.date}</time>
-      </div>
-      <div className="cl-release-body">
-        <h3 className="cl-release-title">{release.label}</h3>
-        <ul className="cl-changes">
-          {release.changes.map((change) => (
-            <li key={change.title} className="cl-change">
-              <span className={`cl-tag ${TYPE_CLASS[change.type]}`}>
-                {TYPE_LABELS[change.type]}
-              </span>
-              <div>
-                {change.href ? (
-                  <Link className="cl-change-title" href={change.href}>
-                    {change.title}
-                  </Link>
-                ) : (
-                  <strong className="cl-change-title">{change.title}</strong>
-                )}
-                <p className="cl-change-desc">{change.description}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </article>
   );
 }
