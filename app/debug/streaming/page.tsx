@@ -95,7 +95,20 @@ export default async function StreamingDebugPage() {
                   ? row.providers.map((p) => p.name).join(", ")
                   : row.cached
                     ? <span style={{ color: "#aaa" }}>配信なし（キャッシュ済）</span>
-                    : <span style={{ color: "#ef4444" }}>未取得</span>}
+                    : (
+                      <span>
+                        <span style={{ color: "#ef4444" }}>未取得</span>
+                        {" "}
+                        <a
+                          href={`/api/debug/streaming-single?title=${encodeURIComponent(row.title)}${row.romaji ? `&romaji=${encodeURIComponent(row.romaji)}` : ""}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: "11px", color: "#3b82f6" }}
+                        >
+                          TMDb試す↗
+                        </a>
+                      </span>
+                    )}
               </td>
             </tr>
           ))}

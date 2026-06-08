@@ -40,13 +40,9 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
     });
   }
 
-  const { map: providerMap, stats: enrichStats } = await buildProviderMapWithStats(result.items);
+  // DB キャッシュにあるものだけ付与。TMDb 呼び出しはここでは行わない（タイムアウト回避）
+  const { map: providerMap } = await buildProviderMapWithStats(result.items, { skipUncached: true });
   const enrichedItems = enrichWithStreamingProviders(result.items, providerMap);
-
-  const enrichWarning =
-    !enrichStats.credentialsMissing && enrichStats.failed > 0
-      ? `配信情報の一部を取得できませんでした（${enrichStats.failed}件）。`
-      : undefined;
 
   return NextResponse.json({
     year,
@@ -54,7 +50,5 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
     generatedAt: new Date().toISOString(),
     ...result,
     items: enrichedItems,
-    enrichStats,
-    ...(enrichWarning ? { enrichWarning } : {}),
   });
 });

@@ -247,7 +247,7 @@ export type EnrichBuildStats = {
 
 export async function buildProviderMapWithStats(
   items: AnimeItem[],
-  options?: { concurrency?: number }
+  options?: { concurrency?: number; skipUncached?: boolean }
 ): Promise<{ map: Map<string, StreamingProvidersJp>; stats: EnrichBuildStats }> {
   const map = new Map<string, StreamingProvidersJp>();
   const credentialsMissing = !hasTmdbCredentials();
@@ -277,6 +277,11 @@ export async function buildProviderMapWithStats(
     } else {
       uncached.push(item);
     }
+  }
+
+  // skipUncached: DB キャッシュのみ返す（タイムアウト回避、lazy fetch 向け）
+  if (options?.skipUncached) {
+    return { map, stats: { attempted: 0, failed: 0, credentialsMissing: false } };
   }
 
   let failed = 0;
