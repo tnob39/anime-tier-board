@@ -4,7 +4,7 @@ import { CalendarDays, ExternalLink, Loader2, MoreVertical, Share2, Star } from 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
-import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
+import type { AnimeStatusRecord, ViewingStatus, WatchRhythm } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
 const statusLabels: Record<ViewingStatus, string> = {
@@ -89,6 +89,17 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
     } finally {
       setSavingId(null);
     }
+  }
+
+  async function updateRhythm(animeId: string, rhythm: WatchRhythm | null) {
+    setItems((records) =>
+      records.map((r) => (r.animeId === animeId ? { ...r, watchRhythm: rhythm } : r))
+    );
+    await fetch("/api/watchlist", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ animeId, watchRhythm: rhythm })
+    });
   }
 
   async function updateStatus(record: AnimeStatusRecord, status: ViewingStatus) {
@@ -295,6 +306,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
                 onStatusChange={(status) => void updateStatus(record, status)}
                 onSave={(draft) => saveTrackingDraft(record, draft)}
                 onCreateEvangelistCard={() => setEvangelistAnime(record.anime as AnimeItem)}
+                onRhythmChange={(rhythm) => void updateRhythm(record.animeId, rhythm)}
               />
             ) : null
           )}
@@ -325,13 +337,20 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
   );
 }
 
+const RHYTHM_OPTIONS: { value: WatchRhythm; label: string; emoji: string }[] = [
+  { value: "weekly", label: "毎週リアタイ", emoji: "📡" },
+  { value: "batch", label: "まとめて見る", emoji: "📦" },
+  { value: "slow", label: "ゆっくり見る", emoji: "🐢" }
+];
+
 function WatchlistCard({
   record,
   saving,
   onUpdate,
   onStatusChange,
   onSave,
-  onCreateEvangelistCard
+  onCreateEvangelistCard,
+  onRhythmChange
 }: {
   record: AnimeStatusRecord;
   saving: boolean;
@@ -341,10 +360,21 @@ function WatchlistCard({
   onStatusChange: (status: ViewingStatus) => void;
   onSave: (draft: TrackingDraft) => Promise<SaveResult>;
   onCreateEvangelistCard: () => void;
+  onRhythmChange: (rhythm: WatchRhythm | null) => void;
 }) {
   const anime = record.anime as AnimeItem;
   const [menuOpen, setMenuOpen] = useState(false);
   const [draftStatus, setDraftStatus] = useState(record.status);
+  const [showRhythmPicker, setShowRhythmPicker] = useState(false);
+
+  function handleStatusChange(status: ViewingStatus) {
+    setDraftStatus(status);
+    if (status === "watching" && !record.watchRhythm) {
+      setShowRhythmPicker(true);
+    } else {
+      setShowRhythmPicker(false);
+    }
+  }
   const [draftFavoriteLevel, setDraftFavoriteLevel] = useState(record.favoriteLevel);
   const [draftWatchSlot, setDraftWatchSlot] = useState(record.watchSlot ?? "");
   const [draftNotes, setDraftNotes] = useState(record.notes ?? "");
@@ -453,7 +483,51 @@ function WatchlistCard({
           </div>
         </div>
 
-        <StatusChips status={draftStatus} onChange={setDraftStatus} />
+        <StatusChips status={draftStatus} onChange={handleStatusChange} />
+
+        {showRhythmPicker ? (
+          <div className="watch-rhythm-picker" aria-label="視聴リズムを選択">
+            <p className="watch-rhythm-label">どのペースで見ますか？（スキップ可）</p>
+            <div className="watch-rhythm-chips">
+              {RHYTHM_OPTIONS.map(({ value, label, emoji }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={`rhythm-chip${record.watchRhythm === value ? " is-active" : ""}`}
+                  onClick={() => {
+                    onRhythmChange(value);
+                    setShowRhythmPicker(false);
+                  }}
+                >
+                  {emoji} {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="rhythm-chip rhythm-chip-skip"
+                onClick={() => setShowRhythmPicker(false)}
+              >
+                スキップ
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {!showRhythmPicker && record.watchRhythm && draftStatus === "watching" ? (
+          <div className="watch-rhythm-current">
+            <span>
+              {RHYTHM_OPTIONS.find((o) => o.value === record.watchRhythm)?.emoji}{" "}
+              {RHYTHM_OPTIONS.find((o) => o.value === record.watchRhythm)?.label}
+            </span>
+            <button
+              type="button"
+              className="rhythm-change-link"
+              onClick={() => setShowRhythmPicker(true)}
+            >
+              変更
+            </button>
+          </div>
+        ) : null}
 
         <div className="watchlist-favorite" aria-label="お気に入り度">
           {[1, 2, 3, 4, 5].map((level) => (

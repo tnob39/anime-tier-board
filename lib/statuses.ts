@@ -5,6 +5,9 @@ export const VIEWING_STATUSES = ["planned", "watching", "completed", "paused", "
 
 export type ViewingStatus = (typeof VIEWING_STATUSES)[number];
 
+export const WATCH_RHYTHMS = ["weekly", "batch", "slow"] as const;
+export type WatchRhythm = (typeof WATCH_RHYTHMS)[number];
+
 export type AnimeStatusRecord = {
   animeId: string;
   status: ViewingStatus;
@@ -12,6 +15,7 @@ export type AnimeStatusRecord = {
   favoriteLevel: number | null;
   watchSlot: string | null;
   notes: string | null;
+  watchRhythm: WatchRhythm | null;
   updatedAt: string;
 };
 
@@ -31,7 +35,7 @@ export async function listStatuses(userId: string): Promise<AnimeStatusRecord[]>
   await ensureStatusSchema();
 
   const result = await getTursoClient().execute({
-    sql: `select anime_id, status, anime_json, favorite_level, watch_slot, notes, updated_at
+    sql: `select anime_id, status, anime_json, favorite_level, watch_slot, notes, watch_rhythm, updated_at
           from user_anime_statuses
           where user_id = ?
           order by updated_at desc
@@ -53,6 +57,7 @@ export async function listStatuses(userId: string): Promise<AnimeStatusRecord[]>
         favoriteLevel: normalizeFavoriteLevel(row.favorite_level),
         watchSlot: row.watch_slot ? String(row.watch_slot) : null,
         notes: row.notes ? String(row.notes) : null,
+        watchRhythm: normalizeWatchRhythm(row.watch_rhythm),
         updatedAt: String(row.updated_at)
       };
     })
@@ -91,6 +96,26 @@ export async function deleteStatus(userId: string, animeId: string) {
   await getTursoClient().execute({
     sql: "delete from user_anime_statuses where user_id = ? and anime_id = ?",
     args: [userId, animeId]
+  });
+}
+
+export async function updateWatchRhythm({
+  userId,
+  animeId,
+  watchRhythm
+}: {
+  userId: string;
+  animeId: string;
+  watchRhythm: WatchRhythm | null;
+}) {
+  await ensureStatusSchema();
+
+  const now = new Date().toISOString();
+  await getTursoClient().execute({
+    sql: `update user_anime_statuses
+          set watch_rhythm = ?, updated_at = ?
+          where user_id = ? and anime_id = ?`,
+    args: [watchRhythm, now, userId, animeId]
   });
 }
 
@@ -196,6 +221,9 @@ export function ensureStatusSchema() {
     await client
       .execute("alter table user_anime_statuses add column notes text")
       .catch(() => undefined);
+    await client
+      .execute("alter table user_anime_statuses add column watch_rhythm text")
+      .catch(() => undefined);
   })();
 
   return statusSchemaReady;
@@ -221,6 +249,11 @@ function parseAnime(value: unknown): AnimeItem | null {
   } catch {
     return null;
   }
+}
+
+function normalizeWatchRhythm(value: unknown): WatchRhythm | null {
+  if (typeof value !== "string") return null;
+  return WATCH_RHYTHMS.includes(value as WatchRhythm) ? (value as WatchRhythm) : null;
 }
 
 function normalizeFavoriteLevel(value: unknown): number | null {
