@@ -62,7 +62,7 @@ export function calcSubscriptionStats(
     .map((subscription) => STREAMING_SERVICES.find((service) => service.id === subscription.serviceId))
     .filter((service): service is StreamingService => Boolean(service));
 
-  const subscribedProviderIds = subscribedServices.map((service) => service.tmdbProviderId);
+  const subscribedProviderIds = subscribedServices.flatMap((service) => service.tmdbProviderIds);
   const coveredAnime = watchlist.filter((anime) =>
     subscribedProviderIds.some((providerId) => animeMatchesProvider(anime, providerId))
   );
@@ -70,7 +70,7 @@ export function calcSubscriptionStats(
 
   const subscribedCoverage = subscribedServices.map((service) => {
     const count = watchlist.filter((anime) =>
-      animeMatchesProvider(anime, service.tmdbProviderId)
+      service.tmdbProviderIds.some((id) => animeMatchesProvider(anime, id))
     ).length;
 
     return {
@@ -89,7 +89,8 @@ export function calcSubscriptionStats(
       service,
       additionalCount: watchlist.filter(
         (anime) =>
-          !coveredIds.has(anime.id) && animeMatchesProvider(anime, service.tmdbProviderId)
+          !coveredIds.has(anime.id) &&
+          service.tmdbProviderIds.some((id) => animeMatchesProvider(anime, id))
       ).length
     }))
     .sort((left, right) => right.additionalCount - left.additionalCount);
@@ -114,7 +115,9 @@ function addProviderId(providerIds: Set<number>, rawName: string) {
 
   const service = STREAMING_SERVICES.find((entry) => entry.id === serviceId);
   if (service) {
-    providerIds.add(service.tmdbProviderId);
+    for (const id of service.tmdbProviderIds) {
+      providerIds.add(id);
+    }
   }
 }
 

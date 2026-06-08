@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { listStatuses } from "@/lib/statuses";
 import { getSubscriptionState } from "@/lib/subscriptions";
 import { calcSubscriptionStats } from "@/lib/subscription-stats";
+import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
 import type { AnimeItem } from "@/lib/types";
 import { SubscriptionsClient } from "./subscriptions-client";
 
@@ -23,7 +24,10 @@ export default async function SubscriptionsPage() {
     .map((record) => record.anime)
     .filter((anime): anime is AnimeItem => Boolean(anime));
 
-  const stats = calcSubscriptionStats(watchlist, subscriptionState.subscriptions);
+  const { map: providerMap } = await buildProviderMapWithStats(watchlist, { skipUncached: true });
+  const enrichedWatchlist = enrichWithStreamingProviders(watchlist, providerMap);
+
+  const stats = calcSubscriptionStats(enrichedWatchlist, subscriptionState.subscriptions);
 
   return (
     <SubscriptionsClient
