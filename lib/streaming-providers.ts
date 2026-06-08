@@ -104,18 +104,34 @@ async function findTmdbAvailability(title: string, mediaType: "tv" | "movie") {
   };
 }
 
-export async function fetchAndSaveStreamingProviders(title: string): Promise<StreamingProvidersJp | null> {
-  const [tv, movie] = await Promise.all([
-    findTmdbAvailability(title, "tv").catch(() => null),
-    findTmdbAvailability(title, "movie").catch(() => null),
-  ]);
+export async function fetchAndSaveStreamingProviders(
+  title: string,
+  fallbackTitles: string[] = []
+): Promise<StreamingProvidersJp | null> {
+  const titlesToTry = [title, ...fallbackTitles].filter(
+    (t, i, arr) => Boolean(t?.trim()) && arr.indexOf(t) === i
+  );
 
-  // Prefer the result with actual JP flatrate providers; TV wins over movie for ties
-  const best =
-    (tv?.flatrate?.length ? tv : null) ??
-    (movie?.flatrate?.length ? movie : null) ??
-    tv ??
-    movie;
+  let best = null;
+  for (const t of titlesToTry) {
+    const [tv, movie] = await Promise.all([
+      findTmdbAvailability(t, "tv").catch(() => null),
+      findTmdbAvailability(t, "movie").catch(() => null),
+    ]);
+    // Prefer result with actual JP flatrate; TV wins over movie for ties
+    const candidate =
+      (tv?.flatrate?.length ? tv : null) ??
+      (movie?.flatrate?.length ? movie : null) ??
+      tv ??
+      movie;
+    if (candidate?.flatrate?.length) {
+      best = candidate;
+      break;
+    }
+    if (candidate && !best) {
+      best = candidate;
+    }
+  }
   if (!best) return null;
 
   const client = getTursoClient();
@@ -261,7 +277,12 @@ export async function buildProviderMapForItems(
     const results = await Promise.all(
       batch.map(async (item) => {
         try {
-          const providers = await fetchAndSaveStreamingProviders(item.title);
+          const fallbacks = [
+            item.titles?.romaji,
+            item.titles?.english,
+            item.titles?.userPreferred,
+          ].filter((t): t is string => Boolean(t?.trim()) && t !== item.title);
+          const providers = await fetchAndSaveStreamingProviders(item.title, fallbacks);
           return { item, providers };
         } catch {
           return { item, providers: null };
