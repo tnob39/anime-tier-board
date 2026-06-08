@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireUserId } from "@/lib/api/auth-helpers";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { AppError } from "@/lib/errors/app-error";
 import { listStatuses, updateTrackingDetails } from "@/lib/statuses";
 
 const MAX_TRACKING_PAYLOAD_BYTES = 20_000;
@@ -11,28 +13,22 @@ type TrackingPayload = {
   notes?: string | null;
 };
 
-export async function GET() {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withApiRoute("watchlist.GET", async () => {
+  const userId = await requireUserId();
   return NextResponse.json({ items: await listStatuses(userId) });
-}
+});
 
-export async function PUT(request: Request) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const PUT = withApiRoute("watchlist.PUT", async (request: Request) => {
+  const userId = await requireUserId();
 
   const rawBody = await request.text();
   if (rawBody.length > MAX_TRACKING_PAYLOAD_BYTES) {
-    return NextResponse.json({ error: "Tracking payload too large" }, { status: 413 });
+    throw new AppError({
+      message: "送信データが大きすぎます。",
+      status: 413,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   let payload: TrackingPayload;
@@ -40,11 +36,21 @@ export async function PUT(request: Request) {
   try {
     payload = JSON.parse(rawBody) as TrackingPayload;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    throw new AppError({
+      message: "JSONの形式が正しくありません。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   if (!payload.animeId) {
-    return NextResponse.json({ error: "Invalid tracking payload" }, { status: 400 });
+    throw new AppError({
+      message: "視聴管理の内容が不正です。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   await updateTrackingDetails({
@@ -52,8 +58,8 @@ export async function PUT(request: Request) {
     animeId: payload.animeId,
     favoriteLevel: payload.favoriteLevel ?? null,
     watchSlot: payload.watchSlot ?? null,
-    notes: payload.notes ?? null
+    notes: payload.notes ?? null,
   });
 
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireUserId } from "@/lib/api/auth-helpers";
+import { withApiRoute } from "@/lib/api/with-api-route";
 import { getDashboard } from "@/lib/statuses";
 
-export async function GET() {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withApiRoute("dashboard.GET", async () => {
+  const userId = await requireUserId();
   return NextResponse.json({ dashboard: await getDashboard(userId) });
-}
+});

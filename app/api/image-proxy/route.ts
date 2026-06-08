@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { AppError } from "@/lib/errors/app-error";
 
 export const dynamic = "force-dynamic";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
-export async function GET(request: Request) {
+export const GET = withApiRoute("image-proxy.GET", async (request: Request) => {
   const requestUrl = new URL(request.url);
   const rawUrl = requestUrl.searchParams.get("url");
 
   if (!rawUrl) {
-    return NextResponse.json({ error: "url is required" }, { status: 400 });
+    throw new AppError({
+      message: "url パラメータが必要です。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   let imageUrl: URL;
@@ -17,63 +24,99 @@ export async function GET(request: Request) {
   try {
     imageUrl = new URL(rawUrl);
   } catch {
-    return NextResponse.json({ error: "invalid url" }, { status: 400 });
+    throw new AppError({
+      message: "URLの形式が正しくありません。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   if (imageUrl.protocol !== "https:") {
-    return NextResponse.json(
-      { error: "only https image URLs are supported" },
-      { status: 400 }
-    );
+    throw new AppError({
+      message: "https の画像 URL のみ対応しています。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   if (isBlockedHost(imageUrl.hostname)) {
-    return NextResponse.json({ error: "blocked host" }, { status: 400 });
+    throw new AppError({
+      message: "このホストからの画像取得は許可されていません。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
-  const response = await fetch(imageUrl, {
-    headers: {
-      Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-      "User-Agent": "anime-tier-board/0.1"
-    },
-    cache: "force-cache"
-  });
+  let response: Response;
+  try {
+    response = await fetch(imageUrl, {
+      headers: {
+        Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "User-Agent": "anime-tier-board/0.1",
+      },
+      cache: "force-cache",
+    });
+  } catch {
+    throw new AppError({
+      message: "画像の取得に失敗しました。",
+      status: 502,
+      code: "UPSTREAM",
+      expose: true,
+    });
+  }
 
   if (!response.ok) {
-    return NextResponse.json(
-      { error: `image request failed: ${response.status}` },
-      { status: 502 }
-    );
+    throw new AppError({
+      message: `画像の取得に失敗しました（${response.status}）。`,
+      status: 502,
+      code: "UPSTREAM",
+      expose: true,
+    });
   }
 
   const contentType = response.headers.get("content-type") ?? "application/octet-stream";
 
   if (!contentType.startsWith("image/")) {
-    return NextResponse.json(
-      { error: "url did not return an image" },
-      { status: 415 }
-    );
+    throw new AppError({
+      message: "指定 URL は画像ではありませんでした。",
+      status: 415,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   const contentLength = Number(response.headers.get("content-length") ?? 0);
 
   if (contentLength > MAX_IMAGE_BYTES) {
-    return NextResponse.json({ error: "image is too large" }, { status: 413 });
+    throw new AppError({
+      message: "画像が大きすぎます。",
+      status: 413,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   const imageBuffer = await response.arrayBuffer();
 
   if (imageBuffer.byteLength > MAX_IMAGE_BYTES) {
-    return NextResponse.json({ error: "image is too large" }, { status: 413 });
+    throw new AppError({
+      message: "画像が大きすぎます。",
+      status: 413,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
-  return new Response(imageBuffer, {
+  return new NextResponse(imageBuffer, {
     headers: {
       "Content-Type": contentType,
-      "Cache-Control": "public, max-age=86400, s-maxage=86400"
-    }
+      "Cache-Control": "public, max-age=86400, s-maxage=86400",
+    },
   });
-}
+});
 
 function isBlockedHost(hostname: string): boolean {
   const lower = hostname.toLowerCase();

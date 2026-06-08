@@ -81,6 +81,7 @@ type SeasonalApiResponse = {
   source: AnimeSourceName;
   cached: boolean;
   warning?: string;
+  enrichWarning?: string;
   error?: string;
 };
 
@@ -265,7 +266,7 @@ export function TierBoardApp() {
       setBoard(nextBoard);
       setSource(payload.source);
       setCached(payload.cached);
-      setWarning(payload.warning ?? null);
+      setWarning(payload.warning ?? payload.enrichWarning ?? null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
       setItems([]);
@@ -290,7 +291,19 @@ export function TierBoardApp() {
     let cancelled = false;
 
     fetch("/api/statuses", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : { statuses: [] }))
+      .then(async (response) => {
+        if (!response.ok) {
+          let message = "視聴ステータスの取得に失敗しました。";
+          try {
+            const body = (await response.json()) as { error?: string };
+            if (body.error) message = body.error;
+          } catch {
+            // ignore
+          }
+          throw new Error(message);
+        }
+        return response.json() as Promise<StatusApiResponse>;
+      })
       .then((payload: StatusApiResponse) => {
         if (cancelled) {
           return;
@@ -302,7 +315,16 @@ export function TierBoardApp() {
         }
         setStatusMap(nextStatuses);
       })
-      .catch(() => undefined);
+      .catch((statusError) => {
+        if (cancelled) {
+          return;
+        }
+        setWarning(
+          statusError instanceof Error
+            ? statusError.message
+            : "視聴ステータスの取得に失敗しました。"
+        );
+      });
 
     return () => {
       cancelled = true;

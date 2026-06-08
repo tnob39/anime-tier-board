@@ -239,19 +239,28 @@ function hasTmdbCredentials() {
   return Boolean(process.env.TMDB_API_KEY || process.env.TMDB_BEARER_TOKEN || process.env.TMDB_READ_ACCESS_TOKEN);
 }
 
-export async function buildProviderMapForItems(
+export type EnrichBuildStats = {
+  attempted: number;
+  failed: number;
+  credentialsMissing: boolean;
+};
+
+export async function buildProviderMapWithStats(
   items: AnimeItem[],
   options?: { concurrency?: number }
-): Promise<Map<string, StreamingProvidersJp>> {
+): Promise<{ map: Map<string, StreamingProvidersJp>; stats: EnrichBuildStats }> {
   const map = new Map<string, StreamingProvidersJp>();
-  if (!hasTmdbCredentials()) {
-    return map;
+  const credentialsMissing = !hasTmdbCredentials();
+  if (credentialsMissing) {
+    return {
+      map,
+      stats: { attempted: 0, failed: 0, credentialsMissing: true },
+    };
   }
 
   const client = getTursoClient();
   await ensureStreamingProvidersTable(client);
 
-  // Step 1: serve from DB cache
   const allTitles = items.flatMap((item) =>
     [item.title, item.titles?.romaji].filter((t): t is string => Boolean(t?.trim()))
   );
@@ -270,7 +279,7 @@ export async function buildProviderMapForItems(
     }
   }
 
-  // Step 2: fetch from TMDb only for uncached items
+  let failed = 0;
   const concurrency = Math.max(1, options?.concurrency ?? 3);
   for (let index = 0; index < uncached.length; index += concurrency) {
     const batch = uncached.slice(index, index + concurrency);
@@ -285,6 +294,7 @@ export async function buildProviderMapForItems(
           const providers = await fetchAndSaveStreamingProviders(item.title, fallbacks);
           return { item, providers };
         } catch {
+          failed += 1;
           return { item, providers: null };
         }
       })
@@ -298,6 +308,21 @@ export async function buildProviderMapForItems(
     }
   }
 
+  return {
+    map,
+    stats: {
+      attempted: uncached.length,
+      failed,
+      credentialsMissing: false,
+    },
+  };
+}
+
+export async function buildProviderMapForItems(
+  items: AnimeItem[],
+  options?: { concurrency?: number }
+): Promise<Map<string, StreamingProvidersJp>> {
+  const { map } = await buildProviderMapWithStats(items, options);
   return map;
 }
 
