@@ -26,3 +26,8 @@ git-state-active/
 
 .vercel
 .env*
+
+# Playwright
+playwright-report/
+test-results/
+tests/.auth/
