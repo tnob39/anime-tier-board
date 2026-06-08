@@ -486,6 +486,8 @@ function WatchlistCard({
           ) : null}
         </div>
 
+        <StreamingProviderChips anime={anime} />
+
         <label className="watchlist-field">
           <span>いつ見る？</span>
           <select
@@ -619,6 +621,40 @@ function StatusChips({
           {statusLabels[option]}
         </button>
       ))}
+    </div>
+  );
+}
+
+function StreamingProviderChips({ anime }: { anime: AnimeItem }) {
+  const providers = anime.streamingProvidersJp?.flatrate;
+  if (!providers?.length) return null;
+
+  const providerLink = anime.streamingProvidersJp?.providerLink;
+
+  return (
+    <div className="watchlist-streaming-chips">
+      {providers.map((provider) =>
+        provider.logoUrl ? (
+          <span key={provider.id} className="watchlist-streaming-chip" title={provider.name}>
+            <img src={provider.logoUrl} alt={provider.name} width={18} height={18} />
+          </span>
+        ) : (
+          <span key={provider.id} className="watchlist-streaming-chip watchlist-streaming-chip-text">
+            {provider.name}
+          </span>
+        )
+      )}
+      {providerLink ? (
+        <a
+          className="watchlist-streaming-chip watchlist-streaming-chip-more"
+          href={providerLink}
+          target="_blank"
+          rel="noreferrer"
+          title="配信情報を詳しく見る"
+        >
+          <ExternalLink size={11} />
+        </a>
+      ) : null}
     </div>
   );
 }
