@@ -111,6 +111,8 @@ npm.cmd run dev:local
 | [CLAUDE.md](./CLAUDE.md) | Claude Code 向けエントリポイント |
 | [orca/AUTOMATIONS.md](./orca/AUTOMATIONS.md) | 定期レビュー Automation 定義 |
 | [worktrees/composer-dev.md](./worktrees/composer-dev.md) | composer-dev worktree ミニガイド |
+| [worktrees/error-catching.md](./worktrees/error-catching.md) | エラー処理共通化（Phase 1）専用 worktree |
+| [plans/error-catching-20260608.md](./plans/error-catching-20260608.md) | API エラー契約・並行タスクのファイル所有権 |
 | [worktrees/claude-review.md](./worktrees/claude-review.md) | claude-review worktree ミニガイド |
 | [docs/GITHUB_ISSUES.md](./docs/GITHUB_ISSUES.md) | タスク管理（GitHub Issues） |
 | [SESSION_HANDOFF.md](./SESSION_HANDOFF.md) | セッション引き継ぎ |

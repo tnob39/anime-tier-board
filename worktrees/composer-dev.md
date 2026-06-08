@@ -114,6 +114,15 @@ orca worktree create --name calendar-next-airing --agent grok \
 
 ---
 
+## 並行タスク（error-catching）
+
+エラー処理共通化（`plans/error-catching-20260608.md`）が **別 worktree** で進む場合:
+
+- `explore-client.tsx` / TMDb ピル UI は **本 worktree が優先**
+- `app/api/anime/seasonal/route.ts` は main マージ後に rebase。コンフリクト時は **enrichStats / enrichWarning 行を残す**
+
+---
+
 ## 既知の制約
 
 - `Hermes` ファイルはコミットしない

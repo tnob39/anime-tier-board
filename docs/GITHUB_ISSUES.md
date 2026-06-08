@@ -59,6 +59,7 @@
 | [#1](https://github.com/tnob39/anime-tier-board/issues/1) | TMDb Watch Providers カード表示 polish | composer-dev |
 | [#2](https://github.com/tnob39/anime-tier-board/issues/2) | 今夜何見る？（decide-tonight） | feature-new-features |
 | [#3](https://github.com/tnob39/anime-tier-board/issues/3) | airing データ調査・改善 | （調査） |
+| [#4](https://github.com/tnob39/anime-tier-board/issues/4) | エラー処理共通化 Phase 1 | error-catching |
 
 ---
 
