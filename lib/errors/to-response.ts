@@ -74,7 +74,8 @@ export function toErrorResponse(
   });
 
   const body: ApiErrorBody = {
-    error: mapped.expose && error instanceof Error ? error.message : mapped.message,
+    error:
+      isAppError(error) && mapped.expose ? error.message : mapped.message,
     code: mapped.code,
     requestId,
   };
