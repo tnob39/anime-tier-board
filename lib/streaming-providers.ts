@@ -123,6 +123,7 @@ export async function fetchAndSaveStreamingProviders(title: string): Promise<Str
 
   const data = {
     tmdb_id: best.tmdbId,
+    anime_title: title,
     media_type: best.mediaType,
     jp_flatrate: JSON.stringify(best.flatrate),
     provider_link: best.providerLink,
@@ -130,14 +131,15 @@ export async function fetchAndSaveStreamingProviders(title: string): Promise<Str
   };
 
   await client.execute({
-    sql: `INSERT INTO anime_streaming_providers (tmdb_id, media_type, jp_flatrate, provider_link, updated_at)
-          VALUES (?, ?, ?, ?, ?)
+    sql: `INSERT INTO anime_streaming_providers (tmdb_id, anime_title, media_type, jp_flatrate, provider_link, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)
           ON CONFLICT(tmdb_id) DO UPDATE SET
+            anime_title=excluded.anime_title,
             media_type=excluded.media_type,
             jp_flatrate=excluded.jp_flatrate,
             provider_link=excluded.provider_link,
             updated_at=excluded.updated_at`,
-    args: [data.tmdb_id, data.media_type, data.jp_flatrate, data.provider_link, data.updated_at],
+    args: [data.tmdb_id, data.anime_title, data.media_type, data.jp_flatrate, data.provider_link, data.updated_at],
   });
 
   return {
@@ -153,12 +155,17 @@ async function ensureStreamingProvidersTable(client: any) {
   await client.execute(`
     CREATE TABLE IF NOT EXISTS anime_streaming_providers (
       tmdb_id INTEGER PRIMARY KEY,
+      anime_title TEXT,
       media_type TEXT,
       jp_flatrate TEXT,
       provider_link TEXT,
       updated_at TEXT NOT NULL
     )
   `);
+  // migrate: add anime_title column if missing
+  await client
+    .execute("ALTER TABLE anime_streaming_providers ADD COLUMN anime_title TEXT")
+    .catch(() => undefined);
 }
 
 export async function getStreamingProvidersByTmdbId(tmdbId: number): Promise<StreamingProvidersJp | null> {
@@ -182,25 +189,75 @@ export async function getStreamingProvidersByTmdbId(tmdbId: number): Promise<Str
   };
 }
 
+async function getCachedProvidersByTitles(
+  client: any,
+  titles: string[]
+): Promise<Map<string, StreamingProvidersJp>> {
+  const map = new Map<string, StreamingProvidersJp>();
+  if (!titles.length) return map;
+
+  const placeholders = titles.map(() => "?").join(", ");
+  const result = await client.execute({
+    sql: `SELECT anime_title, jp_flatrate, provider_link, tmdb_id, media_type, updated_at
+          FROM anime_streaming_providers
+          WHERE anime_title IN (${placeholders})`,
+    args: titles,
+  });
+
+  for (const row of result.rows) {
+    const t = row.anime_title as string | null;
+    if (!t) continue;
+    map.set(t, {
+      flatrate: JSON.parse((row.jp_flatrate as string) ?? "[]"),
+      providerLink: row.provider_link as string | null,
+      tmdbId: row.tmdb_id as number,
+      mediaType: row.media_type as "tv" | "movie" | undefined,
+      updatedAt: row.updated_at as string,
+    });
+  }
+
+  return map;
+}
+
 function hasTmdbCredentials() {
   return Boolean(process.env.TMDB_API_KEY || process.env.TMDB_BEARER_TOKEN || process.env.TMDB_READ_ACCESS_TOKEN);
 }
 
 export async function buildProviderMapForItems(
   items: AnimeItem[],
-  options?: { limit?: number; concurrency?: number }
+  options?: { concurrency?: number }
 ): Promise<Map<string, StreamingProvidersJp>> {
   const map = new Map<string, StreamingProvidersJp>();
   if (!hasTmdbCredentials()) {
     return map;
   }
 
-  const limit = options?.limit ?? 25;
-  const concurrency = Math.max(1, options?.concurrency ?? 3);
-  const targets = items.slice(0, limit);
+  const client = getTursoClient();
+  await ensureStreamingProvidersTable(client);
 
-  for (let index = 0; index < targets.length; index += concurrency) {
-    const batch = targets.slice(index, index + concurrency);
+  // Step 1: serve from DB cache
+  const allTitles = items.flatMap((item) =>
+    [item.title, item.titles?.romaji].filter((t): t is string => Boolean(t?.trim()))
+  );
+  const cached = await getCachedProvidersByTitles(client, [...new Set(allTitles)]);
+
+  const uncached: AnimeItem[] = [];
+  for (const item of items) {
+    const hit = cached.get(item.title) ?? (item.titles?.romaji ? cached.get(item.titles.romaji) : undefined);
+    if (hit) {
+      if (hit.flatrate.length > 0) {
+        map.set(item.title, hit);
+        if (item.titles?.romaji) map.set(item.titles.romaji, hit);
+      }
+    } else {
+      uncached.push(item);
+    }
+  }
+
+  // Step 2: fetch from TMDb only for uncached items
+  const concurrency = Math.max(1, options?.concurrency ?? 3);
+  for (let index = 0; index < uncached.length; index += concurrency) {
+    const batch = uncached.slice(index, index + concurrency);
     const results = await Promise.all(
       batch.map(async (item) => {
         try {
@@ -213,14 +270,9 @@ export async function buildProviderMapForItems(
     );
 
     for (const { item, providers } of results) {
-      if (!providers?.flatrate?.length) {
-        continue;
-      }
-
+      if (!providers?.flatrate?.length) continue;
       const romajiKey = item.titles?.romaji?.trim();
-      if (romajiKey) {
-        map.set(romajiKey, providers);
-      }
+      if (romajiKey) map.set(romajiKey, providers);
       map.set(item.title, providers);
     }
   }
@@ -236,15 +288,8 @@ export function enrichWithStreamingProviders(
     const key = item.titles?.romaji || item.title;
     const providers = providerMap.get(key) ?? providerMap.get(item.title);
     if (providers && providers.flatrate.length > 0) {
-      return {
-        ...item,
-        streamingProvidersJp: providers,
-      };
+      return { ...item, streamingProvidersJp: providers };
     }
     return item;
   });
 }
-
-// Prepared for seasonal fetch integration:
-// Call fetchAndSaveStreamingProviders / getStreamingProvidersByTmdbId per item
-// then enrichWithStreamingProviders(items, providerMap) after fetching seasonal list.
