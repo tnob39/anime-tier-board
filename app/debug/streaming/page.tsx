@@ -1,13 +1,13 @@
 import { getTursoClient } from "@/lib/turso";
 import { fetchSeasonalAnime } from "@/lib/anime-sources";
 import { getCurrentAnimeSeason } from "@/lib/season";
+import { CacheControls } from "./cache-controls";
 
 export const dynamic = "force-dynamic";
 
 export default async function StreamingDebugPage() {
   const { year, season } = getCurrentAnimeSeason();
 
-  // DB キャッシュを全件取得
   const client = getTursoClient();
   const dbRows = await client
     .execute(
@@ -33,54 +33,67 @@ export default async function StreamingDebugPage() {
       ])
   );
 
-  // 季節アニメ一覧（AniList のみ、TMDb 呼び出しなし）
   const seasonal = await fetchSeasonalAnime(year, season).catch(() => ({ items: [] }));
 
   const rows = seasonal.items.map((item) => {
     const hit = cached.get(item.title) ?? cached.get(item.titles?.romaji ?? "");
     return {
       title: item.title,
+      romaji: item.titles?.romaji ?? "",
       cached: Boolean(hit),
+      hasProviders: (hit?.providers?.length ?? 0) > 0,
       providers: hit?.providers ?? [],
-      updatedAt: hit?.updatedAt ?? null,
     };
   });
 
+  const total = rows.length;
   const hitCount = rows.filter((r) => r.cached).length;
-  const withProviders = rows.filter((r) => r.providers.length > 0).length;
+  const withProviders = rows.filter((r) => r.hasProviders).length;
+  const emptyCache = rows.filter((r) => r.cached && !r.hasProviders).length;
+  const notFetched = rows.filter((r) => !r.cached).length;
+  const dbTotal = dbRows.rows.length;
 
   return (
-    <main style={{ padding: "16px", fontFamily: "monospace", fontSize: "13px" }}>
-      <h1 style={{ fontSize: "16px", marginBottom: "8px" }}>
+    <main style={{ padding: "16px", fontFamily: "monospace", fontSize: "13px", maxWidth: "800px" }}>
+      <h1 style={{ fontSize: "16px", marginBottom: "12px" }}>
         Streaming Provider Debug — {season} {year}
       </h1>
 
-      <p style={{ marginBottom: "12px", color: "#666" }}>
-        季節アニメ {rows.length}本 / DBキャッシュあり {hitCount}本 / JP flatrate あり {withProviders}本
-        <br />
-        DBキャッシュ総件数: {dbRows.rows.length}件
-      </p>
+      <div style={{ background: "#f5f5f5", padding: "10px 12px", borderRadius: "8px", marginBottom: "16px", lineHeight: "1.8" }}>
+        <div>季節アニメ: <b>{total}</b> 本</div>
+        <div>✅ キャッシュあり+配信あり: <b style={{ color: "#22c55e" }}>{withProviders}</b> 本</div>
+        <div>⬜ キャッシュあり+配信なし: <b style={{ color: "#f59e0b" }}>{emptyCache}</b> 本 ← 再取得対象</div>
+        <div>❌ 未取得: <b style={{ color: "#ef4444" }}>{notFetched}</b> 本</div>
+        <div style={{ marginTop: "4px", color: "#888" }}>DB総件数: {dbTotal} 件</div>
+      </div>
 
-      <table style={{ borderCollapse: "collapse", width: "100%" }}>
+      <CacheControls emptyCount={emptyCache} />
+
+      <table style={{ borderCollapse: "collapse", width: "100%", marginTop: "16px" }}>
         <thead>
           <tr style={{ background: "#f0f0f0" }}>
             <th style={th}>タイトル</th>
-            <th style={th}>キャッシュ</th>
+            <th style={th}>状態</th>
             <th style={th}>配信サービス</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.title} style={{ borderBottom: "1px solid #eee" }}>
-              <td style={td}>{row.title}</td>
+              <td style={td}>
+                <div>{row.title}</div>
+                {row.romaji && row.romaji !== row.title ? (
+                  <div style={{ color: "#888", fontSize: "11px" }}>{row.romaji}</div>
+                ) : null}
+              </td>
               <td style={{ ...td, textAlign: "center" }}>
-                {row.cached ? "✅" : "❌"}
+                {row.hasProviders ? "✅" : row.cached ? "⬜" : "❌"}
               </td>
               <td style={td}>
                 {row.providers.length > 0
                   ? row.providers.map((p) => p.name).join(", ")
                   : row.cached
-                    ? "—（配信なし）"
+                    ? "配信なし（キャッシュ済）"
                     : "未取得"}
               </td>
             </tr>
