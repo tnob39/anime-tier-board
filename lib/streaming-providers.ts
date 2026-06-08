@@ -240,7 +240,11 @@ function hasTmdbCredentials() {
 }
 
 // 「第2期」「Season 2」「3クール」「-Second Season-」などを除去してベースタイトルを返す。
-// 変化なければ null を返す。
+// 変化なければ null を返す。debug エンドポイントからも利用可。
+export function stripSeasonQualifierForDebug(title: string): string | null {
+  return stripSeasonQualifier(title);
+}
+
 function stripSeasonQualifier(title: string): string | null {
   const patterns = [
     /[\s　]+第\d+期\s*$/,

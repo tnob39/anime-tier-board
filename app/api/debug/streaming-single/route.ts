@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getTursoClient } from "@/lib/turso";
-import { fetchAndSaveStreamingProviders } from "@/lib/streaming-providers";
+import { fetchAndSaveStreamingProviders, stripSeasonQualifierForDebug } from "@/lib/streaming-providers";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "title は必須です" }, { status: 400 });
   }
 
-  const fallbacks = [romaji, english].filter((t): t is string => Boolean(t?.trim()) && t !== title);
+  const baseTitle = stripSeasonQualifierForDebug(title);
+  const baseRomaji = romaji ? stripSeasonQualifierForDebug(romaji) : null;
+
+  const fallbacks = [romaji, english, baseTitle, baseRomaji]
+    .filter((t): t is string => Boolean(t?.trim()) && t !== title);
   const triedTitles = [title, ...fallbacks];
 
   const startMs = Date.now();
