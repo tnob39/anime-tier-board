@@ -5,6 +5,18 @@ import { CacheControls } from "./cache-controls";
 
 export const dynamic = "force-dynamic";
 
+const ANILIST_STREAMING_QUERY = `
+  query SeasonalAnime($season: MediaSeason, $seasonYear: Int) {
+    Page(page: 1, perPage: 50) {
+      media(type: ANIME, season: $season, seasonYear: $seasonYear, sort: POPULARITY_DESC, isAdult: false) {
+        id
+        title { native romaji english }
+        externalLinks { url site type language }
+      }
+    }
+  }
+`;
+
 export default async function StreamingDebugPage() {
   const { year, season } = getCurrentAnimeSeason();
 
@@ -35,14 +47,38 @@ export default async function StreamingDebugPage() {
 
   const seasonal = await fetchSeasonalAnime(year, season).catch(() => ({ items: [] }));
 
+  // AniList externalLinks (no timeout risk — single GraphQL call)
+  const anilistRes = await fetch("https://graphql.anilist.co", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: ANILIST_STREAMING_QUERY, variables: { season, seasonYear: year } }),
+    signal: AbortSignal.timeout(8000),
+  }).catch(() => null);
+  const anilistJson = await anilistRes?.json().catch(() => null) as { data?: { Page?: { media?: any[] } } } | null;
+  const anilistMedia: any[] = anilistJson?.data?.Page?.media ?? [];
+
+  const anilistMap = new Map<string, string[]>();
+  for (const m of anilistMedia) {
+    const sites = (m.externalLinks as any[])
+      .filter((l) => l.type === "STREAMING")
+      .map((l) => l.site as string);
+    if (m.title.native) anilistMap.set(m.title.native as string, sites);
+    if (m.title.romaji) anilistMap.set(m.title.romaji as string, sites);
+  }
+
   const rows = seasonal.items.map((item) => {
     const hit = cached.get(item.title) ?? cached.get(item.titles?.romaji ?? "");
+    const anilistSites =
+      anilistMap.get(item.title) ??
+      anilistMap.get(item.titles?.romaji ?? "") ??
+      [];
     return {
       title: item.title,
       romaji: item.titles?.romaji ?? "",
       cached: Boolean(hit),
       hasProviders: (hit?.providers?.length ?? 0) > 0,
       providers: hit?.providers ?? [],
+      anilistSites,
     };
   });
 
@@ -74,7 +110,8 @@ export default async function StreamingDebugPage() {
           <tr style={{ background: "#f0f0f0" }}>
             <th style={th}>タイトル</th>
             <th style={th}>状態</th>
-            <th style={th}>配信サービス</th>
+            <th style={th}>TMDb (JP flatrate)</th>
+            <th style={{ ...th, background: "#e8f4fd" }}>AniList (externalLinks)</th>
           </tr>
         </thead>
         <tbody>
@@ -93,8 +130,13 @@ export default async function StreamingDebugPage() {
                 {row.providers.length > 0
                   ? row.providers.map((p) => p.name).join(", ")
                   : row.cached
-                    ? "配信なし（キャッシュ済）"
-                    : "未取得"}
+                    ? <span style={{ color: "#aaa" }}>配信なし（キャッシュ済）</span>
+                    : <span style={{ color: "#ef4444" }}>未取得</span>}
+              </td>
+              <td style={{ ...td, background: "#f7fbff" }}>
+                {row.anilistSites.length > 0
+                  ? row.anilistSites.join(", ")
+                  : <span style={{ color: "#aaa" }}>—</span>}
               </td>
             </tr>
           ))}

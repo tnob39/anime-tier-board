@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireUserId } from "@/lib/api/auth-helpers";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { AppError } from "@/lib/errors/app-error";
 import { deleteStatus, isViewingStatus, listStatuses, saveStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
@@ -11,28 +13,22 @@ type StatusPayload = {
   anime?: AnimeItem;
 };
 
-export async function GET() {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withApiRoute("statuses.GET", async () => {
+  const userId = await requireUserId();
   return NextResponse.json({ statuses: await listStatuses(userId) });
-}
+});
 
-export async function PUT(request: Request) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const PUT = withApiRoute("statuses.PUT", async (request: Request) => {
+  const userId = await requireUserId();
 
   const rawBody = await request.text();
   if (rawBody.length > MAX_STATUS_PAYLOAD_BYTES) {
-    return NextResponse.json({ error: "Status payload too large" }, { status: 413 });
+    throw new AppError({
+      message: "送信データが大きすぎます。",
+      status: 413,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   let payload: StatusPayload;
@@ -40,7 +36,12 @@ export async function PUT(request: Request) {
   try {
     payload = JSON.parse(rawBody) as StatusPayload;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    throw new AppError({
+      message: "JSONの形式が正しくありません。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   if (
@@ -50,34 +51,39 @@ export async function PUT(request: Request) {
     !payload.anime ||
     payload.anime.id !== payload.animeId
   ) {
-    return NextResponse.json({ error: "Invalid status payload" }, { status: 400 });
+    throw new AppError({
+      message: "ステータスの内容が不正です。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   await saveStatus({
     userId,
     animeId: payload.animeId,
     status: payload.status,
-    anime: payload.anime
+    anime: payload.anime,
   });
 
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(request: Request) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const DELETE = withApiRoute("statuses.DELETE", async (request: Request) => {
+  const userId = await requireUserId();
 
   const url = new URL(request.url);
   const animeId = url.searchParams.get("animeId")?.trim();
 
   if (!animeId) {
-    return NextResponse.json({ error: "Invalid status key" }, { status: 400 });
+    throw new AppError({
+      message: "animeId が指定されていません。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
   }
 
   await deleteStatus(userId, animeId);
   return NextResponse.json({ ok: true });
-}
+});
