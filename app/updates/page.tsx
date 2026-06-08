@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import {
   BarChart3, CalendarDays, Compass, CreditCard,
   ListChecks, Mic2, Share2, Sparkles, Star,
-  UserCheck, Zap, type LucideIcon
+  Tv2, UserCheck, Zap, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,10 +27,24 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "0.8",
+    date: "2026-06-08",
+    label: "今夜何見る？",
+    isLatest: true,
+    changes: [
+      {
+        icon: Tv2,
+        iconColor: "#f76f4f",
+        title: "今夜何見る？",
+        description: "ダッシュボードから「続きを見る」「今夜完結したい」で候補を提示します。視聴リズム（毎週リアタイ / まとめて見る / ゆっくり見る）も登録できます。",
+        href: "/dashboard"
+      }
+    ]
+  },
+  {
     version: "0.7",
     date: "2026-06-07",
     label: "サブスク最適化 & 布教カード",
-    isLatest: true,
     changes: [
       {
         icon: CreditCard,
