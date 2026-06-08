@@ -636,7 +636,20 @@ function StreamingProviderChips({ anime }: { anime: AnimeItem }) {
       {providers.map((provider) =>
         provider.logoUrl ? (
           <span key={provider.id} className="watchlist-streaming-chip" title={provider.name}>
-            <img src={provider.logoUrl} alt={provider.name} width={18} height={18} />
+            <img
+              src={provider.logoUrl}
+              alt={provider.name}
+              width={20}
+              height={20}
+              onError={(e) => {
+                const el = e.currentTarget;
+                el.style.display = "none";
+                const text = document.createElement("span");
+                text.textContent = provider.name.slice(0, 2);
+                text.style.cssText = "font-size:8px;font-weight:700;color:var(--muted)";
+                el.parentElement?.appendChild(text);
+              }}
+            />
           </span>
         ) : (
           <span key={provider.id} className="watchlist-streaming-chip watchlist-streaming-chip-text">
