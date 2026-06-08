@@ -160,7 +160,7 @@ export function DashboardClient({
 
       <Link className="dashboard-updates-link" href="/updates">
         <span className="dashboard-updates-badge">NEW</span>
-        v0.7 — サブスク最適化・布教カードを追加しました
+        v0.8 — 今夜何見る？機能を追加しました
         <span className="dashboard-updates-arrow">›</span>
       </Link>
 
