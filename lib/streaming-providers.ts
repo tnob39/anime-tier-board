@@ -239,6 +239,23 @@ function hasTmdbCredentials() {
   return Boolean(process.env.TMDB_API_KEY || process.env.TMDB_BEARER_TOKEN || process.env.TMDB_READ_ACCESS_TOKEN);
 }
 
+// 「第2期」「Season 2」「3クール」「-Second Season-」などを除去してベースタイトルを返す。
+// 変化なければ null を返す。
+function stripSeasonQualifier(title: string): string | null {
+  const patterns = [
+    /[\s　]+第\d+期\s*$/,
+    /[\s　]+\d+クール\s*$/,
+    /[\s　]+Season[\s　]+\d+\s*$/i,
+    /[\s　]+Part[\s　]+\d+\s*$/i,
+    /[\s　]+\d+(st|nd|rd|th)[\s　]+Season\s*$/i,
+    /[\s　]+(Second|Third|Fourth|Fifth|Sixth)[\s　]+Season\s*$/i,
+    /[\s　]+-\s*(Second|Third|Fourth|Fifth|Sixth|2nd|3rd|4th|5th)[\s　]+Season\s*-\s*$/i,
+  ];
+  let result = title;
+  for (const p of patterns) result = result.replace(p, "").trim();
+  return result !== title ? result : null;
+}
+
 export type EnrichBuildStats = {
   attempted: number;
   failed: number;
@@ -291,10 +308,14 @@ export async function buildProviderMapWithStats(
     const results = await Promise.all(
       batch.map(async (item) => {
         try {
+          const baseTitle = stripSeasonQualifier(item.title);
+          const baseRomaji = item.titles?.romaji ? stripSeasonQualifier(item.titles.romaji) : null;
           const fallbacks = [
             item.titles?.romaji,
             item.titles?.english,
             item.titles?.userPreferred,
+            baseTitle,
+            baseRomaji,
           ].filter((t): t is string => Boolean(t?.trim()) && t !== item.title);
           const providers = await fetchAndSaveStreamingProviders(item.title, fallbacks);
           return { item, providers };
