@@ -46,7 +46,11 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
   const [evangelistAnime, setEvangelistAnime] = useState<AnimeItem | null>(null);
   const [evangelistShareUrl, setEvangelistShareUrl] = useState<string | null>(null);
   const visibleItems = useMemo(() => items.filter((item) => item.anime), [items]);
-  const broadcastCalendar = useMemo(() => groupItemsByBroadcastDay(visibleItems), [visibleItems]);
+  const calendarItems = useMemo(
+    () => visibleItems.filter((item) => item.status === "watching" || item.status === "paused"),
+    [visibleItems]
+  );
+  const broadcastCalendar = useMemo(() => groupItemsByBroadcastDay(calendarItems), [calendarItems]);
 
   async function updateItem(
     animeId: string,
