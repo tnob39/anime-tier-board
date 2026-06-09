@@ -48,6 +48,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
@@ -1009,7 +1010,7 @@ function MoveItemSheet({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="move-sheet-preview">
-          <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+          <AnimeCardPlaceholder title={item.title} draggable={false} />
           <div>
             <strong>{item.title}</strong>
             <span>移動先を選択</span>
@@ -1241,7 +1242,7 @@ function AnimeCard({
         .filter(Boolean)
         .join(" ")}
     >
-      <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+      <AnimeCardPlaceholder title={item.title} draggable={false} />
       {!compact ? (
         <div className="anime-meta">
         <div className="anime-title" title={item.title}>

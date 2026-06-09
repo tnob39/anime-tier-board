@@ -3,6 +3,7 @@
 import { Compass, Loader2, PlayCircle, Plus, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
@@ -222,7 +223,7 @@ export function ExploreClient({
         <section className="explore-grid" aria-label="作品候補">
           {rankedItems.map((entry, index) => (
             <article key={entry.item.id} className="explore-card">
-              <img src={entry.item.proxiedImageUrl} alt={entry.item.title} />
+              <AnimeCardPlaceholder title={entry.item.title} />
               <div className="explore-card-body">
                 <div className="explore-rank">#{index + 1}</div>
                 <h2>{entry.item.title}</h2>

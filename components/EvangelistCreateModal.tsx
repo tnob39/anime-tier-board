@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import type { AnimeItem } from "@/lib/types";
 import { getStreamingProviders } from "@/lib/streaming-services";
 
@@ -122,7 +123,7 @@ export function EvangelistCreateModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="evangelist-sheet-preview">
-          <img src={anime.proxiedImageUrl} alt={anime.title} draggable={false} />
+          <AnimeCardPlaceholder title={anime.title} draggable={false} />
           <div>
             <strong id="evangelist-sheet-title">{anime.title}</strong>
             <span>布教カードを作る</span>

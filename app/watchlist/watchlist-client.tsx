@@ -1,9 +1,11 @@
 "use client";
 
-import { CalendarDays, ExternalLink, Loader2, MoreVertical, Share2, Star } from "lucide-react";
+import { CalendarDays, Copy, ExternalLink, Loader2, MoreVertical, Share2, Star } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
+import { searchUrlFromProviderId } from "@/lib/service-search";
 import type { AnimeStatusRecord, ViewingStatus, WatchRhythm } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
@@ -444,7 +446,7 @@ function WatchlistCard({
 
   return (
     <article className="watchlist-card">
-      <img src={anime.proxiedImageUrl} alt={anime.title} />
+      <AnimeCardPlaceholder title={anime.title} />
       <div className="watchlist-card-body">
         <div className="watchlist-card-heading">
           <div>
@@ -703,13 +705,21 @@ function StreamingProviderChips({ anime }: { anime: AnimeItem }) {
   const providers = anime.streamingProvidersJp?.flatrate;
   if (!providers?.length) return null;
 
-  const providerLink = anime.streamingProvidersJp?.providerLink;
+  const [copied, setCopied] = useState(false);
+
+  function copyTitle() {
+    navigator.clipboard.writeText(anime.title).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
 
   return (
     <div className="watchlist-streaming-chips">
-      {providers.map((provider) =>
-        provider.logoUrl ? (
-          <span key={provider.id} className="watchlist-streaming-chip" title={provider.name}>
+      {providers.map((provider) => {
+        const searchUrl = searchUrlFromProviderId(provider.id, anime.title);
+        const chip = provider.logoUrl ? (
+          <span className="watchlist-streaming-chip" title={`${provider.name}で検索`}>
             <img
               src={provider.logoUrl}
               alt={provider.name}
@@ -726,22 +736,35 @@ function StreamingProviderChips({ anime }: { anime: AnimeItem }) {
             />
           </span>
         ) : (
-          <span key={provider.id} className="watchlist-streaming-chip watchlist-streaming-chip-text">
+          <span className="watchlist-streaming-chip watchlist-streaming-chip-text">
             {provider.name}
           </span>
-        )
-      )}
-      {providerLink ? (
-        <a
-          className="watchlist-streaming-chip watchlist-streaming-chip-more"
-          href={providerLink}
-          target="_blank"
-          rel="noreferrer"
-          title="配信情報を詳しく見る"
-        >
-          <ExternalLink size={11} />
-        </a>
-      ) : null}
+        );
+        return searchUrl ? (
+          <a
+            key={provider.id}
+            className="watchlist-streaming-chip-link"
+            href={searchUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`${provider.name}で「${anime.title}」を検索`}
+          >
+            {chip}
+          </a>
+        ) : (
+          <span key={provider.id}>{chip}</span>
+        );
+      })}
+      <button
+        type="button"
+        className={`watchlist-title-copy${copied ? " is-copied" : ""}`}
+        onClick={copyTitle}
+        aria-label="タイトルをコピー"
+        title="タイトルをコピーしてサービス内で検索"
+      >
+        <Copy size={10} />
+        {copied ? "コピー済" : "タイトルをコピー"}
+      </button>
     </div>
   );
 }

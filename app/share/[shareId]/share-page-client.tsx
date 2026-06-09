@@ -4,6 +4,7 @@ import { Heart, MessageCircle, Sparkles, ThumbsUp, Zap } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
+import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import type { BoardShare, ReactionCounts, ReactionKind, ShareComment } from "@/lib/shares";
 import type { AnimeItem } from "@/lib/types";
 import { SEASON_LABELS } from "@/lib/types";
@@ -218,7 +219,7 @@ export function SharePageClient({
                   .filter((item): item is AnimeItem => Boolean(item))
                   .map((item) => (
                     <article key={item.id} className="anime-card is-compact" title={item.title}>
-                      <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+                      <AnimeCardPlaceholder title={item.title} draggable={false} />
                     </article>
                   ))}
               </div>
