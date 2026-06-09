@@ -3,6 +3,7 @@
 import { Heart, MessageCircle, Sparkles, ThumbsUp, Zap } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import type {
   DashboardShare,
   ReactionCounts,
@@ -195,8 +196,8 @@ export function DashboardShareClient({
           <div className="recent-grid">
             {initialShare.data.recent.map((record) => (
               <article key={record.animeId} className="recent-card">
-                {record.anime?.proxiedImageUrl ? (
-                  <img src={record.anime.proxiedImageUrl} alt={record.anime.title} />
+                {record.anime ? (
+                  <AnimeCardPlaceholder title={record.anime.title} />
                 ) : null}
                 <div>
                   <strong>{record.anime?.title ?? record.animeId}</strong>

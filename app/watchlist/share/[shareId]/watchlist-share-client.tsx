@@ -3,6 +3,7 @@
 import { Heart, MessageCircle, Sparkles, Star, ThumbsUp, Zap } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import type {
   ReactionCounts,
   ReactionKind,
@@ -191,7 +192,7 @@ export function WatchlistShareClient({
         {initialShare.items.map((record) =>
           record.anime ? (
             <article key={record.animeId} className="shared-watchlist-card">
-              <img src={record.anime.proxiedImageUrl} alt={record.anime.title} />
+              <AnimeCardPlaceholder title={record.anime.title} />
               <div>
                 <strong>{record.anime.title}</strong>
                 <span>{statusLabels[record.status]}</span>

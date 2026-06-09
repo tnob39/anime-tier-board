@@ -3,6 +3,7 @@
 import { ExternalLink, Mic2, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeVoiceActor } from "@/lib/types";
 
@@ -93,7 +94,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
               <div className="voice-work-list">
                 {actor.works.map((work) => (
                   <div key={`${actor.key}:${work.anime.id}:${work.characterName ?? ""}`} className="voice-work">
-                    <img src={work.anime.proxiedImageUrl} alt={work.anime.title} />
+                    <AnimeCardPlaceholder title={work.anime.title} />
                     <div>
                       <strong>{work.anime.title}</strong>
                       <span>{statusLabels[work.status]}</span>
