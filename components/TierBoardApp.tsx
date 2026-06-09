@@ -1010,7 +1010,11 @@ function MoveItemSheet({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="move-sheet-preview">
-          <AnimeCardPlaceholder title={item.title} draggable={false} />
+          {item.proxiedImageUrl ? (
+            <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+          ) : (
+            <AnimeCardPlaceholder title={item.title} draggable={false} />
+          )}
           <div>
             <strong>{item.title}</strong>
             <span>移動先を選択</span>
@@ -1242,7 +1246,11 @@ function AnimeCard({
         .filter(Boolean)
         .join(" ")}
     >
-      <AnimeCardPlaceholder title={item.title} draggable={false} />
+      {item.proxiedImageUrl ? (
+        <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+      ) : (
+        <AnimeCardPlaceholder title={item.title} draggable={false} />
+      )}
       {!compact ? (
         <div className="anime-meta">
         <div className="anime-title" title={item.title}>

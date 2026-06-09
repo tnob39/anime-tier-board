@@ -219,7 +219,11 @@ export function SharePageClient({
                   .filter((item): item is AnimeItem => Boolean(item))
                   .map((item) => (
                     <article key={item.id} className="anime-card is-compact" title={item.title}>
-                      <AnimeCardPlaceholder title={item.title} draggable={false} />
+                      {item.proxiedImageUrl ? (
+                        <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+                      ) : (
+                        <AnimeCardPlaceholder title={item.title} draggable={false} />
+                      )}
                     </article>
                   ))}
               </div>

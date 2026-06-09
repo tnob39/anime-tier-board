@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { Copy, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { getServiceUrl } from "@/lib/streaming-services";
@@ -140,31 +140,88 @@ function DiagnosisView({
         </div>
       </section>
 
-      <section className="subscriptions-panel">
-        <h2>追加すると増える</h2>
-        <div className="subscription-additional-list">
-          {stats.additionalByService.map((entry) => (
-            <article key={entry.service.id} className="subscription-additional-row">
-              <div className="subscription-additional-main">
-                <img src={entry.service.logoUrl} alt="" aria-hidden="true" />
-                <div>
-                  <strong>{entry.service.name}</strong>
-                  <span>
-                    +{entry.additionalCount}本 / 月{entry.service.monthlyPrice.toLocaleString("ja-JP")}
-                    円
-                  </span>
-                </div>
-              </div>
-              <ServiceDetailLink serviceId={entry.service.id} />
-            </article>
-          ))}
-        </div>
-      </section>
+      {stats.additionalByService.some((e) => e.additionalCount > 0) ? (
+        <section className="subscriptions-panel">
+          <h2>追加すると増える</h2>
+          <div className="subscription-additional-list">
+            {stats.additionalByService
+              .filter((e) => e.additionalCount > 0)
+              .map((entry) => (
+                <article key={entry.service.id} className="subscription-additional-row">
+                  <div className="subscription-additional-main">
+                    <img src={entry.service.logoUrl} alt="" aria-hidden="true" />
+                    <div>
+                      <strong>{entry.service.name}</strong>
+                      <span>
+                        +{entry.additionalCount}本 / 月{entry.service.monthlyPrice.toLocaleString("ja-JP")}円
+                      </span>
+                    </div>
+                  </div>
+                  <ServiceDetailLink serviceId={entry.service.id} />
+                </article>
+              ))}
+          </div>
+        </section>
+      ) : null}
+
+      {stats.uncoveredAnime.length > 0 ? (
+        <section className="subscriptions-panel">
+          <h2>
+            どこにもない
+            <span className="subscription-uncovered-count">{stats.uncoveredAnime.length}本</span>
+          </h2>
+          <p className="subscription-uncovered-note">
+            加入中・未加入を含めどのサービスにも配信情報がない作品です。
+          </p>
+          <div className="subscription-uncovered-list">
+            {stats.uncoveredAnime.map((anime) => (
+              <UncoveredAnimeRow key={anime.id} title={anime.title} siteUrl={anime.siteUrl} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <button className="command-button subscriptions-diagnosis-toggle" type="button" onClick={onBack}>
         シンプル表示に戻る
       </button>
     </>
+  );
+}
+
+function UncoveredAnimeRow({ title, siteUrl }: { title: string; siteUrl: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function copyTitle() {
+    navigator.clipboard.writeText(title).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  return (
+    <article className="subscription-uncovered-row">
+      <span className="subscription-uncovered-title">{title}</span>
+      <div className="subscription-uncovered-actions">
+        <button
+          type="button"
+          className={`watchlist-title-copy${copied ? " is-copied" : ""}`}
+          onClick={copyTitle}
+          title="タイトルをコピーして検索"
+        >
+          <Copy size={10} />
+          {copied ? "コピー済" : "コピー"}
+        </button>
+        <a
+          className="subscription-uncovered-link"
+          href={siteUrl}
+          target="_blank"
+          rel="noreferrer"
+          title="AniListで確認"
+        >
+          <ExternalLink size={12} />
+        </a>
+      </div>
+    </article>
   );
 }
 

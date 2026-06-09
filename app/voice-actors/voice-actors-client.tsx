@@ -94,7 +94,11 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
               <div className="voice-work-list">
                 {actor.works.map((work) => (
                   <div key={`${actor.key}:${work.anime.id}:${work.characterName ?? ""}`} className="voice-work">
-                    <AnimeCardPlaceholder title={work.anime.title} />
+                    {work.anime.proxiedImageUrl ? (
+                      <img src={work.anime.proxiedImageUrl} alt={work.anime.title} />
+                    ) : (
+                      <AnimeCardPlaceholder title={work.anime.title} />
+                    )}
                     <div>
                       <strong>{work.anime.title}</strong>
                       <span>{statusLabels[work.status]}</span>

@@ -223,7 +223,11 @@ export function ExploreClient({
         <section className="explore-grid" aria-label="作品候補">
           {rankedItems.map((entry, index) => (
             <article key={entry.item.id} className="explore-card">
-              <AnimeCardPlaceholder title={entry.item.title} />
+              {entry.item.proxiedImageUrl ? (
+                <img src={entry.item.proxiedImageUrl} alt={entry.item.title} />
+              ) : (
+                <AnimeCardPlaceholder title={entry.item.title} />
+              )}
               <div className="explore-card-body">
                 <div className="explore-rank">#{index + 1}</div>
                 <h2>{entry.item.title}</h2>
