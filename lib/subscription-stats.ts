@@ -28,6 +28,7 @@ export type SubscriptionStats = {
   coveragePercentage: number;
   subscribedCoverage: ServiceCoverage[];
   additionalByService: AdditionalServiceEffect[];
+  uncoveredAnime: AnimeItem[];
 };
 
 export function getAnimeTmdbProviderIds(anime: AnimeItem): number[] {
@@ -98,12 +99,15 @@ export function calcSubscriptionStats(
   const watchlistCount = watchlist.length;
   const coveredCount = coveredAnime.length;
 
+  const uncoveredAnime = watchlist.filter((anime) => !coveredIds.has(anime.id));
+
   return {
     watchlistCount,
     coveredCount,
     coveragePercentage: watchlistCount ? Math.round((coveredCount / watchlistCount) * 100) : 0,
     subscribedCoverage,
-    additionalByService
+    additionalByService,
+    uncoveredAnime
   };
 }
 

@@ -197,7 +197,11 @@ export function DashboardShareClient({
             {initialShare.data.recent.map((record) => (
               <article key={record.animeId} className="recent-card">
                 {record.anime ? (
-                  <AnimeCardPlaceholder title={record.anime.title} />
+                  record.anime.proxiedImageUrl ? (
+                    <img src={record.anime.proxiedImageUrl} alt={record.anime.title} />
+                  ) : (
+                    <AnimeCardPlaceholder title={record.anime.title} />
+                  )
                 ) : null}
                 <div>
                   <strong>{record.anime?.title ?? record.animeId}</strong>

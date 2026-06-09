@@ -238,7 +238,11 @@ export function DashboardClient({
             {dashboard.recent.map((record) => (
               <article key={record.animeId} className="recent-card">
                 {record.anime ? (
-                  <AnimeCardPlaceholder title={record.anime.title} />
+                  record.anime.proxiedImageUrl ? (
+                    <img src={record.anime.proxiedImageUrl} alt={record.anime.title} />
+                  ) : (
+                    <AnimeCardPlaceholder title={record.anime.title} />
+                  )
                 ) : null}
                 <div>
                   <strong>{record.anime?.title ?? record.animeId}</strong>
@@ -277,7 +281,11 @@ function TonightCandidateCard({
 
   return (
     <article className="tonight-candidate-card">
-      <AnimeCardPlaceholder title={anime.title} className="tonight-candidate-image" />
+      {anime.proxiedImageUrl ? (
+        <img src={anime.proxiedImageUrl} alt={anime.title} className="tonight-candidate-image" />
+      ) : (
+        <AnimeCardPlaceholder title={anime.title} className="tonight-candidate-image" />
+      )}
       <div className="tonight-candidate-body">
         <strong className="tonight-candidate-title">{anime.title}</strong>
         {anime.episodes ? (

@@ -123,7 +123,11 @@ export function EvangelistCreateModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="evangelist-sheet-preview">
-          <AnimeCardPlaceholder title={anime.title} draggable={false} />
+          {anime.proxiedImageUrl ? (
+            <img src={anime.proxiedImageUrl} alt={anime.title} draggable={false} />
+          ) : (
+            <AnimeCardPlaceholder title={anime.title} draggable={false} />
+          )}
           <div>
             <strong id="evangelist-sheet-title">{anime.title}</strong>
             <span>布教カードを作る</span>

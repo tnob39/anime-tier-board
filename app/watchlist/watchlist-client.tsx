@@ -450,7 +450,11 @@ function WatchlistCard({
 
   return (
     <article className="watchlist-card">
-      <AnimeCardPlaceholder title={anime.title} />
+      {anime.proxiedImageUrl ? (
+        <img src={anime.proxiedImageUrl} alt={anime.title} />
+      ) : (
+        <AnimeCardPlaceholder title={anime.title} />
+      )}
       <div className="watchlist-card-body">
         <div className="watchlist-card-heading">
           <div>
