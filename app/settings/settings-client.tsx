@@ -3,10 +3,25 @@
 import Link from "next/link";
 import { useState } from "react";
 import { SubscriptionPicker } from "@/components/SubscriptionPicker";
+import { useUiMode, type UiMode } from "@/lib/ui-mode";
+
+const uiModeOptions: Array<{ value: UiMode; label: string; description: string }> = [
+  {
+    value: "simple",
+    label: "シンプル",
+    description: "今期アニメの確認と視聴管理だけ。初めての方や、ティア表機能を使わない方向け。"
+  },
+  {
+    value: "pro",
+    label: "プロ",
+    description: "ティア表のドラッグ操作、PNG出力、共有URL、過去作探索、声優、分析など全機能。"
+  }
+];
 
 export function SettingsClient({ initialServiceIds }: { initialServiceIds: string[] }) {
   const [serviceIds, setServiceIds] = useState(initialServiceIds);
   const [message, setMessage] = useState<string | null>(null);
+  const { mode, setMode } = useUiMode();
 
   async function saveSubscriptions(nextServiceIds: string[]) {
     const previous = serviceIds;
@@ -46,6 +61,28 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
           ダッシュボードへ
         </Link>
       </header>
+
+      <section className="settings-panel">
+        <h2>表示モード</h2>
+        <p>アプリの表示をシンプルにするかどうかを選べます。</p>
+        <div className="ui-mode-options">
+          {uiModeOptions.map((option) => (
+            <label key={option.value} className={`ui-mode-option${mode === option.value ? " is-selected" : ""}`}>
+              <input
+                type="radio"
+                name="uiMode"
+                value={option.value}
+                checked={mode === option.value}
+                onChange={() => setMode(option.value)}
+              />
+              <div className="ui-mode-option-body">
+                <span className="ui-mode-option-label">{option.label}</span>
+                <span className="ui-mode-option-desc">{option.description}</span>
+              </div>
+            </label>
+          ))}
+        </div>
+      </section>
 
       <section className="settings-panel">
         <h2>サブスク設定</h2>
