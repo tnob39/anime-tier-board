@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import {
   BarChart3, CalendarDays, Compass, CreditCard,
-  ListChecks, Mic2, Share2, Sparkles, Star,
+  Filter, ListChecks, Mic2, Share2, Smartphone, Sparkles, Star,
   Tv2, UserCheck, Zap, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
@@ -27,10 +27,45 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "0.9",
+    date: "2026-06-10",
+    label: "モバイル UX 改善 & カレンダーフィルター",
+    isLatest: true,
+    changes: [
+      {
+        icon: Smartphone,
+        iconColor: "#4fc48e",
+        title: "モバイル視聴管理の表示崩れ修正",
+        description: "スマートフォンでのウォッチリスト画面を改善。ステータスチップの折り返し表示、長いタイトルでのレイアウト崩れ、コピーボタンのアイコン表示を修正しました。",
+        href: "/watchlist"
+      },
+      {
+        icon: Filter,
+        iconColor: "#a07ef7",
+        title: "放送カレンダーフィルター変更",
+        description: "放送カレンダーに表示するアニメを「視聴中」と「見たい」のみに絞り込むよう変更しました。一時停止・完了・中止は非表示になります。",
+        href: "/watchlist"
+      },
+      {
+        icon: CreditCard,
+        iconColor: "#4f8ef7",
+        title: "サブスク診断の詳細表示",
+        description: "見放題カバー率ページで、各サービスがカバーしている作品を展開して確認できるようになりました。",
+        href: "/subscriptions"
+      },
+      {
+        icon: Tv2,
+        iconColor: "#f76f4f",
+        title: "今夜何見る？ ロジック改善",
+        description: "週次視聴アニメを優先表示するよう修正。「今日放送」「昨日放送」「今週放送済み」などのタグと、おすすめ理由を表示するようにしました。",
+        href: "/dashboard"
+      }
+    ]
+  },
+  {
     version: "0.8",
     date: "2026-06-08",
     label: "今夜何見る？",
-    isLatest: true,
     changes: [
       {
         icon: Tv2,
