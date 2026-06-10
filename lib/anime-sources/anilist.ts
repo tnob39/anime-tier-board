@@ -347,6 +347,7 @@ export async function fetchAniListSeasonalAnime(
         airing: {
           startDate: formatAniListDate(entry.startDate),
           courEstimate: estimateCour(entry.episodes),
+          broadcastDay: deriveBroadcastDay(entry.nextAiringEpisode?.airingAt),
           nextEpisode: formatAniListNextEpisode(entry.nextAiringEpisode),
           recentEpisodes: (entry.airingSchedule?.nodes ?? [])
             .filter(
@@ -606,6 +607,15 @@ function estimateCour(episodes?: number | null): string | null {
 
 function formatUnixSeconds(value: number): string {
   return new Date(value * 1000).toISOString();
+}
+
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+
+function deriveBroadcastDay(unixSeconds?: number | null): string | null {
+  if (!unixSeconds) return null;
+  const jstDate = new Date(unixSeconds * 1000 + JST_OFFSET_MS);
+  return WEEKDAY_NAMES[jstDate.getUTCDay()];
 }
 
 function dedupeById(items: AnimeItem[]): AnimeItem[] {

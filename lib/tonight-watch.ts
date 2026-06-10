@@ -12,13 +12,13 @@ export type TonightCandidate = {
 
 // Broadcast day string → JS weekday number (Sun=0 … Sat=6)
 const WEEKDAY_MAP: Record<string, number> = {
-  sun: 0, sunday: 0, 日: 0,
-  mon: 1, monday: 1, 月: 1,
-  tue: 2, tuesday: 2, 火: 2,
-  wed: 3, wednesday: 3, 水: 3,
-  thu: 4, thursday: 4, 木: 4,
-  fri: 5, friday: 5, 金: 5,
-  sat: 6, saturday: 6, 土: 6,
+  sun: 0, sunday: 0, sundays: 0, 日: 0,
+  mon: 1, monday: 1, mondays: 1, 月: 1,
+  tue: 2, tuesday: 2, tuesdays: 2, 火: 2,
+  wed: 3, wednesday: 3, wednesdays: 3, 水: 3,
+  thu: 4, thursday: 4, thursdays: 4, 木: 4,
+  fri: 5, friday: 5, fridays: 5, 金: 5,
+  sat: 6, saturday: 6, saturdays: 6, 土: 6,
 };
 
 function broadcastWeekday(record: AnimeStatusRecord): number | null {
