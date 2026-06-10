@@ -1537,16 +1537,6 @@ button:disabled {
   font-weight: 700;
 }
 
-.flatrate-candidates {
-  margin-top: 6px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  border: 1px solid rgba(15, 118, 110, 0.2);
-  background: #f3faf8;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--accent);
-}
 
 .watchlist-weekly-calendar {
   border: 1px solid var(--line);
