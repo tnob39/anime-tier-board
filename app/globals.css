@@ -3824,3 +3824,45 @@ a.cl-history-title:hover {
   text-decoration: underline;
   padding: 0;
 }
+
+/* --- UIモード切り替え --- */
+.ui-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.ui-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ui-mode-option input[type="radio"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.ui-mode-option.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface-soft));
+}
+.ui-mode-option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ui-mode-option-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.ui-mode-option-desc {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}

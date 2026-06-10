@@ -41,6 +41,7 @@ import {
   PlayCircle,
   RefreshCw,
   RotateCcw,
+  Settings,
   Share2,
   Sparkles,
   Star,
@@ -50,6 +51,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
+import { useUiMode } from "@/lib/ui-mode";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
@@ -128,6 +130,8 @@ const nextTierColors = [
 ];
 
 export function TierBoardApp() {
+  const { mode } = useUiMode();
+  const isSimple = mode === "simple";
   const { data: session, status: authStatus } = useSession();
   const currentSeason = useMemo(() => getCurrentAnimeSeason(), []);
   const [seasonYear, setSeasonYear] = useState(currentSeason.year);
@@ -719,54 +723,60 @@ export function TierBoardApp() {
             </button>
           )}
 
-          <label className="field">
-            <span>年</span>
-            <select
-              value={seasonYear}
-              onChange={(event) => setSeasonYear(Number(event.target.value))}
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </label>
+          {!isSimple && (
+            <label className="field">
+              <span>年</span>
+              <select
+                value={seasonYear}
+                onChange={(event) => setSeasonYear(Number(event.target.value))}
+              >
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
-          <label className="field">
-            <span>期</span>
-            <select
-              value={season}
-              onChange={(event) => setSeason(event.target.value as AnimeSeason)}
-            >
-              {SEASONS.map((option) => (
-                <option key={option} value={option}>
-                  {SEASON_LABELS[option]}
-                </option>
-              ))}
-            </select>
-          </label>
+          {!isSimple && (
+            <label className="field">
+              <span>期</span>
+              <select
+                value={season}
+                onChange={(event) => setSeason(event.target.value as AnimeSeason)}
+              >
+                {SEASONS.map((option) => (
+                  <option key={option} value={option}>
+                    {SEASON_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
-          <div className="filter-chip-group no-export" aria-label="表示フィルター">
-            <button
-              className={hideMovies ? "filter-chip is-active" : "filter-chip"}
-              type="button"
-              onClick={() => setHideMovies((current) => !current)}
-              aria-pressed={hideMovies}
-              title="映画を非表示"
-            >
-              映画OFF
-            </button>
-            <button
-              className={hideRerunCandidates ? "filter-chip is-active" : "filter-chip"}
-              type="button"
-              onClick={() => setHideRerunCandidates((current) => !current)}
-              aria-pressed={hideRerunCandidates}
-              title="旧作・再放送候補を非表示"
-            >
-              旧作OFF
-            </button>
-          </div>
+          {!isSimple && (
+            <div className="filter-chip-group no-export" aria-label="表示フィルター">
+              <button
+                className={hideMovies ? "filter-chip is-active" : "filter-chip"}
+                type="button"
+                onClick={() => setHideMovies((current) => !current)}
+                aria-pressed={hideMovies}
+                title="映画を非表示"
+              >
+                映画OFF
+              </button>
+              <button
+                className={hideRerunCandidates ? "filter-chip is-active" : "filter-chip"}
+                type="button"
+                onClick={() => setHideRerunCandidates((current) => !current)}
+                aria-pressed={hideRerunCandidates}
+                title="旧作・再放送候補を非表示"
+              >
+                旧作OFF
+              </button>
+            </div>
+          )}
 
           <button
             className="command-button"
@@ -779,67 +789,79 @@ export function TierBoardApp() {
             <span>再取得</span>
           </button>
 
-          <button
-            className="command-button"
-            type="button"
-            onClick={handleAddTier}
-            disabled={!board}
-            title="Tierを追加"
-          >
-            <Plus size={18} />
-            <span>Tier追加</span>
-          </button>
+          {!isSimple && (
+            <button
+              className="command-button"
+              type="button"
+              onClick={handleAddTier}
+              disabled={!board}
+              title="Tierを追加"
+            >
+              <Plus size={18} />
+              <span>Tier追加</span>
+            </button>
+          )}
 
-          <button
-            className="command-button emphasis-button"
-            type="button"
-            onClick={handleAutoPublicTier}
-            disabled={!board || loading || !items.length}
-            title="人気順で自動的にTier配置"
-          >
-            <Sparkles size={18} />
-            <span>出刃表</span>
-          </button>
+          {!isSimple && (
+            <button
+              className="command-button emphasis-button"
+              type="button"
+              onClick={handleAutoPublicTier}
+              disabled={!board || loading || !items.length}
+              title="人気順で自動的にTier配置"
+            >
+              <Sparkles size={18} />
+              <span>出刃表</span>
+            </button>
+          )}
 
-          <button
-            className="command-button"
-            type="button"
-            onClick={() => void handleExport()}
-            disabled={!board || exporting}
-            title="Tier表をPNGで出力"
-          >
-            {exporting ? <Loader2 className="spin" size={18} /> : <Download size={18} />}
-            <span>表出力</span>
-          </button>
+          {!isSimple && (
+            <button
+              className="command-button"
+              type="button"
+              onClick={() => void handleExport()}
+              disabled={!board || exporting}
+              title="Tier表をPNGで出力"
+            >
+              {exporting ? <Loader2 className="spin" size={18} /> : <Download size={18} />}
+              <span>表出力</span>
+            </button>
+          )}
 
-          <button
-            className="command-button"
-            type="button"
-            onClick={() => void handleCreateShare()}
-            disabled={!board || sharing || loading || !items.length}
-            title="共有URLを作成"
-          >
-            {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
-            <span>共有</span>
-          </button>
+          {!isSimple && (
+            <button
+              className="command-button"
+              type="button"
+              onClick={() => void handleCreateShare()}
+              disabled={!board || sharing || loading || !items.length}
+              title="共有URLを作成"
+            >
+              {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
+              <span>共有</span>
+            </button>
+          )}
 
-          <button
-            className="icon-button"
-            type="button"
-            onClick={handleReset}
-            disabled={!board}
-            title="リセット"
-          >
-            <RotateCcw size={18} />
-          </button>
-          <a
-            className="icon-button nav-icon-link"
-            href="/dashboard"
-            title="分析"
-            aria-label="分析ページを開く"
-          >
-            <BarChart3 size={18} />
-          </a>
+          {!isSimple && (
+            <button
+              className="icon-button"
+              type="button"
+              onClick={handleReset}
+              disabled={!board}
+              title="リセット"
+            >
+              <RotateCcw size={18} />
+            </button>
+          )}
+          {!isSimple && (
+            <a
+              className="icon-button nav-icon-link"
+              href="/dashboard"
+              title="分析"
+              aria-label="分析ページを開く"
+            >
+              <BarChart3 size={18} />
+            </a>
+          )}
           <a
             className="icon-button nav-icon-link"
             href="/watchlist"
@@ -848,22 +870,26 @@ export function TierBoardApp() {
           >
             <ListChecks size={18} />
           </a>
-          <a
-            className="icon-button nav-icon-link"
-            href="/explore"
-            title="過去作品探索"
-            aria-label="過去作品探索ページを開く"
-          >
-            <Compass size={18} />
-          </a>
-          <a
-            className="icon-button nav-icon-link"
-            href="/voice-actors"
-            title="声優"
-            aria-label="声優ページを開く"
-          >
-            <Mic2 size={18} />
-          </a>
+          {!isSimple && (
+            <a
+              className="icon-button nav-icon-link"
+              href="/explore"
+              title="過去作品探索"
+              aria-label="過去作品探索ページを開く"
+            >
+              <Compass size={18} />
+            </a>
+          )}
+          {!isSimple && (
+            <a
+              className="icon-button nav-icon-link"
+              href="/voice-actors"
+              title="声優"
+              aria-label="声優ページを開く"
+            >
+              <Mic2 size={18} />
+            </a>
+          )}
           <a
             className="icon-button nav-icon-link nav-updates-link"
             href="/updates"
@@ -872,6 +898,14 @@ export function TierBoardApp() {
           >
             <Megaphone size={18} />
             <span className="nav-updates-dot" aria-hidden="true" />
+          </a>
+          <a
+            className="icon-button nav-icon-link"
+            href="/settings"
+            title="設定"
+            aria-label="設定ページを開く"
+          >
+            <Settings size={18} />
           </a>
         </div>
       </header>
