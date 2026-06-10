@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import {
   BarChart3, CalendarDays, Compass, CreditCard,
-  Filter, Layers, ListChecks, Mic2, Share2, Smartphone, Sparkles, Star,
+  Filter, Layers, ListChecks, Menu, Mic2, Share2, Smartphone, Sparkles, Star,
   Tv2, UserCheck, Zap, Download, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
@@ -27,10 +27,36 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.2",
+    date: "2026-06-11",
+    label: "ナビゲーション大改修・初回チュートリアル追加",
+    isLatest: true,
+    changes: [
+      {
+        icon: Menu,
+        iconColor: "#4f8ef7",
+        title: "ハンバーガーメニュー追加",
+        description: "左上 ☰ アイコンからメニューを開けるようになりました。シンプル/プロモードの切替、全ページへのナビゲーション、更新情報・設定へのリンクがここに集約されています。",
+      },
+      {
+        icon: UserCheck,
+        iconColor: "#4fc48e",
+        title: "ログイン/ユーザーアイコンを右上に配置",
+        description: "未ログイン時は右上のアイコンをタップするとGoogleログインができます。ログイン後はアバターをタップして設定・ログアウトにアクセスできます。",
+      },
+      {
+        icon: Sparkles,
+        iconColor: "#f7a74f",
+        title: "初回訪問チュートリアル",
+        description: "初めてアプリを開いたとき「何のアプリか」を説明するモーダルが表示されます。3ステップのガイドとGoogleログイン誘導ボタン付き。",
+      }
+    ]
+  },
+  {
     version: "1.1",
     date: "2026-06-11",
     label: "シンプル/プロ表示モード切り替え",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Layers,
