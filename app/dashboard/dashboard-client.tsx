@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import type { AnimeStatusRecord, DashboardData, ViewingStatus } from "@/lib/statuses";
-import { selectTonightCandidates, type TonightMode } from "@/lib/tonight-watch";
+import { selectTonightCandidates, type TonightCandidate, type TonightMode } from "@/lib/tonight-watch";
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -30,7 +30,7 @@ export function DashboardClient({
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [tonightMode, setTonightMode] = useState<TonightMode | null>(null);
-  const [tonightCandidates, setTonightCandidates] = useState<AnimeStatusRecord[]>([]);
+  const [tonightCandidates, setTonightCandidates] = useState<TonightCandidate[]>([]);
   const [tonightIndex, setTonightIndex] = useState(0);
   const [tonightLoading, setTonightLoading] = useState(false);
 
@@ -213,7 +213,7 @@ export function DashboardClient({
 
           {tonightMode && !tonightLoading && tonightCandidates.length > 0 ? (
             <TonightCandidateCard
-              record={tonightCandidates[tonightIndex]}
+              candidate={tonightCandidates[tonightIndex]}
               current={tonightIndex}
               total={tonightCandidates.length}
               onSkip={() => {
@@ -260,18 +260,19 @@ export function DashboardClient({
 }
 
 function TonightCandidateCard({
-  record,
+  candidate,
   current,
   total,
   onSkip,
   onReset: _onReset
 }: {
-  record: AnimeStatusRecord;
+  candidate: TonightCandidate;
   current: number;
   total: number;
   onSkip: () => void;
   onReset: () => void;
 }) {
+  const { record, tags, reason } = candidate;
   const anime = record.anime;
   if (!anime) return null;
 
@@ -287,7 +288,17 @@ function TonightCandidateCard({
         <AnimeCardPlaceholder title={anime.title} className="tonight-candidate-image" />
       )}
       <div className="tonight-candidate-body">
+        {tags.length > 0 ? (
+          <div className="tonight-candidate-tags">
+            {tags.map((tag) => (
+              <span key={tag} className="tonight-candidate-tag">{tag}</span>
+            ))}
+          </div>
+        ) : null}
         <strong className="tonight-candidate-title">{anime.title}</strong>
+        {reason ? (
+          <p className="tonight-candidate-reason">{reason}</p>
+        ) : null}
         {anime.episodes ? (
           <span className="tonight-candidate-meta">全{anime.episodes}話</span>
         ) : null}

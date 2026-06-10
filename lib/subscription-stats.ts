@@ -15,11 +15,13 @@ export type ServiceCoverage = {
   service: StreamingService;
   count: number;
   percentage: number;
+  coveredAnime: AnimeItem[];
 };
 
 export type AdditionalServiceEffect = {
   service: StreamingService;
   additionalCount: number;
+  additionalAnime: AnimeItem[];
 };
 
 export type SubscriptionStats = {
@@ -70,14 +72,15 @@ export function calcSubscriptionStats(
   const coveredIds = new Set(coveredAnime.map((anime) => anime.id));
 
   const subscribedCoverage = subscribedServices.map((service) => {
-    const count = watchlist.filter((anime) =>
+    const covered = watchlist.filter((anime) =>
       service.tmdbProviderIds.some((id) => animeMatchesProvider(anime, id))
-    ).length;
+    );
 
     return {
       service,
-      count,
-      percentage: watchlist.length ? Math.round((count / watchlist.length) * 100) : 0
+      count: covered.length,
+      percentage: watchlist.length ? Math.round((covered.length / watchlist.length) * 100) : 0,
+      coveredAnime: covered
     };
   });
 
@@ -86,14 +89,18 @@ export function calcSubscriptionStats(
   );
 
   const additionalByService = unsubscribed
-    .map((service) => ({
-      service,
-      additionalCount: watchlist.filter(
+    .map((service) => {
+      const additional = watchlist.filter(
         (anime) =>
           !coveredIds.has(anime.id) &&
           service.tmdbProviderIds.some((id) => animeMatchesProvider(anime, id))
-      ).length
-    }))
+      );
+      return {
+        service,
+        additionalCount: additional.length,
+        additionalAnime: additional
+      };
+    })
     .sort((left, right) => right.additionalCount - left.additionalCount);
 
   const watchlistCount = watchlist.length;
