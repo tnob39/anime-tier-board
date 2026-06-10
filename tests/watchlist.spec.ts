@@ -74,6 +74,30 @@ test.describe("/watchlist (mobile)", () => {
     }
   });
 
+  test("all 5 status chips are visible (no horizontal scroll cutoff) on mobile", async ({ page }) => {
+    await page.goto("/watchlist");
+    await expect(page.getByRole("heading", { name: "視聴管理" })).toBeVisible();
+
+    const chipGroup = page.locator(".watchlist-status-chips").first();
+    await expect(chipGroup).toBeVisible();
+
+    const chipGroupBox = await chipGroup.boundingBox();
+    expect(chipGroupBox).not.toBeNull();
+
+    // 全5チップがcard内に収まっていること（overflow-x scrollで隠れていないこと）
+    const chips = chipGroup.locator(".status-chip");
+    await expect(chips).toHaveCount(5);
+
+    for (let i = 0; i < 5; i++) {
+      const chip = chips.nth(i);
+      const chipBox = await chip.boundingBox();
+      if (chipBox && chipGroupBox) {
+        // 各チップが親コンテナ右端を超えていないこと（折り返し表示されていること）
+        expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(chipGroupBox.x + chipGroupBox.width + 2);
+      }
+    }
+  });
+
   test("copy button shows icon only (no text) on mobile", async ({ page }) => {
     await page.goto("/watchlist");
     await expect(page.getByRole("heading", { name: "視聴管理" })).toBeVisible();
