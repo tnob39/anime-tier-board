@@ -1840,6 +1840,19 @@ button:disabled {
 }
 
 @media (max-width: 640px) {
+  /* ステータスチップ: 横スクロールをやめてラップ表示に */
+  .watchlist-status-chips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .watchlist-status-chips .status-chip {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  /* ストリーミングチップ */
   .watchlist-streaming-chips {
     gap: 3px;
   }
@@ -1855,10 +1868,14 @@ button:disabled {
     height: 16px;
   }
 
+  /* テキストチップ（ロゴなし）: 最大幅を制限してはみ出さないように */
   .watchlist-streaming-chip-text {
     height: 24px;
     padding: 0 6px;
     font-size: 9px;
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
