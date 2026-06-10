@@ -1663,6 +1663,13 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+}
+
+/* タイトル列が flex で縮めるよう min-width: 0 を付与 */
+.watchlist-card-heading > div:first-child {
+  min-width: 0;
+  flex: 1 1 0;
 }
 
 .watchlist-card-heading strong,
