@@ -1,11 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/app/providers";
 import { MobileNav } from "@/components/MobileNav";
+import { SWRegister } from "@/app/sw-register";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "今期アニメ Tier 表",
   description: "AniList APIから今期アニメを取得してTier表を作るWebアプリ",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Tier Board",
+  },
+  formatDetection: { telephone: false },
   robots: {
     index: false,
     follow: false,
@@ -20,7 +28,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   width: "device-width",
-  initialScale: 1
+  initialScale: 1,
+  themeColor: "#0f766e",
 };
 
 export default function RootLayout({
@@ -35,6 +44,7 @@ export default function RootLayout({
           {children}
           <MobileNav />
         </Providers>
+        <SWRegister />
       </body>
     </html>
   );

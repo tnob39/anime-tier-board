@@ -161,7 +161,7 @@ export function DashboardClient({
 
       <Link className="dashboard-updates-link" href="/updates">
         <span className="dashboard-updates-badge">NEW</span>
-        v0.9 — モバイル UX 改善・カレンダーフィルター更新
+        v1.0 — ホーム画面に追加できるようになりました（PWA）
         <span className="dashboard-updates-arrow">›</span>
       </Link>
 
