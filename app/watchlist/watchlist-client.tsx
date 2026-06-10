@@ -771,7 +771,7 @@ function StreamingProviderChips({ anime }: { anime: AnimeItem }) {
         title="タイトルをコピーしてサービス内で検索"
       >
         <Copy size={10} />
-        {copied ? "コピー済" : "タイトルをコピー"}
+        <span className="copy-label">{copied ? "コピー済" : "タイトルをコピー"}</span>
       </button>
     </div>
   );
