@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import {
   BarChart3, CalendarDays, Compass, CreditCard,
   Filter, ListChecks, Mic2, Share2, Smartphone, Sparkles, Star,
-  Tv2, UserCheck, Zap, type LucideIcon
+  Tv2, UserCheck, Zap, Download, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,10 +27,23 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.0",
+    date: "2026-06-10",
+    label: "PWA 対応 — ホームに追加できるようになりました",
+    isLatest: true,
+    changes: [
+      {
+        icon: Download,
+        iconColor: "#4fc48e",
+        title: "ホーム画面に追加（PWA）",
+        description: "Safari の「共有 → ホーム画面に追加」または Chrome の「インストール」からアプリのようにホーム画面に追加できます。アイコン・スプラッシュ・テーマカラーに対応しました。",
+      }
+    ]
+  },
+  {
     version: "0.9",
     date: "2026-06-10",
     label: "モバイル UX 改善 & カレンダーフィルター",
-    isLatest: true,
     changes: [
       {
         icon: Smartphone,
