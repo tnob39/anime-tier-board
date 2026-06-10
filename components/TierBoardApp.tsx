@@ -1273,11 +1273,6 @@ function AnimeCard({
         <ReputationBadges item={item} />
         <AiringBadges item={item} />
         <StreamingPlatformLinks item={item} />
-        {item.streamingProvidersJp?.flatrate?.length ? (
-          <div className="flatrate-candidates" title="TMDb / JustWatchベースの見放題候補">
-            見放題候補: {item.streamingProvidersJp.flatrate.slice(0, 3).map((p) => p.name).join(" / ")}
-          </div>
-        ) : null}
         {onStatusChange ? (
           <StatusChips
             status={status}
