@@ -2546,6 +2546,16 @@ button:disabled {
     height: 108px;
   }
 
+  .watchlist-card > .anime-card-placeholder,
+  .shared-watchlist-card > .anime-card-placeholder {
+    width: 76px;
+    height: 108px;
+  }
+
+  .watchlist-title-copy .copy-label {
+    display: none;
+  }
+
   .explore-header,
   .voice-header,
   .explore-controls {

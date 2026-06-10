@@ -21,6 +21,13 @@ export default defineConfig({
         storageState: "tests/.auth/user.json",
       },
     },
+    {
+      name: "mobile-chrome",
+      use: {
+        ...devices["Pixel 5"],
+        storageState: "tests/.auth/user.json",
+      },
+    },
   ],
   globalSetup: "./tests/global-setup.ts",
   globalTeardown: "./tests/global-teardown.ts",
