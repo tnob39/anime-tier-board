@@ -25,23 +25,17 @@ import {
   useSortable
 } from "@dnd-kit/sortable";
 import { toPng } from "html-to-image";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import {
-  BarChart3,
   CalendarDays,
-  Compass,
   Download,
   ExternalLink,
   Heart,
-  ListChecks,
   Loader2,
-  Megaphone,
-  Mic2,
   Plus,
   PlayCircle,
   RefreshCw,
   RotateCcw,
-  Settings,
   Share2,
   Sparkles,
   Star,
@@ -132,7 +126,7 @@ const nextTierColors = [
 export function TierBoardApp() {
   const { mode } = useUiMode();
   const isSimple = mode === "simple";
-  const { data: session, status: authStatus } = useSession();
+  const { status: authStatus } = useSession();
   const currentSeason = useMemo(() => getCurrentAnimeSeason(), []);
   const [seasonYear, setSeasonYear] = useState(currentSeason.year);
   const [season, setSeason] = useState<AnimeSeason>(currentSeason.season);
@@ -162,7 +156,6 @@ export function TierBoardApp() {
     [seasonYear, season]
   );
   const isAuthenticated = authStatus === "authenticated";
-  const userLabel = session?.user?.name ?? session?.user?.email ?? "Googleユーザー";
 
   const visibleItems = useMemo(
     () => filterAnimeItems(items, { hideMovies, hideRerunCandidates, seasonYear }),
@@ -693,35 +686,12 @@ export function TierBoardApp() {
             {items.length}作品
             {source ? ` / ${source === "anilist" ? "AniList" : "Jikan"}` : ""}
             {cached ? " / キャッシュ" : ""}
+            {isAuthenticated && saveState === "saving" ? " / 保存中..." : null}
+            {isAuthenticated && saveState === "error" ? " / 保存エラー" : null}
           </div>
         </div>
 
         <div className="control-bar">
-          {isAuthenticated ? (
-            <>
-              <span className="status-line toolbar-status no-export">
-                {userLabel} / {getSaveStateLabel(saveState)}
-              </span>
-              <button
-                className="command-button auth-button"
-                type="button"
-                onClick={() => void signOut()}
-                title="ログアウト"
-              >
-                <span>ログアウト</span>
-              </button>
-            </>
-          ) : (
-            <button
-              className="command-button emphasis-button auth-button"
-              type="button"
-              onClick={() => void signIn("google")}
-              disabled={authStatus === "loading"}
-              title="Googleでログイン"
-            >
-              <span>Googleログイン</span>
-            </button>
-          )}
 
           {!isSimple && (
             <label className="field">
@@ -852,61 +822,6 @@ export function TierBoardApp() {
               <RotateCcw size={18} />
             </button>
           )}
-          {!isSimple && (
-            <a
-              className="icon-button nav-icon-link"
-              href="/dashboard"
-              title="分析"
-              aria-label="分析ページを開く"
-            >
-              <BarChart3 size={18} />
-            </a>
-          )}
-          <a
-            className="icon-button nav-icon-link"
-            href="/watchlist"
-            title="視聴管理"
-            aria-label="視聴管理ページを開く"
-          >
-            <ListChecks size={18} />
-          </a>
-          {!isSimple && (
-            <a
-              className="icon-button nav-icon-link"
-              href="/explore"
-              title="過去作品探索"
-              aria-label="過去作品探索ページを開く"
-            >
-              <Compass size={18} />
-            </a>
-          )}
-          {!isSimple && (
-            <a
-              className="icon-button nav-icon-link"
-              href="/voice-actors"
-              title="声優"
-              aria-label="声優ページを開く"
-            >
-              <Mic2 size={18} />
-            </a>
-          )}
-          <a
-            className="icon-button nav-icon-link nav-updates-link"
-            href="/updates"
-            title="更新情報"
-            aria-label="更新情報を見る"
-          >
-            <Megaphone size={18} />
-            <span className="nav-updates-dot" aria-hidden="true" />
-          </a>
-          <a
-            className="icon-button nav-icon-link"
-            href="/settings"
-            title="設定"
-            aria-label="設定ページを開く"
-          >
-            <Settings size={18} />
-          </a>
         </div>
       </header>
 
