@@ -3434,6 +3434,123 @@ a.cl-history-title:hover {
   white-space: nowrap;
 }
 
+/* ── subscription toggle rows ── */
+.subscription-service-toggle,
+.subscription-diagnosis-toggle-row,
+.subscription-additional-toggle {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  cursor: pointer;
+}
+
+.subscription-service-toggle {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.subscription-diagnosis-toggle-row {
+  grid-template-columns: minmax(0, 1fr) 1fr auto auto;
+  align-items: center;
+}
+
+.subscription-additional-toggle {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.subscription-service-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subscription-service-meta {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.subscription-anime-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 6px 0 12px 42px;
+  border-bottom: 1px solid var(--line);
+}
+
+.subscription-anime-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--surface-soft);
+}
+
+.subscription-anime-item:last-of-type {
+  border-bottom: none;
+}
+
+.subscription-anime-item:hover {
+  color: var(--accent);
+}
+
+.subscription-anime-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 0;
+}
+
+.subscription-anime-gap {
+  font-size: 11px;
+  color: var(--muted);
+  padding-top: 6px;
+  border-top: 1px solid var(--surface-soft);
+}
+
+.subscription-additional-anime {
+  padding-left: 42px;
+}
+
+.subscription-coverage-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subscription-coverage-gap {
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.subscription-coverage-complete {
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.subscription-text-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.subscription-beginner-gap {
+  margin-top: 12px;
+}
+
 .subscription-coverage-ring {
   display: grid;
   justify-items: center;
@@ -3615,6 +3732,25 @@ a.cl-history-title:hover {
 }
 .tonight-candidate-counter {
   font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+}
+.tonight-candidate-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tonight-candidate-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+}
+.tonight-candidate-reason {
+  font-size: 12px;
   color: var(--muted);
   margin: 0;
 }

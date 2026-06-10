@@ -1,10 +1,10 @@
 "use client";
 
-import { Copy, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { getServiceUrl } from "@/lib/streaming-services";
-import type { SubscriptionStats } from "@/lib/subscription-stats";
+import type { AdditionalServiceEffect, ServiceCoverage, SubscriptionStats } from "@/lib/subscription-stats";
 
 type SubscriptionsClientProps = {
   stats: SubscriptionStats;
@@ -68,6 +68,8 @@ export function SubscriptionsClient({ stats, serviceIds }: SubscriptionsClientPr
   );
 }
 
+// ─── BeginnerView ────────────────────────────────────────────────────────────
+
 function BeginnerView({
   stats,
   onOpenDiagnosis
@@ -80,16 +82,23 @@ function BeginnerView({
       <h2>加入中のサービス</h2>
       <div className="subscription-service-list">
         {stats.subscribedCoverage.map((entry) => (
-          <article key={entry.service.id} className="subscription-service-row">
-            <div className="subscription-service-label">
-              <img src={entry.service.logoUrl} alt="" aria-hidden="true" />
-              <strong>{entry.service.name}</strong>
-              <span>（加入中）</span>
-            </div>
-            <strong className="subscription-service-count">{entry.count}本</strong>
-          </article>
+          <ServiceCoverageRow key={entry.service.id} entry={entry} total={stats.watchlistCount} />
         ))}
       </div>
+
+      {stats.uncoveredAnime.length > 0 ? (
+        <p className="subscription-uncovered-note subscription-beginner-gap">
+          {stats.uncoveredAnime.length}本はどのサービスにも配信情報がありません。
+          <button
+            type="button"
+            className="subscription-text-link"
+            onClick={onOpenDiagnosis}
+          >
+            詳しく見る
+          </button>
+        </p>
+      ) : null}
+
       <button
         className="command-button emphasis-button subscriptions-diagnosis-toggle"
         type="button"
@@ -101,6 +110,63 @@ function BeginnerView({
   );
 }
 
+function ServiceCoverageRow({ entry, total }: { entry: ServiceCoverage; total: number }) {
+  const [open, setOpen] = useState(false);
+  const uncoveredCount = total - entry.count;
+
+  return (
+    <article className="subscription-service-row">
+      <button
+        type="button"
+        className="subscription-service-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <div className="subscription-service-label">
+          <img src={entry.service.logoUrl} alt="" aria-hidden="true" />
+          <strong>{entry.service.name}</strong>
+          <span>（加入中）</span>
+        </div>
+        <div className="subscription-service-summary">
+          <strong className="subscription-service-count">{entry.count}本</strong>
+          <span className="subscription-service-meta">
+            {total}本中{entry.count}本見放題
+          </span>
+          {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </div>
+      </button>
+
+      {open ? (
+        <div className="subscription-anime-list">
+          {entry.coveredAnime.length > 0 ? (
+            entry.coveredAnime.map((anime) => (
+              <a
+                key={anime.id}
+                className="subscription-anime-item"
+                href={anime.siteUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {anime.title}
+                <ExternalLink size={10} />
+              </a>
+            ))
+          ) : (
+            <p className="subscription-anime-empty">このサービスで見られる作品はありません</p>
+          )}
+          {uncoveredCount > 0 ? (
+            <p className="subscription-anime-gap">
+              残り{uncoveredCount}本は{entry.service.name}では視聴できません
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+// ─── DiagnosisView ───────────────────────────────────────────────────────────
+
 function DiagnosisView({
   stats,
   onBack
@@ -108,6 +174,8 @@ function DiagnosisView({
   stats: SubscriptionStats;
   onBack: () => void;
 }) {
+  const uncoveredCount = stats.watchlistCount - stats.coveredCount;
+
   return (
     <>
       <section className="subscriptions-panel diagnosis-summary">
@@ -115,27 +183,25 @@ function DiagnosisView({
           <strong>{stats.coveragePercentage}%</strong>
           <span>見放題カバー率</span>
         </div>
-        <p>
-          {stats.coveredCount} / {stats.watchlistCount}本が加入中サービスで見放題
-        </p>
+        <div className="subscription-coverage-summary">
+          <p>
+            <strong>{stats.watchlistCount}本中{stats.coveredCount}本</strong>が加入中サービスで見放題
+          </p>
+          {uncoveredCount > 0 ? (
+            <p className="subscription-coverage-gap">
+              残り{uncoveredCount}本は加入中サービスで見られません
+            </p>
+          ) : (
+            <p className="subscription-coverage-complete">ウォッチリストの全作品が見放題です 🎉</p>
+          )}
+        </div>
       </section>
 
       <section className="subscriptions-panel">
-        <h2>加入中</h2>
+        <h2>加入中 — どの作品が見られるか</h2>
         <div className="subscription-diagnosis-list">
           {stats.subscribedCoverage.map((entry) => (
-            <article key={entry.service.id} className="subscription-diagnosis-row">
-              <div className="subscription-diagnosis-label">
-                <img src={entry.service.logoUrl} alt="" aria-hidden="true" />
-                <strong>{entry.service.name}</strong>
-              </div>
-              <div className="subscription-diagnosis-bar">
-                <i style={{ width: `${entry.percentage}%` }} />
-              </div>
-              <span className="subscription-diagnosis-meta">
-                {entry.count}本見放題（{entry.percentage}%）
-              </span>
-            </article>
+            <DiagnosisServiceRow key={entry.service.id} entry={entry} total={stats.watchlistCount} />
           ))}
         </div>
       </section>
@@ -147,18 +213,7 @@ function DiagnosisView({
             {stats.additionalByService
               .filter((e) => e.additionalCount > 0)
               .map((entry) => (
-                <article key={entry.service.id} className="subscription-additional-row">
-                  <div className="subscription-additional-main">
-                    <img src={entry.service.logoUrl} alt="" aria-hidden="true" />
-                    <div>
-                      <strong>{entry.service.name}</strong>
-                      <span>
-                        +{entry.additionalCount}本 / 月{entry.service.monthlyPrice.toLocaleString("ja-JP")}円
-                      </span>
-                    </div>
-                  </div>
-                  <ServiceDetailLink serviceId={entry.service.id} />
-                </article>
+                <AdditionalServiceRow key={entry.service.id} entry={entry} />
               ))}
           </div>
         </section>
@@ -188,6 +243,109 @@ function DiagnosisView({
   );
 }
 
+function DiagnosisServiceRow({ entry, total }: { entry: ServiceCoverage; total: number }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <article className="subscription-diagnosis-row">
+      <button
+        type="button"
+        className="subscription-diagnosis-toggle-row"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <div className="subscription-diagnosis-label">
+          <img src={entry.service.logoUrl} alt="" aria-hidden="true" />
+          <strong>{entry.service.name}</strong>
+        </div>
+        <div className="subscription-diagnosis-bar">
+          <i style={{ width: `${entry.percentage}%` }} />
+        </div>
+        <span className="subscription-diagnosis-meta">
+          {total}本中{entry.count}本（{entry.percentage}%）
+        </span>
+        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+
+      {open ? (
+        <div className="subscription-anime-list">
+          {entry.coveredAnime.length > 0 ? (
+            entry.coveredAnime.map((anime) => (
+              <a
+                key={anime.id}
+                className="subscription-anime-item"
+                href={anime.siteUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {anime.title}
+                <ExternalLink size={10} />
+              </a>
+            ))
+          ) : (
+            <p className="subscription-anime-empty">このサービスで見られる作品はありません</p>
+          )}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function AdditionalServiceRow({ entry }: { entry: AdditionalServiceEffect }) {
+  const [open, setOpen] = useState(false);
+  const url = getServiceUrl(entry.service.id);
+
+  return (
+    <article className="subscription-additional-row">
+      <button
+        type="button"
+        className="subscription-additional-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <div className="subscription-additional-main">
+          <img src={entry.service.logoUrl} alt="" aria-hidden="true" />
+          <div>
+            <strong>{entry.service.name}</strong>
+            <span>
+              +{entry.additionalCount}本 / 月{entry.service.monthlyPrice.toLocaleString("ja-JP")}円
+            </span>
+          </div>
+        </div>
+        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+
+      {open ? (
+        <div className="subscription-anime-list subscription-additional-anime">
+          {entry.additionalAnime.map((anime) => (
+            <a
+              key={anime.id}
+              className="subscription-anime-item"
+              href={anime.siteUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {anime.title}
+              <ExternalLink size={10} />
+            </a>
+          ))}
+          {url ? (
+            <a
+              className="command-button subscription-detail-link"
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span>{entry.service.name}を見てみる</span>
+              <ExternalLink size={16} />
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 function UncoveredAnimeRow({ title, siteUrl }: { title: string; siteUrl: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -209,7 +367,7 @@ function UncoveredAnimeRow({ title, siteUrl }: { title: string; siteUrl: string 
           title="タイトルをコピーして検索"
         >
           <Copy size={10} />
-          {copied ? "コピー済" : "コピー"}
+          <span className="copy-label">{copied ? "コピー済" : "コピー"}</span>
         </button>
         <a
           className="subscription-uncovered-link"
@@ -222,25 +380,5 @@ function UncoveredAnimeRow({ title, siteUrl }: { title: string; siteUrl: string 
         </a>
       </div>
     </article>
-  );
-}
-
-function ServiceDetailLink({ serviceId }: { serviceId: string }) {
-  const url = getServiceUrl(serviceId);
-
-  if (!url) {
-    return null;
-  }
-
-  return (
-    <a
-      className="command-button subscription-detail-link"
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-    >
-      <span>詳しく見る</span>
-      <ExternalLink size={16} />
-    </a>
   );
 }
