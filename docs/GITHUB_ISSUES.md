@@ -1,7 +1,7 @@
 # GitHub Issues 運用（kanban 廃止後）
 
 **リポジトリ**: [tnob39/anime-tier-board](https://github.com/tnob39/anime-tier-board)  
-**更新**: 2026-06-07
+**更新**: 2026-06-09
 
 `kanban-board.md` は廃止しました。タスクの唯一のソース・オブ・トゥルースは **GitHub Issues** です。
 
@@ -52,14 +52,26 @@
 3. 動的指示は `.claude/orchestration/instructions/` に置き、Issue 番号を `Task ID` に含める
 4. **kanban-board.md は更新しない**（参照もしない）
 
+## 設計メモ（Issue 未起票の方針）
+
+モバイル配信・収益化・競合対策: [`plans/mobile-distribution-monetization-20260609.md`](../plans/mobile-distribution-monetization-20260609.md)  
+収益フェーズ: [`MONETIZATION_ROADMAP.md`](../MONETIZATION_ROADMAP.md)
+
 ## 現在の Open Issues
 
 | # | タイトル | Worktree |
 |---|----------|----------|
 | [#1](https://github.com/tnob39/anime-tier-board/issues/1) | TMDb Watch Providers カード表示 polish | composer-dev |
-| [#2](https://github.com/tnob39/anime-tier-board/issues/2) | 今夜何見る？（decide-tonight） | feature-new-features |
 | [#3](https://github.com/tnob39/anime-tier-board/issues/3) | airing データ調査・改善 | （調査） |
 | [#4](https://github.com/tnob39/anime-tier-board/issues/4) | エラー処理共通化 Phase 1 | error-catching |
+| [#15](https://github.com/tnob39/anime-tier-board/issues/15) | 配信アフィリエイト URL + PR表記 | — |
+| [#16](https://github.com/tnob39/anime-tier-board/issues/16) | PWA化（manifest + Service Worker） | — |
+
+## 最近 Close / 未マージ注意
+
+| # | タイトル | 備考 |
+|---|----------|------|
+| [#2](https://github.com/tnob39/anime-tier-board/issues/2) | 今夜何見る？（decide-tonight） | **CLOSED** だが実装は `tnob39/decide-tonight` ブランチのみ（main 未マージ） |
 
 ---
 

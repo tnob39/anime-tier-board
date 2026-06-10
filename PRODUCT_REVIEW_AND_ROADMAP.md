@@ -376,6 +376,17 @@ Output:
 - Link top voice actors from Dashboard.
 - Add voice actor profile page and related works.
 
+## Competitive And Distribution Strategy
+
+See [`plans/mobile-distribution-monetization-20260609.md`](./plans/mobile-distribution-monetization-20260609.md) for:
+
+- Mobile distribution roadmap (PWA → Capacitor, not full native)
+- Affiliate-first monetization and when to add ads
+- Defensible moats: cross-season user data, sharing/network effects, brand
+- Store submission prerequisites (AniList commercial license, legal pages)
+
+Tier-list UI alone is easy to copy. Prioritize features that compound per user and per season.
+
 ## Product Positioning
 
 Use this wording:
