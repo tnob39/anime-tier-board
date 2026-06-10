@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/app/providers";
+import { GlobalNav } from "@/components/GlobalNav";
 import { MobileNav } from "@/components/MobileNav";
+import { WelcomeModal } from "@/components/WelcomeModal";
 import { SWRegister } from "@/app/sw-register";
 import "./globals.css";
 
@@ -41,8 +43,10 @@ export default function RootLayout({
     <html lang="ja">
       <body>
         <Providers>
+          <GlobalNav />
           {children}
           <MobileNav />
+          <WelcomeModal />
         </Providers>
         <SWRegister />
       </body>
