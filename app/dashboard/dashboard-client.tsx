@@ -161,7 +161,7 @@ export function DashboardClient({
 
       <Link className="dashboard-updates-link" href="/updates">
         <span className="dashboard-updates-badge">NEW</span>
-        v0.8 — 今夜何見る？機能を追加しました
+        v0.9 — モバイル UX 改善・カレンダーフィルター更新
         <span className="dashboard-updates-arrow">›</span>
       </Link>
 
