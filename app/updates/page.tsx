@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import {
   BarChart3, CalendarDays, Compass, CreditCard,
-  Filter, ListChecks, Mic2, Share2, Smartphone, Sparkles, Star,
+  Filter, Layers, ListChecks, Mic2, Share2, Smartphone, Sparkles, Star,
   Tv2, UserCheck, Zap, Download, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.1",
+    date: "2026-06-11",
+    label: "シンプル/プロ表示モード切り替え",
+    isLatest: true,
+    changes: [
+      {
+        icon: Layers,
+        iconColor: "#a07ef7",
+        title: "シンプルモード / プロモード切り替え",
+        description: "設定ページから表示モードを選べるようになりました。シンプルモードはアニメ一覧・視聴管理・サブスクのみ。プロモードはティア追加・PNG出力・共有・過去作探索・声優・分析など全機能が使えます。",
+        href: "/settings"
+      }
+    ]
+  },
+  {
     version: "1.0",
     date: "2026-06-10",
     label: "PWA 対応 — ホームに追加できるようになりました",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Download,
