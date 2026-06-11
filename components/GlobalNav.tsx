@@ -2,7 +2,6 @@
 
 import { LogOut, Menu, Settings, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
@@ -35,17 +34,7 @@ export function GlobalNav() {
                   aria-label="ユーザーメニュー"
                   aria-expanded={isUserMenuOpen}
                 >
-                  {session?.user?.image ? (
-                    <Image
-                      src={session.user.image}
-                      alt={session.user.name ?? "ユーザー"}
-                      width={26}
-                      height={26}
-                      className="user-avatar-img"
-                    />
-                  ) : (
-                    <UserCircle2 size={26} className="user-avatar-placeholder" />
-                  )}
+                  <UserCircle2 size={26} className="user-avatar-placeholder" />
                 </button>
 
                 {isUserMenuOpen && (

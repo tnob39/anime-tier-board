@@ -3990,12 +3990,6 @@ a.cl-history-title:hover {
   padding: 0;
   border-radius: 50%;
 }
-.user-avatar-img {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  object-fit: cover;
-}
 .user-avatar-placeholder {
   display: block;
   color: var(--fg);
