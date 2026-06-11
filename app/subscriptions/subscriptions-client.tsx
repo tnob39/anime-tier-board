@@ -58,6 +58,10 @@ export function SubscriptionsClient({ stats, serviceIds }: SubscriptionsClientPr
       ) : null}
 
       {hasSubscriptions && stats.watchlistCount > 0 ? (
+        <ConclusionBanner stats={stats} />
+      ) : null}
+
+      {hasSubscriptions && stats.watchlistCount > 0 ? (
         diagnosisMode ? (
           <DiagnosisView stats={stats} onBack={() => setDiagnosisMode(false)} />
         ) : (
@@ -65,6 +69,62 @@ export function SubscriptionsClient({ stats, serviceIds }: SubscriptionsClientPr
         )
       ) : null}
     </main>
+  );
+}
+
+// ─── ConclusionBanner ────────────────────────────────────────────────────────
+
+function ConclusionBanner({ stats }: { stats: SubscriptionStats }) {
+  if (stats.coveragePercentage === 0) return null;
+
+  const uncoveredCount = stats.watchlistCount - stats.coveredCount;
+  const topAdditional = stats.additionalByService
+    .filter((e) => e.additionalCount > 0)
+    .slice(0, 2);
+
+  return (
+    <section
+      className="subscriptions-panel"
+      style={{
+        borderLeft: "4px solid var(--accent, #6366f1)",
+        background: "var(--surface-raised, rgba(99,102,241,0.06))"
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <p style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700, lineHeight: 1.2 }}>
+          ウォッチリストの{" "}
+          <span style={{ color: "var(--accent, #6366f1)" }}>
+            {stats.coveragePercentage}%
+          </span>{" "}
+          をカバー中
+        </p>
+        <p style={{ margin: 0, color: "var(--text-secondary, #888)" }}>
+          加入中サービスで{" "}
+          <strong>
+            {stats.coveredCount}/{stats.watchlistCount}本
+          </strong>{" "}
+          が見放題
+          {uncoveredCount > 0 ? (
+            <span>
+              {"　"}未カバー:{" "}
+              <strong>{uncoveredCount}本</strong>
+            </span>
+          ) : null}
+        </p>
+        {topAdditional.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", marginTop: "0.25rem" }}>
+            {topAdditional.map((entry) => (
+              <p key={entry.service.id} style={{ margin: 0, fontSize: "0.875rem", color: "var(--text-secondary, #888)" }}>
+                <strong style={{ color: "var(--text, inherit)" }}>{entry.service.name}</strong>{" "}
+                を追加すると{" "}
+                <strong style={{ color: "var(--accent, #6366f1)" }}>+{entry.additionalCount}本</strong>{" "}
+                カバーできます
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
