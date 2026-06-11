@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import {
   BarChart3, Bell, CalendarDays, Compass, CreditCard,
   Filter, Layers, ListChecks, Menu, Mic2, Share2, Smartphone, Sparkles, Star,
-  Tv2, UserCheck, Zap, Download, type LucideIcon
+  Tv2, UserCheck, Zap, Download, Loader2, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,10 +27,38 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.4",
+    date: "2026-06-12",
+    label: "numanie リブランディング・UX 改善",
+    isLatest: true,
+    changes: [
+      {
+        icon: Sparkles,
+        iconColor: "#818cf8",
+        title: "numanie にリブランド",
+        description: "サービス名を「numanie」に変更しました。「沼に」＋ フランス語 manie（熱中・偏愛）から着想を得た名前です。ロゴ・アイコン・PWAアイコンも新デザインに刷新。",
+      },
+      {
+        icon: Loader2,
+        iconColor: "#4f8ef7",
+        title: "初期ロード スケルトン表示",
+        description: "ページ読み込み中に「0作品」の空白Tier表が一瞬表示される問題を修正。データ取得中はシマーアニメーション付きのスケルトンUIに切り替わります。",
+        href: "/",
+      },
+      {
+        icon: CreditCard,
+        iconColor: "#4fc48e",
+        title: "サブスク診断 — 結論ファースト表示",
+        description: "サブスク診断ページの最上部に「ウォッチリストの XX% をカバー中」サマリーを追加。何本見られるか・追加するとお得なサービスが一目でわかるようになりました。",
+        href: "/subscriptions",
+      }
+    ]
+  },
+  {
     version: "1.3",
     date: "2026-06-11",
     label: "PWA プッシュ通知対応",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Bell,
