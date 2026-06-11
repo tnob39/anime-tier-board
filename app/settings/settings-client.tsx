@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { PushToggle } from "@/components/PushToggle";
 import { SubscriptionPicker } from "@/components/SubscriptionPicker";
 import { useUiMode, type UiMode } from "@/lib/ui-mode";
 
@@ -82,6 +83,12 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
             </label>
           ))}
         </div>
+      </section>
+
+      <section className="settings-panel">
+        <h2>プッシュ通知</h2>
+        <p>視聴中・見たいアニメの放送日に通知を受け取れます。</p>
+        <PushToggle />
       </section>
 
       <section className="settings-panel">
