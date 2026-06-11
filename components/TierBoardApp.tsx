@@ -857,25 +857,43 @@ export function TierBoardApp() {
               </div>
 
               <div className="tier-list">
-                {rankedTiers.map((tier) => (
-                  <TierLane
-                    key={tier.id}
-                    tier={tier}
-                    itemMap={itemMap}
-                    editable
-                    onRename={handleRenameTier}
-                    onColor={handleColorTier}
-                    onDelete={handleDeleteTier}
-                    onOpenMoveMenu={setMoveMenuItemId}
-                    statusMap={statusMap}
-                    onStatusChange={handleStatusChange}
-                  />
-                ))}
+                {!board ? (
+                  Array.from({ length: 5 }, (_, i) => (
+                    <div key={i} className="skeleton-tier-row">
+                      {Array.from({ length: 5 }, (_, j) => (
+                        <div key={j} className="skeleton-card" />
+                      ))}
+                    </div>
+                  ))
+                ) : (
+                  rankedTiers.map((tier) => (
+                    <TierLane
+                      key={tier.id}
+                      tier={tier}
+                      itemMap={itemMap}
+                      editable
+                      onRename={handleRenameTier}
+                      onColor={handleColorTier}
+                      onDelete={handleDeleteTier}
+                      onOpenMoveMenu={setMoveMenuItemId}
+                      statusMap={statusMap}
+                      onStatusChange={handleStatusChange}
+                    />
+                  ))
+                )}
               </div>
             </div>
           </section>
 
-          {unrankedTier ? (
+          {!board ? (
+            <section className="pool-section" aria-label="未分類">
+              <div className="skeleton-pool">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <div key={i} className="skeleton-card" />
+                ))}
+              </div>
+            </section>
+          ) : unrankedTier ? (
             <section className="pool-section" aria-label="未分類">
               <TierLane
                 tier={unrankedTier}
