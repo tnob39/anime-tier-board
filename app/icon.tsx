@@ -13,44 +13,32 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0f1117",
+          background: "linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 50%, #fce7f3 100%)",
         }}
       >
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             width: "420px",
             height: "420px",
-            background: "#0f766e",
+            background: "linear-gradient(135deg, #e0f2fe 0%, #ede9fe 50%, #fce7f3 100%)",
             borderRadius: "96px",
+            border: "6px solid rgba(99,102,241,0.25)",
           }}
         >
           <div
             style={{
-              fontSize: "220px",
+              fontSize: "260px",
               fontWeight: "900",
-              color: "#ffffff",
-              lineHeight: 1,
+              color: "#6366f1",
               fontFamily: "sans-serif",
+              lineHeight: 1,
               letterSpacing: "-8px",
             }}
           >
-            A
-          </div>
-          <div
-            style={{
-              fontSize: "56px",
-              fontWeight: "700",
-              color: "rgba(255,255,255,0.75)",
-              letterSpacing: "14px",
-              fontFamily: "sans-serif",
-              marginTop: "-8px",
-            }}
-          >
-            TIER
+            n
           </div>
         </div>
       </div>

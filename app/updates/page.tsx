@@ -7,8 +7,8 @@ import {
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "更新情報 — アニメ Tier ボード",
-  description: "アニメ Tier ボードの最新アップデート一覧"
+  title: "更新情報 — numanie",
+  description: "numanie の最新アップデート一覧"
 };
 
 type Release = {
@@ -306,7 +306,7 @@ const RELEASES: Release[] = [
       {
         icon: Sparkles,
         iconColor: "#a07ef7",
-        title: "アニメ Tier ボード",
+        title: "numanie",
         description: "AniList から季節アニメを取得し、S / A / B / C / D の Tier に分類して保存できる最初のバージョン。",
         href: "/"
       }

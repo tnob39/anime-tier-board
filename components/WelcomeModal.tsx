@@ -10,7 +10,7 @@ const features = [
   { icon: "📋", text: "今期アニメを自動取得・一覧表示" },
   { icon: "✅", text: "見たい・視聴中・完了でステータス管理" },
   { icon: "💳", text: "契約サブスクで見放題かを確認" },
-  { icon: "⭐", text: "ティア表を作って友達と共有（プロモード）" }
+  { icon: "⭐", text: "Tier表を作って自分の評価を残す（プロモード）" }
 ];
 
 const tutorialSteps = [
@@ -61,10 +61,10 @@ export function WelcomeModal() {
         {step === "welcome" ? (
           <>
             <div className="welcome-hero">
-              <span className="welcome-emoji" aria-hidden="true">🎬</span>
-              <h2 className="welcome-title">今期アニメを管理しよう</h2>
+              <span className="welcome-emoji" aria-hidden="true">✨</span>
+              <h2 className="welcome-title">numanie へようこそ</h2>
               <p className="welcome-subtitle">
-                今クールのアニメ一覧を自動取得し、視聴状況を管理できます。
+                好きなアニメを記録して、もっと沼に。
               </p>
             </div>
 
