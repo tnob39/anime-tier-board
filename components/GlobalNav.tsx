@@ -1,6 +1,6 @@
 "use client";
 
-import { LogIn, LogOut, Menu, Settings, UserCircle2 } from "lucide-react";
+import { LogOut, Menu, Settings, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -82,12 +82,12 @@ export function GlobalNav() {
               </div>
             ) : (
               <button
-                className="global-nav-btn login-btn"
+                className="global-nav-btn user-avatar-btn"
                 onClick={() => void signIn("google")}
                 aria-label="Googleでログイン"
                 title="Googleでログイン"
               >
-                <LogIn size={20} />
+                <UserCircle2 size={26} className="user-avatar-placeholder" />
               </button>
             )
           )}
