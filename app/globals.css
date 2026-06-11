@@ -3988,7 +3988,6 @@ a.cl-history-title:hover {
   width: 36px;
   height: 36px;
   padding: 0;
-  overflow: hidden;
   border-radius: 50%;
 }
 .user-avatar-img {
@@ -3998,8 +3997,8 @@ a.cl-history-title:hover {
   object-fit: cover;
 }
 .user-avatar-placeholder {
-  color: var(--muted);
   display: block;
+  color: var(--fg);
 }
 .user-menu-backdrop {
   position: fixed;
