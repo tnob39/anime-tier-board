@@ -3868,6 +3868,82 @@ a.cl-history-title:hover {
 }
 
 /* ========================================
+   PushToggle
+======================================== */
+.push-toggle-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.push-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.push-toggle-label {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.push-toggle-btn {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2, #f0f0f0);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.push-toggle-btn:hover:not(:disabled) {
+  background: var(--surface-3, #e0e0e0);
+}
+.push-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.push-toggle-btn.is-on {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.push-toggle-btn.is-on:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.push-toggle-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.push-toggle-message {
+  font-size: 0.82rem;
+  color: var(--accent);
+  margin: 0;
+}
+
+.push-toggle-unsupported,
+.push-toggle-denied {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========================================
    GlobalNav
 ======================================== */
 .global-nav {
