@@ -15,14 +15,19 @@ export function GlobalNav() {
   return (
     <>
       <nav className="global-nav" role="navigation" aria-label="グローバルナビゲーション">
-        <button
-          className="global-nav-btn"
-          onClick={() => setIsDrawerOpen(true)}
-          aria-label="メニューを開く"
-          aria-expanded={isDrawerOpen}
-        >
-          <Menu size={20} />
-        </button>
+        <div className="global-nav-left">
+          <button
+            className="global-nav-btn"
+            onClick={() => setIsDrawerOpen(true)}
+            aria-label="メニューを開く"
+            aria-expanded={isDrawerOpen}
+          >
+            <Menu size={20} />
+          </button>
+          <a href="/" className="global-nav-logo" aria-label="numanie トップへ">
+            numanie
+          </a>
+        </div>
 
         <div className="global-nav-right">
           {status !== "loading" && (

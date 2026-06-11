@@ -7,13 +7,13 @@ import { SWRegister } from "@/app/sw-register";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "今期アニメ Tier 表",
-  description: "AniList APIから今期アニメを取得してTier表を作るWebアプリ",
+  title: "numanie — 好きなアニメを記録して、もっと沼に。",
+  description: "アニメの視聴履歴、評価、Tier表をまとめて管理できるアプリ。好きな作品を記録して、もっと沼に。",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Tier Board",
+    title: "numanie",
   },
   formatDetection: { telephone: false },
   robots: {
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f766e",
+  themeColor: "#6366f1",
 };
 
 export default function RootLayout({
