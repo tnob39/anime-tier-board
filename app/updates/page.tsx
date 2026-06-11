@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import {
-  BarChart3, CalendarDays, Compass, CreditCard,
+  BarChart3, Bell, CalendarDays, Compass, CreditCard,
   Filter, Layers, ListChecks, Menu, Mic2, Share2, Smartphone, Sparkles, Star,
   Tv2, UserCheck, Zap, Download, type LucideIcon
 } from "lucide-react";
@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.3",
+    date: "2026-06-11",
+    label: "PWA プッシュ通知対応",
+    isLatest: true,
+    changes: [
+      {
+        icon: Bell,
+        iconColor: "#f7a74f",
+        title: "プッシュ通知（実験的）",
+        description: "設定画面からプッシュ通知を有効にすると、視聴中・見たいアニメの放送日に通知が届きます。iPhoneはホーム画面に追加後にご利用ください。",
+        href: "/settings",
+      }
+    ]
+  },
+  {
     version: "1.2",
     date: "2026-06-11",
     label: "ナビゲーション大改修・初回チュートリアル追加",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Menu,
