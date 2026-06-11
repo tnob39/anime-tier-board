@@ -4290,6 +4290,22 @@ a.cl-history-title:hover {
   margin-bottom: 10px;
   line-height: 1;
 }
+.welcome-symbol {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #0f766e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+.welcome-symbol span {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
 .welcome-title {
   margin: 0 0 8px;
   font-size: clamp(20px, 4vw, 24px);
