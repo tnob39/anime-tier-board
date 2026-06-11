@@ -3997,17 +3997,9 @@ a.cl-history-title:hover {
   border-radius: 50%;
   object-fit: cover;
 }
-.user-avatar-initial {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+.user-avatar-placeholder {
+  color: var(--muted);
+  display: block;
 }
 .user-menu-backdrop {
   position: fixed;

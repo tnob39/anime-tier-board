@@ -1,6 +1,6 @@
 "use client";
 
-import { LogIn, Menu, Settings, User } from "lucide-react";
+import { LogIn, LogOut, Menu, Settings, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -44,9 +44,7 @@ export function GlobalNav() {
                       className="user-avatar-img"
                     />
                   ) : (
-                    <span className="user-avatar-initial">
-                      {(session?.user?.name ?? session?.user?.email ?? "U")[0].toUpperCase()}
-                    </span>
+                    <UserCircle2 size={26} className="user-avatar-placeholder" />
                   )}
                 </button>
 
@@ -75,7 +73,7 @@ export function GlobalNav() {
                           void signOut();
                         }}
                       >
-                        <User size={15} />
+                        <LogOut size={15} />
                         <span>ログアウト</span>
                       </button>
                     </div>
