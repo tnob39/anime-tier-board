@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronUp, Copy, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { getServiceUrl } from "@/lib/streaming-services";
 import type { AdditionalServiceEffect, ServiceCoverage, SubscriptionStats } from "@/lib/subscription-stats";
@@ -12,8 +13,17 @@ type SubscriptionsClientProps = {
 };
 
 export function SubscriptionsClient({ stats, serviceIds }: SubscriptionsClientProps) {
-  const [diagnosisMode, setDiagnosisMode] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const diagnosisMode = searchParams.get("mode") === "diagnosis";
   const hasSubscriptions = serviceIds.length > 0;
+
+  function setDiagnosisMode(val: boolean) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (val) params.set("mode", "diagnosis");
+    else params.delete("mode");
+    router.replace(`/subscriptions?${params.toString()}`);
+  }
 
   return (
     <main className="app-main subscriptions-main">

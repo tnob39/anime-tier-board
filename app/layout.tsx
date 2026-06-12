@@ -7,8 +7,8 @@ import { SWRegister } from "@/app/sw-register";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "numanie — 好きなアニメを記録して、もっと沼に。",
-  description: "アニメの視聴履歴、評価、Tier表をまとめて管理できるアプリ。好きな作品を記録して、もっと沼に。",
+  title: "numanie",
+  description: "アニメ視聴を自分のものに。",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

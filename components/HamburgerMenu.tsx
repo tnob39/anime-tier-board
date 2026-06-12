@@ -3,7 +3,6 @@
 import {
   Megaphone,
   Mic2,
-  Settings,
   X
 } from "lucide-react";
 import Link from "next/link";
@@ -98,10 +97,6 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
           <Link href="/updates" className="hamburger-nav-item" onClick={onClose}>
             <Megaphone size={18} className="hamburger-nav-icon" />
             <span>更新情報</span>
-          </Link>
-          <Link href="/settings" className="hamburger-nav-item" onClick={onClose}>
-            <Settings size={18} className="hamburger-nav-icon" />
-            <span>設定</span>
           </Link>
         </section>
       </aside>

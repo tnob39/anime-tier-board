@@ -798,18 +798,16 @@ export function TierBoardApp() {
             </button>
           )}
 
-          {!isSimple && (
-            <button
-              className="command-button"
-              type="button"
-              onClick={() => void handleCreateShare()}
-              disabled={!board || sharing || loading || !items.length}
-              title="共有URLを作成"
-            >
-              {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
-              <span>共有</span>
-            </button>
-          )}
+          <button
+            className="command-button"
+            type="button"
+            onClick={() => void handleCreateShare()}
+            disabled={!board || sharing || loading || !items.length}
+            title="共有URLを作成"
+          >
+            {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
+            <span>共有</span>
+          </button>
 
           {!isSimple && (
             <button
@@ -1241,11 +1239,25 @@ function AnimeCard({
         <AiringBadges item={item} />
         <StreamingPlatformLinks item={item} />
         {onStatusChange ? (
-          <StatusChips
-            status={status}
-            compact
-            onChange={(nextStatus) => onStatusChange(item, nextStatus)}
-          />
+          status ? (
+            <StatusChips
+              status={status}
+              compact
+              onChange={(nextStatus) => onStatusChange(item, nextStatus)}
+            />
+          ) : (
+            <button
+              className="status-chip quick-add-planned"
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onStatusChange(item, "planned");
+              }}
+            >
+              ＋見たい
+            </button>
+          )
         ) : null}
         </div>
       ) : null}

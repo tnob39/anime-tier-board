@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, Settings, UserCircle2 } from "lucide-react";
+import { Compass, LogOut, Menu, Settings, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
@@ -30,6 +30,10 @@ export function GlobalNav() {
         </div>
 
         <div className="global-nav-right">
+          <Link href="/explore" className="global-nav-btn" aria-label="作品を探す" title="作品を探す">
+            <Compass size={20} />
+          </Link>
+
           {status !== "loading" && (
             isAuthenticated ? (
               <div className="user-menu-wrap">

@@ -40,7 +40,7 @@ export function WelcomeModal() {
 
         <div className="welcome-hero">
           <div className="welcome-symbol" aria-hidden="true">
-            <span>T</span>
+            <span>n</span>
           </div>
           <h2 className="welcome-title">アニメを、自分のものに。</h2>
           <p className="welcome-subtitle">
