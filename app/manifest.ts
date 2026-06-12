@@ -10,6 +10,26 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#f5f3ff",
     theme_color: "#6366f1",
     orientation: "portrait",
+    shortcuts: [
+      {
+        name: "今夜見るリスト",
+        short_name: "今夜",
+        url: "/watchlist",
+        description: "放送日が近い視聴中アニメを確認",
+      },
+      {
+        name: "ティア表",
+        short_name: "ティア",
+        url: "/",
+        description: "アニメをティア表で評価",
+      },
+      {
+        name: "サブスク診断",
+        short_name: "サブスク",
+        url: "/subscriptions",
+        description: "配信サービスのコスパを診断",
+      },
+    ],
     icons: [
       {
         src: "/numanie-icon.png",

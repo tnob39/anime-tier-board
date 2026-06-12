@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
 import { searchUrlFromProviderId } from "@/lib/service-search";
+import { updateAppBadge } from "@/lib/badge";
 import type { AnimeStatusRecord, ViewingStatus, WatchRhythm } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
@@ -53,6 +54,15 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
     [visibleItems]
   );
   const broadcastCalendar = useMemo(() => groupItemsByBroadcastDay(calendarItems), [calendarItems]);
+
+  useEffect(() => {
+    const TODAY_JA = ["日", "月", "火", "水", "木", "金", "土"][new Date().getDay()];
+    const todayCount = calendarItems.filter(
+      (item) => item.status === "watching" && item.anime?.airing?.broadcastDay === TODAY_JA
+    ).length;
+    updateAppBadge(todayCount);
+    return () => { updateAppBadge(0); };
+  }, [calendarItems]);
 
   async function updateItem(
     animeId: string,
