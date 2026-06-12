@@ -4290,6 +4290,22 @@ a.cl-history-title:hover {
   margin-bottom: 10px;
   line-height: 1;
 }
+.welcome-symbol {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #0f766e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+.welcome-symbol span {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
 .welcome-title {
   margin: 0 0 8px;
   font-size: clamp(20px, 4vw, 24px);
@@ -4373,4 +4389,50 @@ a.cl-history-title:hover {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.6;
+}
+
+/* ─── Share page CTA ─────────────────────────────────────────────────────── */
+.share-page-cta {
+  margin: 2.5rem auto 1rem;
+  max-width: 600px;
+  padding: 1.25rem 1.5rem;
+  background: var(--surface-raised, rgba(99,102,241,0.06));
+  border: 1px solid var(--border, rgba(99,102,241,0.2));
+  border-radius: 12px;
+  text-align: center;
+}
+.share-page-cta p {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.share-page-cta a {
+  display: inline-block;
+  padding: 0.55rem 1.2rem;
+  background: var(--accent, #6366f1);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.share-page-cta a:hover {
+  opacity: 0.88;
+}
+
+/* ─── Quick-add planned button (pool cards) ──────────────────────────────── */
+.quick-add-planned {
+  margin-top: 4px;
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  background: var(--surface-raised, rgba(99,102,241,0.08));
+  color: var(--accent, #6366f1);
+  border: 1px dashed var(--accent, #6366f1);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.quick-add-planned:hover {
+  background: var(--accent, #6366f1);
+  color: #fff;
 }

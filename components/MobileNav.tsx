@@ -1,16 +1,16 @@
 "use client";
 
-import { BarChart3, Compass, CreditCard, ListChecks, Table2 } from "lucide-react";
+import { BarChart3, CreditCard, ListChecks, Table2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUiMode } from "@/lib/ui-mode";
 
 const allNavItems = [
-  { href: "/", label: "Tier", icon: Table2, proOnly: false },
   { href: "/watchlist", label: "視聴中", icon: ListChecks, proOnly: false },
+  { href: "/", label: "Tier", icon: Table2, proOnly: false },
   { href: "/subscriptions", label: "サブスク", icon: CreditCard, proOnly: false },
-  { href: "/explore", label: "探す", icon: Compass, proOnly: true },
-  { href: "/dashboard", label: "分析", icon: BarChart3, badge: true, proOnly: true }
+  { href: "/dashboard", label: "分析", icon: BarChart3, proOnly: true },
+  // 「探す」はヘッダーに移動したため削除
 ];
 
 export function MobileNav() {
@@ -36,9 +36,6 @@ export function MobileNav() {
           >
             <span className="mobile-nav-icon-wrap">
               <Icon size={19} />
-              {"badge" in item && item.badge ? (
-                <span className="mobile-nav-badge" aria-hidden="true" />
-              ) : null}
             </span>
             <span>{item.label}</span>
           </Link>

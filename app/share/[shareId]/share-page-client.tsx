@@ -287,6 +287,11 @@ export function SharePageClient({
         )}
         {session?.user?.name ? <p className="comment-user">Signed in as {session.user.name}</p> : null}
       </section>
+
+      <div className="share-page-cta">
+        <p>あなたも numanie でアニメ Tier 表を作ろう</p>
+        <a href="/">numanie を使ってみる →</a>
+      </div>
     </main>
   );
 }

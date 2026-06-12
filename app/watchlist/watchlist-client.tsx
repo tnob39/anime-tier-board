@@ -319,10 +319,10 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
         </section>
       ) : (
         <section className="watchlist-empty">
-          <h2>まだ追ってる作品がありません</h2>
-          <p>Tier表で作品にStatusを付けると、このページに表示されます。</p>
+          <h2>まだ視聴中のアニメがありません</h2>
+          <p>今期アニメをチェックして、視聴したい作品を登録しよう。</p>
           <Link className="command-button emphasis-button" href="/">
-            Tier表でStatusを付ける
+            今期アニメをチェックして登録しよう →
           </Link>
         </section>
       )}

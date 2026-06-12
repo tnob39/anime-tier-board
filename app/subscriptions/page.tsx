@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { listStatuses } from "@/lib/statuses";
@@ -30,9 +31,11 @@ export default async function SubscriptionsPage() {
   const stats = calcSubscriptionStats(enrichedWatchlist, subscriptionState.subscriptions);
 
   return (
-    <SubscriptionsClient
-      stats={stats}
-      serviceIds={subscriptionState.subscriptions.map((subscription) => subscription.serviceId)}
-    />
+    <Suspense>
+      <SubscriptionsClient
+        stats={stats}
+        serviceIds={subscriptionState.subscriptions.map((subscription) => subscription.serviceId)}
+      />
+    </Suspense>
   );
 }

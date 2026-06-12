@@ -1,14 +1,8 @@
 "use client";
 
 import {
-  BarChart3,
-  Compass,
-  CreditCard,
-  ListChecks,
   Megaphone,
   Mic2,
-  Settings,
-  Table2,
   X
 } from "lucide-react";
 import Link from "next/link";
@@ -20,13 +14,9 @@ type Props = {
   onClose: () => void;
 };
 
+// ボトムタブにないページのみ
 const navItems = [
-  { href: "/", label: "Tier 表", icon: Table2, proOnly: false },
-  { href: "/watchlist", label: "視聴管理", icon: ListChecks, proOnly: false },
-  { href: "/subscriptions", label: "サブスク診断", icon: CreditCard, proOnly: false },
-  { href: "/explore", label: "過去作探索", icon: Compass, proOnly: true },
-  { href: "/voice-actors", label: "声優", icon: Mic2, proOnly: true },
-  { href: "/dashboard", label: "分析", icon: BarChart3, proOnly: true }
+  { href: "/voice-actors", label: "声優", icon: Mic2 },
 ];
 
 const modeOptions: Array<{ value: UiMode; label: string; desc: string }> = [
@@ -56,7 +46,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
 
       <aside className="hamburger-drawer">
         <div className="hamburger-head">
-          <span className="hamburger-title">メニュー</span>
+          <span className="hamburger-title">設定</span>
           <button className="hamburger-close-btn" onClick={onClose} aria-label="閉じる">
             <X size={20} />
           </button>
@@ -82,10 +72,9 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
         <div className="hamburger-divider" />
 
         <section className="hamburger-section">
-          <p className="hamburger-section-label">ページ</p>
+          <p className="hamburger-section-label">その他</p>
           <nav>
             {navItems.map((item) => {
-              if (item.proOnly && mode === "simple") return null;
               const Icon = item.icon;
               return (
                 <Link
@@ -96,9 +85,6 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
                 >
                   <Icon size={18} className="hamburger-nav-icon" />
                   <span>{item.label}</span>
-                  {item.proOnly && (
-                    <span className="hamburger-pro-badge">PRO</span>
-                  )}
                 </Link>
               );
             })}
@@ -111,10 +97,6 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
           <Link href="/updates" className="hamburger-nav-item" onClick={onClose}>
             <Megaphone size={18} className="hamburger-nav-icon" />
             <span>更新情報</span>
-          </Link>
-          <Link href="/settings" className="hamburger-nav-item" onClick={onClose}>
-            <Settings size={18} className="hamburger-nav-icon" />
-            <span>設定</span>
           </Link>
         </section>
       </aside>

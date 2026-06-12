@@ -13,16 +13,8 @@ const features = [
   { icon: "⭐", text: "Tier表を作って自分の評価を残す（プロモード）" }
 ];
 
-const tutorialSteps = [
-  { step: 1, title: "今期アニメを確認", body: "トップ画面に今クールのアニメが自動で並びます。気になる作品を探してみましょう。" },
-  { step: 2, title: "ステータスを登録", body: "アニメカードをタップして「見たい」「視聴中」などのステータスをつけられます。" },
-  { step: 3, title: "視聴管理で整理", body: "「視聴中」メニューからウォッチリストを確認。放送曜日ごとにまとめて見られます。" }
-];
-
 export function WelcomeModal() {
   const [show, setShow] = useState(false);
-  const [step, setStep] = useState<"welcome" | "tutorial">("welcome");
-  const [tutorialIdx, setTutorialIdx] = useState(0);
   const { status } = useSession();
 
   useEffect(() => {
@@ -37,18 +29,6 @@ export function WelcomeModal() {
     setShow(false);
   }
 
-  function handleStart() {
-    setStep("tutorial");
-  }
-
-  function handleTutorialNext() {
-    if (tutorialIdx < tutorialSteps.length - 1) {
-      setTutorialIdx((prev) => prev + 1);
-    } else {
-      close();
-    }
-  }
-
   if (!show) return null;
 
   return (
@@ -58,71 +38,38 @@ export function WelcomeModal() {
           <X size={18} />
         </button>
 
-        {step === "welcome" ? (
-          <>
-            <div className="welcome-hero">
-              <span className="welcome-emoji" aria-hidden="true">✨</span>
-              <h2 className="welcome-title">numanie へようこそ</h2>
-              <p className="welcome-subtitle">
-                好きなアニメを記録して、もっと沼に。
-              </p>
-            </div>
+        <div className="welcome-hero">
+          <div className="welcome-symbol" aria-hidden="true">
+            <span>n</span>
+          </div>
+          <h2 className="welcome-title">アニメを、自分のものに。</h2>
+          <p className="welcome-subtitle">
+            見たアニメをTierで整理して、視聴履歴を積み上げよう
+          </p>
+        </div>
 
-            <ul className="welcome-features">
-              {features.map((f) => (
-                <li key={f.text}>
-                  <span aria-hidden="true">{f.icon}</span>
-                  <span>{f.text}</span>
-                </li>
-              ))}
-            </ul>
+        <ul className="welcome-features">
+          {features.map((f) => (
+            <li key={f.text}>
+              <span aria-hidden="true">{f.icon}</span>
+              <span>{f.text}</span>
+            </li>
+          ))}
+        </ul>
 
-            <div className="welcome-actions">
-              <button className="command-button emphasis-button" onClick={handleStart}>
-                使い方を見る
-              </button>
-              <button className="command-button" onClick={close}>
-                まず見てみる
-              </button>
-            </div>
+        <div className="welcome-actions">
+          <button className="command-button emphasis-button" onClick={close}>
+            始める
+          </button>
+        </div>
 
-            {status !== "authenticated" && (
-              <button
-                className="welcome-login-link"
-                onClick={() => void signIn("google")}
-              >
-                Googleでログインして全機能を使う →
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="tutorial-progress">
-              {tutorialSteps.map((_, i) => (
-                <span
-                  key={i}
-                  className={`tutorial-dot${i === tutorialIdx ? " is-active" : ""}`}
-                />
-              ))}
-            </div>
-
-            <div className="tutorial-step">
-              <span className="tutorial-step-num">STEP {tutorialSteps[tutorialIdx].step}</span>
-              <h3 className="tutorial-step-title">{tutorialSteps[tutorialIdx].title}</h3>
-              <p className="tutorial-step-body">{tutorialSteps[tutorialIdx].body}</p>
-            </div>
-
-            <div className="welcome-actions">
-              <button className="command-button emphasis-button" onClick={handleTutorialNext}>
-                {tutorialIdx < tutorialSteps.length - 1 ? "次へ" : "始める"}
-              </button>
-              {tutorialIdx > 0 && (
-                <button className="command-button" onClick={() => setTutorialIdx((prev) => prev - 1)}>
-                  戻る
-                </button>
-              )}
-            </div>
-          </>
+        {status !== "authenticated" && (
+          <button
+            className="welcome-login-link"
+            onClick={() => void signIn("google")}
+          >
+            Googleでログイン →
+          </button>
         )}
       </div>
     </div>
