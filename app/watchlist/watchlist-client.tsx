@@ -4,7 +4,8 @@ import { CalendarDays, Copy, ExternalLink, Loader2, MoreVertical, Share2, Star }
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
-import CardLane, { type LaneCardData } from "@/components/CardLane";
+import AnimeList from "@/components/AnimeList";
+import { type LaneCardData } from "@/components/CardLane";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
 import { searchUrlFromProviderId } from "@/lib/service-search";
 import { updateAppBadge } from "@/lib/badge";
@@ -258,8 +259,8 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
           <p>{visibleItems.length}件を管理中</p>
         </div>
         <div className="watchlist-actions">
-          <Link className="command-button" href="/">
-            Tier表に戻る
+          <Link className="command-button" href="/tier">
+            Tier表へ
           </Link>
           <button
             className="command-button emphasis-button"
@@ -272,22 +273,6 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
           </button>
         </div>
       </header>
-
-      <section className="watchlist-guide">
-        <div>
-          <h2>ここで管理すること</h2>
-          <p>
-            Tier表とは分けて、追っている作品の「いつ見るか」「どれくらい楽しみか」
-            「放送/配信の目安」をまとめます。
-          </p>
-        </div>
-        <div className="watchlist-guide-grid">
-          <span>お気に入り度</span>
-          <span>視聴タイミング</span>
-          <span>メモ</span>
-          <span>放送・次回・クール</span>
-        </div>
-      </section>
 
       {visibleItems.length ? (
         <WeeklyBroadcastCalendar grouped={broadcastCalendar.grouped} />
@@ -332,8 +317,8 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
         <section className="watchlist-empty">
           <h2>まだ視聴中のアニメがありません</h2>
           <p>今期アニメをチェックして、視聴したい作品を登録しよう。</p>
-          <Link className="command-button emphasis-button" href="/">
-            今期アニメをチェックして登録しよう →
+          <Link className="command-button emphasis-button" href="/explore">
+            作品を探す →
           </Link>
         </section>
       )}
@@ -661,12 +646,12 @@ function WeeklyBroadcastCalendar({
       <h2 className="watchlist-broadcast-lanes-heading">今週の放映カレンダー</h2>
       <div className="watchlist-broadcast-lanes-list">
         {activeDays.map((day) => (
-          <CardLane
+          <AnimeList
             key={day}
             heading={`${DAY_LABELS[day]}${day === TODAY_JA ? " 🔴" : ""}`}
             count={grouped[day].length}
             items={grouped[day].map(toCardData)}
-            className={day === TODAY_JA ? "card-lane--today" : undefined}
+            className={day === TODAY_JA ? "anime-list-section--today" : undefined}
           />
         ))}
       </div>
