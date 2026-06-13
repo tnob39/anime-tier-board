@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import {
   BarChart3, Bell, CalendarDays, Compass, CreditCard,
-  Filter, Layers, ListChecks, Menu, Mic2, Share2, Smartphone, Sparkles, Star,
-  Tv2, UserCheck, Zap, Download, Loader2, type LucideIcon
+  Filter, Layers, ListChecks, Menu, Mic2, Search, Share2, Smartphone, Sparkles, Star,
+  Tv2, UserCheck, Zap, Download, Loader2, Bookmark, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,10 +27,61 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.6",
+    date: "2026-06-13",
+    label: "ナビ改善・カレンダーUX刷新",
+    isLatest: true,
+    changes: [
+      {
+        icon: CalendarDays,
+        iconColor: "#a07ef7",
+        title: "放映カレンダーを横スクロールレーン化",
+        description: "視聴管理ページの放映カレンダーが曜日ごとの横スクロールレーンに変わりました。今日の欄に自動スクロールし、見たいアニメが一目でわかるようになりました。",
+        href: "/watchlist",
+      },
+      {
+        icon: Layers,
+        iconColor: "#6366f1",
+        title: "Tier 表を /tier へ移設",
+        description: "Tier ボードを専用の /tier ページへ移設しました。トップ（/）は今後パーソナルホームとして整備予定です。",
+        href: "/tier",
+      },
+      {
+        icon: Search,
+        iconColor: "#4f8ef7",
+        title: "探すアイコンを虫眼鏡に変更",
+        description: "右上ナビの「探す」ボタンのアイコンをコンパスから虫眼鏡（Search）に変更しました。機能がひと目でわかりやすくなりました。",
+        href: "/explore",
+      },
+    ]
+  },
+  {
+    version: "1.5",
+    date: "2026-06-12",
+    label: "PWA ショートカット・バッジ通知",
+    isLatest: false,
+    changes: [
+      {
+        icon: Smartphone,
+        iconColor: "#6366f1",
+        title: "PWA ホーム画面ショートカット",
+        description: "ホーム画面の numanie アイコンを長押しすると「今夜見るリスト」「ティア表」「サブスク診断」へのショートカットが表示されます（対応デバイスのみ）。",
+        href: "/watchlist",
+      },
+      {
+        icon: Bookmark,
+        iconColor: "#f59e0b",
+        title: "アプリバッジ通知（Badging API）",
+        description: "ウォッチリストを開くと、今日放送の視聴中アニメ数がホーム画面のアプリアイコン上にバッジ表示されます（対応ブラウザ・OS のみ）。",
+        href: "/watchlist",
+      }
+    ]
+  },
+  {
     version: "1.4",
     date: "2026-06-12",
     label: "numanie リブランディング・UX 改善",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Sparkles,

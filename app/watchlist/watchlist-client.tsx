@@ -4,8 +4,10 @@ import { CalendarDays, Copy, ExternalLink, Loader2, MoreVertical, Share2, Star }
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import CardLane, { type LaneCardData } from "@/components/CardLane";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
 import { searchUrlFromProviderId } from "@/lib/service-search";
+import { updateAppBadge } from "@/lib/badge";
 import type { AnimeStatusRecord, ViewingStatus, WatchRhythm } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
@@ -53,6 +55,15 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
     [visibleItems]
   );
   const broadcastCalendar = useMemo(() => groupItemsByBroadcastDay(calendarItems), [calendarItems]);
+
+  useEffect(() => {
+    const TODAY_JA = ["日", "月", "火", "水", "木", "金", "土"][new Date().getDay()];
+    const todayCount = calendarItems.filter(
+      (item) => item.status === "watching" && item.anime?.airing?.broadcastDay === TODAY_JA
+    ).length;
+    updateAppBadge(todayCount);
+    return () => { updateAppBadge(0); };
+  }, [calendarItems]);
 
   async function updateItem(
     animeId: string,
@@ -617,23 +628,46 @@ function WeeklyBroadcastCalendar({
 }: {
   grouped: Record<BroadcastWeekday, AnimeStatusRecord[]>;
 }) {
+  const TODAY_JA = ["日", "月", "火", "水", "木", "金", "土"][new Date().getDay()] as BroadcastWeekday;
+
+  // 曜日ラベル（月〜日の順）
+  const DAY_LABELS: Record<BroadcastWeekday, string> = {
+    月: "月曜",
+    火: "火曜",
+    水: "水曜",
+    木: "木曜",
+    金: "金曜",
+    土: "土曜",
+    日: "日曜"
+  };
+
+  // アイテムがある曜日だけ表示（アイテムゼロの日は非表示）
+  const activeDays = BROADCAST_WEEKDAYS.filter((day) => grouped[day].length > 0);
+
+  function toCardData(record: AnimeStatusRecord): LaneCardData {
+    const anime = record.anime as AnimeItem;
+    return {
+      id: record.animeId,
+      title: anime.title,
+      coverImage: anime.proxiedImageUrl ?? anime.imageUrl ?? null,
+      statusVariant: record.status === "watching" ? "watching" : "planned"
+    };
+  }
+
+  if (activeDays.length === 0) return null;
+
   return (
-    <section className="watchlist-weekly-calendar" aria-label="今週の放映カレンダー">
-      <h2>今週の放映カレンダー</h2>
-      <div className="watchlist-weekly-calendar-grid">
-        {BROADCAST_WEEKDAYS.map((day) => (
-          <div key={day} className="watchlist-weekly-calendar-column">
-            <h3>{day}</h3>
-            {grouped[day].length ? (
-              <ul>
-                {grouped[day].map((record) => (
-                  <li key={record.animeId}>{record.anime?.title}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="watchlist-weekly-calendar-empty">—</p>
-            )}
-          </div>
+    <section className="watchlist-broadcast-lanes" aria-label="今週の放映カレンダー">
+      <h2 className="watchlist-broadcast-lanes-heading">今週の放映カレンダー</h2>
+      <div className="watchlist-broadcast-lanes-list">
+        {activeDays.map((day) => (
+          <CardLane
+            key={day}
+            heading={`${DAY_LABELS[day]}${day === TODAY_JA ? " 🔴" : ""}`}
+            count={grouped[day].length}
+            items={grouped[day].map(toCardData)}
+            className={day === TODAY_JA ? "card-lane--today" : undefined}
+          />
         ))}
       </div>
     </section>
