@@ -29,9 +29,22 @@ const RELEASES: Release[] = [
   {
     version: "1.6",
     date: "2026-06-13",
-    label: "ナビ改善・カレンダーUX刷新",
+    label: "パーソナルホーム実装・ナビ改善・カレンダーUX刷新",
     isLatest: true,
     changes: [
+      {
+        icon: Tv2,
+        iconColor: "#6366f1",
+        title: "トップページがパーソナルホームに",
+        description: "アプリを開くと「今夜放映」「視聴中」「見たい」の3レーンで自分の視聴状況が一目でわかるホーム画面になりました。",
+        href: "/",
+      },
+      {
+        icon: Smartphone,
+        iconColor: "#10b981",
+        title: "下部ナビを4本に整理",
+        description: "モバイル下部タブをホーム・視聴中・Tier・分析の4本に集約しました。サブスクはハンバーガーメニューからアクセスできます。",
+      },
       {
         icon: CalendarDays,
         iconColor: "#a07ef7",

@@ -84,9 +84,6 @@ export function DashboardClient({
           <Link className="command-button" href="/voice-actors">
             声優
           </Link>
-          <Link className="command-button" href="/">
-            ボードに戻る
-          </Link>
           <button
             className="icon-button nav-icon-link"
             type="button"
@@ -110,39 +107,15 @@ export function DashboardClient({
         </div>
       ) : null}
 
-      <section className="dashboard-tutorial" aria-label="ダッシュボードの使い方">
-        <div>
-          <p className="eyebrow">使い方</p>
-          <h2>ステータスを付けると、好みの偏りが見えるようになります</h2>
-          <p>
-            ダッシュボードは、ボード上で保存した視聴ステータスをもとに、
-            ジャンル・制作会社・声優の傾向を集計します。共有すると、この集計結果にコメントをもらえます。
-          </p>
+      {!hasData ? (
+        <div className="tutorial-empty-callout">
+          <strong>まだ集計データがありません</strong>
+          <span>作品にステータスを付けると、ジャンル・声優の傾向が見えます。</span>
+          <Link className="command-button emphasis-button" href="/watchlist">
+            視聴管理へ
+          </Link>
         </div>
-        <ol className="tutorial-steps">
-          <li>
-            <strong>1. ボードへ戻る</strong>
-            <span>作品カードをタップ、またはクリックして移動メニューを開きます。</span>
-          </li>
-          <li>
-            <strong>2. Statusを選ぶ</strong>
-            <span>「見たい」「視聴中」「完了」などを選ぶとTursoへ保存されます。</span>
-          </li>
-          <li>
-            <strong>3. 分析を共有する</strong>
-            <span>右上の共有アイコンから、分析結果の共有URLを作成できます。</span>
-          </li>
-        </ol>
-        {!hasData ? (
-          <div className="tutorial-empty-callout">
-            <strong>まだ集計データがありません</strong>
-            <span>まずは数作品にStatusを付けてから戻ってください。</span>
-            <Link className="command-button emphasis-button" href="/">
-              ボードでStatusを付ける
-            </Link>
-          </div>
-        ) : null}
-      </section>
+      ) : null}
 
       <section className="dashboard-subscription-card" aria-label="サブスク診断サマリー">
         <div>
@@ -161,7 +134,7 @@ export function DashboardClient({
 
       <Link className="dashboard-updates-link" href="/updates">
         <span className="dashboard-updates-badge">NEW</span>
-        v1.0 — ホーム画面に追加できるようになりました（PWA）
+        v1.6 — パーソナルホームとナビ刷新
         <span className="dashboard-updates-arrow">›</span>
       </Link>
 

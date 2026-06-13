@@ -1,7 +1,16 @@
-import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { listStatuses } from "@/lib/statuses";
+import { HomeClient } from "./home-client";
+import { HomeGuest } from "./home-guest";
 
-// Stage 2 (#63) 実装前の暫定リダイレクト。
-// 本ホーム（視聴中ホーム）が完成したら此処を置き換える。
-export default function Home() {
-  redirect("/tier");
+export default async function HomePage() {
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+
+  if (!userId) {
+    return <HomeGuest />;
+  }
+
+  const items = await listStatuses(userId);
+  return <HomeClient initialItems={items} />;
 }
