@@ -40,6 +40,12 @@ const RELEASES: Release[] = [
         href: "/",
       },
       {
+        icon: Smartphone,
+        iconColor: "#10b981",
+        title: "下部ナビを4本に整理",
+        description: "モバイル下部タブをホーム・視聴中・Tier・分析の4本に集約しました。サブスクはハンバーガーメニューからアクセスできます。",
+      },
+      {
         icon: CalendarDays,
         iconColor: "#a07ef7",
         title: "放映カレンダーを横スクロールレーン化",
