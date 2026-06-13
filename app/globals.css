@@ -4645,3 +4645,56 @@ a.cl-history-title:hover {
   background: var(--accent, #6366f1);
   color: #fff;
 }
+
+/* ─── Home page ──────────────────────────────────────────────────────────── */
+.home-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 60px 0;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.home-guest {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100dvh - 120px);
+}
+
+.home-guest-hero {
+  text-align: center;
+  padding: 40px 16px;
+  max-width: 360px;
+}
+
+.home-guest-symbol {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 12px;
+  line-height: 1;
+}
+
+.home-guest-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.home-guest-desc {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin: 0 0 24px;
+  line-height: 1.6;
+}
+
+.home-guest-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
