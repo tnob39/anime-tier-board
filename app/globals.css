@@ -1608,6 +1608,35 @@ button:disabled {
   }
 }
 
+/* ─── WeeklyBroadcastCalendar — 横スクロールレーン版 (#67) ─────────────────── */
+.watchlist-broadcast-lanes {
+  display: grid;
+  gap: 24px;
+}
+
+.watchlist-broadcast-lanes-heading {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.watchlist-broadcast-lanes-list {
+  display: grid;
+  gap: 20px;
+}
+
+/* 今日の曜日レーンをわずかに強調 */
+.card-lane--today {
+  padding: 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.card-lane--today .card-lane-heading {
+  color: var(--accent);
+}
+
 /* ─── Skeleton loading ─────────────────────────────────────────────────────── */
 .skeleton-tier-row {
   display: flex;
