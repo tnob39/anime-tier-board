@@ -29,11 +29,11 @@ export function SubscriptionsClient({ stats, serviceIds }: SubscriptionsClientPr
     <main className="app-main subscriptions-main">
       <header className="subscriptions-header">
         <div>
-          <p className="eyebrow">サブスク最適化</p>
-          <h1>{diagnosisMode ? "サブスク診断" : "今すぐ見れるもの"}</h1>
+          <p className="eyebrow">サブスク</p>
+          <h1>ウォッチリストは何%見放題？</h1>
           <p>
             {stats.watchlistCount > 0
-              ? `ウォッチリスト ${stats.watchlistCount}本`
+              ? `ウォッチリスト ${stats.watchlistCount}本 を照合中`
               : "ウォッチリストに作品を追加すると診断できます。"}
           </p>
         </div>
@@ -60,9 +60,9 @@ export function SubscriptionsClient({ stats, serviceIds }: SubscriptionsClientPr
       {stats.watchlistCount === 0 ? (
         <section className="subscriptions-empty">
           <h2>ウォッチリストが空です</h2>
-          <p>Tier表で作品にStatusを付けると、ここに見放題率が表示されます。</p>
-          <Link className="command-button emphasis-button" href="/">
-            Tier表でStatusを付ける
+          <p>作品にステータスを付けると、ここに見放題率が表示されます。</p>
+          <Link className="command-button emphasis-button" href="/watchlist">
+            視聴管理へ
           </Link>
         </section>
       ) : null}
