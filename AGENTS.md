@@ -107,6 +107,7 @@ npm.cmd run dev:local
 
 | ファイル | 内容 |
 |----------|------|
+| **[docs/UX_DIRECTION.md](./docs/UX_DIRECTION.md)** | **【UIUX必読】改善の共有方針・IA再設計・FV刷新（全エージェント source of truth）** |
 | [ORCA_GUIDE.md](./ORCA_GUIDE.md) | Orca 操作・マルチエージェント |
 | [CLAUDE.md](./CLAUDE.md) | Claude Code 向けエントリポイント |
 | [orca/AUTOMATIONS.md](./orca/AUTOMATIONS.md) | 定期レビュー Automation 定義 |
