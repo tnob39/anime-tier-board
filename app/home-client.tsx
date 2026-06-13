@@ -57,8 +57,17 @@ export function HomeClient({ initialItems }: { initialItems: AnimeStatusRecord[]
   if (watchingItems.length === 0 && plannedItems.length === 0) {
     return (
       <main className="app-main">
-        <div className="home-empty">
-          <p>アニメを登録して、視聴を管理しよう</p>
+        <div className="home-guide">
+          <p className="home-guide-step-label">STEP 1 / 3</p>
+          <h2 className="home-guide-title">まずはアニメを探してみよう</h2>
+          <p className="home-guide-body">
+            気になる作品に「見たい」や「視聴中」をつけると、ここに表示されます。
+          </p>
+          <div className="home-guide-hints">
+            <span>📋 今期アニメを一覧表示</span>
+            <span>✅ ステータスで管理</span>
+            <span>⭐ Tier表で評価</span>
+          </div>
           <Link href="/explore" className="command-button emphasis-button">
             作品を探す
           </Link>
