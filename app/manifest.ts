@@ -20,7 +20,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "ティア表",
         short_name: "ティア",
-        url: "/",
+        url: "/tier",
         description: "アニメをティア表で評価",
       },
       {
