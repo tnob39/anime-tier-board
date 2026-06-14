@@ -4870,3 +4870,228 @@ a.cl-history-title:hover {
   gap: 10px;
   align-items: center;
 }
+
+/* ========================================
+   Survey（アンケート）
+======================================== */
+.survey-banner {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: linear-gradient(135deg, #0f766e, #115e59);
+  color: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  text-decoration: none;
+}
+.survey-banner-icon {
+  font-size: 20px;
+  flex: 0 0 auto;
+}
+.survey-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.survey-banner-text strong {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.survey-banner-text span {
+  font-size: 11.5px;
+  opacity: 0.9;
+}
+.survey-banner-arrow {
+  font-size: 20px;
+  opacity: 0.8;
+  flex: 0 0 auto;
+}
+
+.survey-main {
+  max-width: 560px;
+  margin: 0 auto;
+}
+.survey-header {
+  padding: 8px 2px 4px;
+}
+.survey-header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+.survey-header p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+.survey-count {
+  font-weight: 700;
+  color: var(--accent) !important;
+  margin-top: 8px !important;
+}
+
+.survey-questions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+.survey-q {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+.survey-q h2 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.survey-multi-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+.survey-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.survey-visual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.survey-visual-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.survey-visual-opt img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+  background: var(--surface-soft);
+}
+.survey-visual-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.survey-visual-opt.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+.survey-visual-opt.is-selected .survey-visual-label {
+  color: #0f5e57;
+}
+.survey-opt {
+  text-align: left;
+  font-size: 13.5px;
+  padding: 11px 13px;
+  border: 1.5px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.survey-opt:hover {
+  border-color: var(--line-strong);
+}
+.survey-opt.is-selected {
+  border-color: var(--accent);
+  background: #dcf3ef;
+  color: #0f5e57;
+  font-weight: 600;
+}
+
+.survey-submit {
+  width: 100%;
+  margin-top: 18px;
+  justify-content: center;
+}
+.survey-note {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 8px;
+}
+.survey-back {
+  width: 100%;
+  justify-content: center;
+  margin-top: 18px;
+}
+.survey-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 30px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.survey-results {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 16px;
+}
+.survey-result-q h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.survey-result-q ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.survey-result-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+.survey-result-label strong {
+  font-weight: 700;
+}
+.survey-result-label strong span {
+  color: var(--muted);
+  font-weight: 500;
+}
+.survey-result-bar {
+  height: 8px;
+  background: var(--surface-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.survey-result-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}

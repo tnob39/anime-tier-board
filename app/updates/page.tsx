@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.7",
+    date: "2026-06-14",
+    label: "サービス改善アンケート",
+    isLatest: true,
+    changes: [
+      {
+        icon: BarChart3,
+        iconColor: "#0f766e",
+        title: "30秒アンケートを開始しました",
+        description: "ホーム上部のバナーから、サービス改善アンケートにご協力いただけます。視聴スタイルや欲しい機能を教えてください。回答すると、みんなの結果（投票数）も見られます。",
+        href: "/survey",
+      },
+    ]
+  },
+  {
     version: "1.6",
     date: "2026-06-13",
     label: "パーソナルホーム実装・ナビ改善・カレンダーUX刷新",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Tv2,
