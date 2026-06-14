@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.8",
+    date: "2026-06-14",
+    label: "モード別ホーム刷新",
+    isLatest: true,
+    changes: [
+      {
+        icon: Layers,
+        iconColor: "#6366f1",
+        title: "ホームをモード別（シンプル S3 / プロ P3）に刷新",
+        description: "アンケート結果（サブスク派メイン、C案最多）を反映。シンプルは「今すぐ見られる／これから配信／見たい」、プロは進捗バー＋未視聴キャッチアップ＋最近の記録＋Tierリンク。watchedEpisodes未入力時の未視聴過大表示を調整。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.7",
     date: "2026-06-14",
     label: "サービス改善アンケート",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: BarChart3,

@@ -32,10 +32,24 @@ export function unwatchedCount(record: AnimeStatusRecord): number {
 }
 
 /**
+ * watchedEpisodes がユーザにより入力済み（null でない）かどうか。
+ * 進捗バー／キャッチアップ表示は入力前提。未入力時は過大表示を避けるため
+ * フィルタで除外する（home-simple S3 / home-pro P3 両対応）。
+ */
+export function hasWatchedEpisodesEntered(record: AnimeStatusRecord): boolean {
+  return record.watchedEpisodes != null;
+}
+
+/**
  * 視聴中かつ未視聴話が残っている（キャッチアップが必要な）作品かどうか。
+ * watchedEpisodes 未入力（null）の場合はキャッチアップ対象とみなさない（過大表示防止）。
  */
 export function isCatchup(record: AnimeStatusRecord): boolean {
-  return record.status === "watching" && unwatchedCount(record) > 0;
+  return (
+    record.status === "watching" &&
+    hasWatchedEpisodesEntered(record) &&
+    unwatchedCount(record) > 0
+  );
 }
 
 /**
@@ -54,10 +68,11 @@ export function selectCatchup(records: AnimeStatusRecord[]): AnimeStatusRecord[]
 
 /**
  * 視聴中の全作品の未視聴話数の合計を返す。
+ * watchedEpisodes 未入力のものは合計に含めない（過大表示調整）。
  */
 export function totalUnwatched(records: AnimeStatusRecord[]): number {
   return records
-    .filter((r) => r.status === "watching")
+    .filter((r) => r.status === "watching" && hasWatchedEpisodesEntered(r))
     .reduce((sum, r) => sum + unwatchedCount(r), 0);
 }
 
