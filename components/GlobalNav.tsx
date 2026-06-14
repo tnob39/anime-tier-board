@@ -30,7 +30,7 @@ export function GlobalNav() {
         </div>
 
         <div className="global-nav-right">
-          <Link href="/" className="global-nav-btn" aria-label="ホーム" title="ホーム">
+          <Link href="/" className="global-nav-btn global-nav-home-pc" aria-label="ホーム" title="ホーム">
             <Home size={20} />
           </Link>
           <Link href="/explore" className="global-nav-btn" aria-label="作品を探す" title="作品を探す">
