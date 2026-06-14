@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import CardLane, { type LaneCardData } from "@/components/CardLane";
+import { SurveyBanner } from "@/components/SurveyBanner";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
@@ -57,6 +58,7 @@ export function HomeClient({ initialItems }: { initialItems: AnimeStatusRecord[]
   if (watchingItems.length === 0 && plannedItems.length === 0) {
     return (
       <main className="app-main">
+        <SurveyBanner />
         <div className="home-empty">
           <p>アニメを登録して、視聴を管理しよう</p>
           <Link href="/explore" className="command-button emphasis-button">
@@ -73,6 +75,7 @@ export function HomeClient({ initialItems }: { initialItems: AnimeStatusRecord[]
 
   return (
     <main className="app-main">
+      <SurveyBanner />
       {tonightItems.length > 0 && (
         <CardLane
           heading="今夜放映"
