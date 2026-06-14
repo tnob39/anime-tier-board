@@ -27,10 +27,38 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.9",
+    date: "2026-06-14",
+    label: "ナビ・バッジ・視聴リズム整理",
+    isLatest: true,
+    changes: [
+      {
+        icon: Smartphone,
+        iconColor: "#6366f1",
+        title: "下部ナビをモード別に出し分け",
+        description: "シンプルはホーム／視聴中／さがす／サブスク、プロはホーム／Tier／分析／探索の4本に。HOME_DESIGN_OPTIONS の宿題を反映。",
+      },
+      {
+        icon: Bookmark,
+        iconColor: "#f59e0b",
+        title: "PWAバッジを未視聴最新話の作品数に変更",
+        description: "今日放送の本数ではなく、視聴中で未視聴話が残っている作品数をホーム画面アイコンに表示します（watchedEpisodes 入力済みのみ）。",
+        href: "/watchlist",
+      },
+      {
+        icon: ListChecks,
+        iconColor: "#10b981",
+        title: "視聴リズム設定を廃止",
+        description: "ペルソナ議論で不要と判断された「毎週リアタイ／まとめて見る／ゆっくり見る」の選択UIを削除しました。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.8",
     date: "2026-06-14",
     label: "モード別ホーム刷新",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Layers,

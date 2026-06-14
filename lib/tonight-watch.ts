@@ -88,21 +88,16 @@ function selectContinueCandidates(records: AnimeStatusRecord[]): TonightCandidat
       }
     }
 
-    // ── Accumulation (batch / slow viewers who haven't touched it in a while) ──
-    if (record.watchRhythm === "batch" && sinceUpdated >= 7) {
-      const bonus = Math.min(sinceUpdated - 7, 14);
-      score += 5 + bonus;
-      tags.push("溜まってるかも");
-      if (!reason) reason = `${Math.round(sinceUpdated)}日間更新なし、まとめ見のチャンスです`;
-    } else if (record.watchRhythm === "slow" && sinceUpdated >= 14) {
+    // ── Accumulation (haven't touched it in a while) ──
+    if (sinceUpdated >= 14) {
       const bonus = Math.min(sinceUpdated - 14, 14);
       score += 3 + bonus;
       tags.push("積みアニメ");
-      if (!reason) reason = `${Math.round(sinceUpdated)}日間更新なし`;
-    } else if (record.watchRhythm === null && sinceUpdated >= 14) {
-      score += 3;
-      tags.push("積みアニメ");
       if (!reason) reason = "しばらく更新がない作品です";
+    } else if (sinceUpdated >= 7) {
+      score += 2;
+      tags.push("溜まってるかも");
+      if (!reason) reason = `${Math.round(sinceUpdated)}日間更新なし`;
     }
 
     // ── Paused bonus ──

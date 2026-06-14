@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { AppBadgeUpdater } from "./AppBadgeUpdater";
 import { GlobalNav } from "./GlobalNav";
 import { MobileNav } from "./MobileNav";
 
@@ -22,6 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <GlobalNav />
+      <AppBadgeUpdater />
       {children}
       <MobileNav />
     </>
