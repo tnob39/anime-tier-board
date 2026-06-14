@@ -16,6 +16,7 @@ export type AnimeStatusRecord = {
   watchSlot: string | null;
   notes: string | null;
   watchRhythm: WatchRhythm | null;
+  watchedEpisodes: number | null;
   updatedAt: string;
 };
 
@@ -35,7 +36,7 @@ export async function listStatuses(userId: string): Promise<AnimeStatusRecord[]>
   await ensureStatusSchema();
 
   const result = await getTursoClient().execute({
-    sql: `select anime_id, status, anime_json, favorite_level, watch_slot, notes, watch_rhythm, updated_at
+    sql: `select anime_id, status, anime_json, favorite_level, watch_slot, notes, watch_rhythm, watched_episodes, updated_at
           from user_anime_statuses
           where user_id = ?
           order by updated_at desc
@@ -58,6 +59,7 @@ export async function listStatuses(userId: string): Promise<AnimeStatusRecord[]>
         watchSlot: row.watch_slot ? String(row.watch_slot) : null,
         notes: row.notes ? String(row.notes) : null,
         watchRhythm: normalizeWatchRhythm(row.watch_rhythm),
+        watchedEpisodes: normalizeWatchedEpisodes(row.watched_episodes),
         updatedAt: String(row.updated_at)
       };
     })
@@ -124,13 +126,15 @@ export async function updateTrackingDetails({
   animeId,
   favoriteLevel,
   watchSlot,
-  notes
+  notes,
+  watchedEpisodes
 }: {
   userId: string;
   animeId: string;
   favoriteLevel: number | null;
   watchSlot: string | null;
   notes: string | null;
+  watchedEpisodes: number | null;
 }) {
   await ensureStatusSchema();
 
@@ -140,6 +144,7 @@ export async function updateTrackingDetails({
       : null;
   const normalizedWatchSlot = normalizeOptionalText(watchSlot, 80);
   const normalizedNotes = normalizeOptionalText(notes, 500);
+  const normalizedWatchedEpisodes = normalizeWatchedEpisodes(watchedEpisodes);
   const now = new Date().toISOString();
 
   await getTursoClient().execute({
@@ -147,12 +152,14 @@ export async function updateTrackingDetails({
           set favorite_level = ?,
               watch_slot = ?,
               notes = ?,
+              watched_episodes = ?,
               updated_at = ?
           where user_id = ? and anime_id = ?`,
     args: [
       normalizedFavoriteLevel,
       normalizedWatchSlot,
       normalizedNotes,
+      normalizedWatchedEpisodes,
       now,
       userId,
       animeId
@@ -209,6 +216,7 @@ export function ensureStatusSchema() {
       favorite_level integer,
       watch_slot text,
       notes text,
+      watched_episodes integer,
       updated_at text not null,
       primary key (user_id, anime_id)
     )`);
@@ -223,6 +231,9 @@ export function ensureStatusSchema() {
       .catch(() => undefined);
     await client
       .execute("alter table user_anime_statuses add column watch_rhythm text")
+      .catch(() => undefined);
+    await client
+      .execute("alter table user_anime_statuses add column watched_episodes integer")
       .catch(() => undefined);
   })();
 
@@ -267,6 +278,19 @@ function normalizeFavoriteLevel(value: unknown): number | null {
   }
 
   return Math.min(5, Math.max(1, Math.trunc(numeric)));
+}
+
+function normalizeWatchedEpisodes(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") {
+    return null;
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return null;
+  }
+
+  return Math.trunc(numeric);
 }
 
 function normalizeOptionalText(value: string | null, maxLength: number): string | null {

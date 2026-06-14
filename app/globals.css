@@ -4665,6 +4665,170 @@ a.cl-history-title:hover {
   color: var(--ink-2);
 }
 
+.home-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 24px;
+  text-align: center;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.home-guide-step-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.home-guide-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.home-guide-body {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.home-guide-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  border-radius: 10px;
+  padding: 12px 16px;
+  width: 100%;
+}
+
+/* ─── AnimeList（縦積みリスト・モード別ホーム / 視聴中カレンダー共通） ─── */
+.anime-list-section {
+  margin-top: 18px;
+}
+.anime-list-section:first-child {
+  margin-top: 8px;
+}
+.anime-list-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 2px 8px;
+}
+.anime-list-heading {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.anime-list-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.anime-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.anime-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 8px 11px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.anime-row:hover {
+  border-color: var(--line-strong);
+}
+.anime-row-poster {
+  width: 42px;
+  height: 56px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-soft);
+}
+.anime-row-img {
+  width: 42px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.anime-row-placeholder {
+  width: 42px;
+  height: 56px;
+  border-radius: 8px;
+}
+.anime-row-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.anime-row-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.anime-row-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.anime-row-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.anime-row-badge--watching {
+  background: #dcf3ef;
+  color: #0f766e;
+}
+.anime-row-badge--planned {
+  background: #fdf0d8;
+  color: #7a4a05;
+}
+.anime-row-badge--completed {
+  background: #e7ecf3;
+  color: #44506a;
+}
+.anime-row-badge--dropped {
+  background: #f0f0f0;
+  color: #888;
+}
+.anime-row-badge--default {
+  display: none;
+}
+.anime-list-section--today .anime-row {
+  border-color: #f3caca;
+}
+
 .home-guest {
   display: flex;
   align-items: center;
@@ -4930,4 +5094,185 @@ a.cl-history-title:hover {
   height: 100%;
   background: var(--accent);
   border-radius: 999px;
+}
+
+/* ─── HomePro (C案 P3) ──────────────────────────────────────────────────────── */
+
+/* 進捗カード */
+.home-pro-progress {
+  padding: 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1d2227, #312a4a);
+  color: #ffffff;
+}
+
+.home-pro-progress-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.home-pro-progress-unwatched {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.home-pro-progress-unwatched strong {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ff7f7f;
+  margin-right: 2px;
+}
+
+.home-pro-progress-tracking {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.home-pro-progress-caught {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #6ee7d8;
+}
+
+/* セグメントバー */
+.home-pro-progress-bar {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.home-pro-progress-seg {
+  flex: 1 1 0;
+  min-width: 4px;
+  border-radius: 999px;
+}
+
+.home-pro-progress-seg.is-behind {
+  background: #dc2626;
+}
+
+.home-pro-progress-seg.is-caught {
+  background: var(--accent);
+}
+
+/* 記録フィード */
+.home-pro-feed {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.home-pro-feed-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+}
+
+.home-pro-feed-poster {
+  width: 46px;
+  height: 62px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.home-pro-feed-img {
+  width: 46px;
+  height: 62px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.home-pro-feed-placeholder {
+  width: 46px !important;
+  height: 62px !important;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.home-pro-feed-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.home-pro-feed-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-pro-feed-stars {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.home-pro-feed-notes {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.home-pro-feed-date {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+/* 「すべて」リンク */
+.home-pro-feed-all-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.home-pro-feed-all-link:hover {
+  text-decoration: underline;
+}
+
+/* Tier リンクカード */
+.home-pro-tier-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 20px;
+  border: 2px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: none;
+  gap: 8px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.home-pro-tier-link:hover {
+  border-color: var(--accent);
+  background: #edfaf5;
+  color: var(--accent);
 }
