@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import AnimeList, { type AnimeListItem } from "@/components/AnimeList";
-import { SurveyBanner } from "@/components/SurveyBanner";
 import {
   selectCatchup,
   selectComingSoon,
@@ -99,7 +98,6 @@ export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[]
 
   return (
     <main className="app-main home-main">
-      <SurveyBanner />
       <AnimeList
         heading="今すぐ見られる"
         count={catchupItems.length}

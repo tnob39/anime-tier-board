@@ -7,7 +7,6 @@ import { useMemo } from "react";
 import { Star } from "lucide-react";
 import AnimeList, { type AnimeListItem } from "@/components/AnimeList";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
-import { SurveyBanner } from "@/components/SurveyBanner";
 import {
   selectCatchup,
   selectRecentRecords,
@@ -202,10 +201,7 @@ export function HomePro({ initialItems }: { initialItems: AnimeStatusRecord[] })
 
   return (
     <main className="app-main home-main">
-      {/* 1. アンケートバナー */}
-      <SurveyBanner />
-
-      {/* 2. 進捗カード */}
+      {/* 1. 進捗カード */}
       <ProgressCard records={initialItems} />
 
       {/* 3. 今すぐ見られる */}

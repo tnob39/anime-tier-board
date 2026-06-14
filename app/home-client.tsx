@@ -9,8 +9,7 @@ import { HomePro } from "./home-pro";
  * ホームのモード別ディスパッチャ。
  * UX_DIRECTION / PRODUCT_CONCEPT の結論「ホームの主役はモードで真逆」を受け、
  * シンプル（つん: 今/今週の視聴サポート）と プロ（ぬま: 記録・進捗・評価）を出し分ける。
- * SurveyBanner は各モード（home-simple / home-pro）側で表示する。
- */
+*/
 export function HomeClient({ initialItems }: { initialItems: AnimeStatusRecord[] }) {
   const { mode } = useUiMode();
 
