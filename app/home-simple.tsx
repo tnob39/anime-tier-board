@@ -4,63 +4,92 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import AnimeList, { type AnimeListItem } from "@/components/AnimeList";
+import { SurveyBanner } from "@/components/SurveyBanner";
+import {
+  selectCatchup,
+  selectComingSoon,
+  unwatchedCount,
+} from "@/lib/home-data";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 
-const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
-
-function toListItem(record: AnimeStatusRecord): AnimeListItem | null {
+/**
+ * AnimeStatusRecord → AnimeListItem 変換ヘルパー。
+ * meta は各セクションの用途に合わせて呼び元で渡す。
+ */
+function toAnimeListItem(
+  record: AnimeStatusRecord,
+  opts: {
+    meta?: string | null;
+    statusVariant?: AnimeListItem["statusVariant"];
+  } = {}
+): AnimeListItem | null {
   if (!record.anime) return null;
   return {
     id: record.animeId,
     title: record.anime.title,
     coverImage: record.anime.proxiedImageUrl || record.anime.imageUrl || null,
-    statusVariant: record.status as AnimeListItem["statusVariant"],
+    statusVariant: opts.statusVariant,
+    meta: opts.meta ?? null,
   };
+}
+
+/** 「今すぐ見られる」セクション用の meta 文字列を組み立てる。 */
+function buildCatchupMeta(record: AnimeStatusRecord): string {
+  const count = unwatchedCount(record);
+  const provider = record.anime?.streamingProvidersJp?.flatrate?.[0]?.name;
+  const countText = `あと${count}話`;
+  return provider ? `${countText}・${provider}` : countText;
+}
+
+/** 「これから配信」セクション用の meta 文字列を組み立てる。 */
+function buildComingSoonMeta(record: AnimeStatusRecord): string | null {
+  const broadcastDay = record.anime?.airing?.broadcastDay;
+  if (!broadcastDay) return null;
+  return `${broadcastDay}曜放映`;
 }
 
 /**
  * シンプルモードのホーム（ライト層「つん」向け）。
- * 主役は「今/今週どうするか」の視聴サポート。
- * 現状は今夜放映 / 視聴中 / 見たい の縦リスト3段。
- * 案 S1/S2 の確定後にこの中身を差し替える。
+ * 主役は「キャッチアップ」— 今すぐ見られる未視聴話が溜まった作品。
+ * S3 案: 今すぐ見られる / これから配信 / 見たい の3段構成。
  */
 export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[] }) {
   const router = useRouter();
-  const todayJa = WEEKDAYS_JA[new Date().getDay()];
 
-  const tonightItems = useMemo(
-    () =>
-      initialItems
-        .filter(
-          (item) =>
-            item.status === "watching" &&
-            item.anime?.airing?.broadcastDay?.includes(todayJa)
-        )
-        .map(toListItem)
-        .filter((x): x is AnimeListItem => x !== null),
-    [initialItems, todayJa]
-  );
+  const catchupItems = useMemo((): AnimeListItem[] => {
+    return selectCatchup(initialItems)
+      .map((r) =>
+        toAnimeListItem(r, {
+          meta: buildCatchupMeta(r),
+          statusVariant: "watching",
+        })
+      )
+      .filter((x): x is AnimeListItem => x !== null);
+  }, [initialItems]);
 
-  const watchingItems = useMemo(
-    () =>
-      initialItems
-        .filter((item) => item.status === "watching")
-        .map(toListItem)
-        .filter((x): x is AnimeListItem => x !== null),
-    [initialItems]
-  );
+  const comingSoonItems = useMemo((): AnimeListItem[] => {
+    return selectComingSoon(initialItems)
+      .map((r) =>
+        toAnimeListItem(r, {
+          meta: buildComingSoonMeta(r),
+        })
+      )
+      .filter((x): x is AnimeListItem => x !== null);
+  }, [initialItems]);
 
-  const plannedItems = useMemo(
-    () =>
-      initialItems
-        .filter((item) => item.status === "planned")
-        .slice(0, 8)
-        .map(toListItem)
-        .filter((x): x is AnimeListItem => x !== null),
-    [initialItems]
-  );
+  const plannedItems = useMemo((): AnimeListItem[] => {
+    return initialItems
+      .filter((r) => r.status === "planned")
+      .slice(0, 8)
+      .map((r) => toAnimeListItem(r, { statusVariant: "planned" }))
+      .filter((x): x is AnimeListItem => x !== null);
+  }, [initialItems]);
 
-  if (watchingItems.length === 0 && plannedItems.length === 0) {
+  if (
+    catchupItems.length === 0 &&
+    comingSoonItems.length === 0 &&
+    plannedItems.length === 0
+  ) {
     return <HomeEmptyGuide />;
   }
 
@@ -70,17 +99,17 @@ export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[]
 
   return (
     <main className="app-main home-main">
+      <SurveyBanner />
       <AnimeList
-        heading="今夜放映"
-        count={tonightItems.length}
-        items={tonightItems}
+        heading="今すぐ見られる"
+        count={catchupItems.length}
+        items={catchupItems}
         onItemClick={handleCardClick}
-        className="anime-list-section--today"
       />
       <AnimeList
-        heading="視聴中"
-        count={watchingItems.length}
-        items={watchingItems}
+        heading="これから配信"
+        count={comingSoonItems.length}
+        items={comingSoonItems}
         onItemClick={handleCardClick}
       />
       <AnimeList
