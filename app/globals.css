@@ -2007,6 +2007,52 @@ button:disabled {
   padding: 8px 9px;
 }
 
+/* 視聴済み話数ステッパー（何話まで見た？） */
+.watchlist-episode-stepper .episode-stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.episode-stepper-btn {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.episode-stepper-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.episode-stepper-value {
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 56px;
+  text-align: center;
+  color: var(--ink);
+}
+.episode-stepper-max {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* 上部ナビのホームアイコンは PC幅のみ（スマホは下部ナビにホームがあるため非表示） */
+@media (max-width: 520px) {
+  .global-nav-home-pc {
+    display: none;
+  }
+}
+
 .watchlist-empty {
   display: grid;
   justify-items: start;
