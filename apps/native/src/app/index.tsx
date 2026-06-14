@@ -1,198 +1,329 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimeCard, DemoAnimeItem } from '@/components/AnimeCard';
+import { LoginPanel } from '@/components/LoginPanel';
+import { MoveItemSheet } from '@/components/MoveItemSheet';
+import { TierLane } from '@/components/TierLane';
 import { useAuth } from '@/contexts/auth-context';
-import { fetchStatusesWithAuth } from '@/lib/auth-api';
-import { API_BASE } from '@/lib/api-base';
+import { useStatuses } from '@/hooks/use-statuses';
+import { filterAnimeItems } from '@/lib/anime-filters';
+import { fetchRemoteBoard, fetchSeasonalAnime, saveRemoteBoard } from '@/lib/api-client';
+import {
+  createDefaultBoard,
+  findTierIdByItemId,
+  getStorageKey,
+  moveItemToTier,
+  reconcileBoard,
+  UNRANKED_TIER_ID,
+  type BoardState,
+} from '@/lib/board';
+import { readStoredBoard, writeStoredBoard } from '@/lib/board-storage';
+import { getCurrentAnimeSeason } from '@/lib/season';
+import { SEASON_LABELS, type AnimeItem, type AnimeSeason } from '@/lib/types';
 
-const SAMPLE_ITEMS: DemoAnimeItem[] = [
-  {
-    id: 'demo-1',
-    title: '葬送のフリーレン',
-    format: 'TV',
-  },
-  {
-    id: 'demo-2',
-    title: 'ダンダダン',
-    format: 'TV',
-    imageUrl: 'https://picsum.photos/id/1016/300/200',
-  },
-];
-
-export default function ExpoPoCScreen() {
-  const { user, token, loading, signingIn, signInWithGoogle, signInWithDev, signOut } = useAuth();
-  const [fetchLoading, setFetchLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+export default function TierBoardScreen() {
+  const { user, token, handleUnauthorized } = useAuth();
+  const { statusMap, savingId, updateStatus, error: statusError } = useStatuses();
+  const currentSeason = useMemo(() => getCurrentAnimeSeason(), []);
+  const [seasonYear, setSeasonYear] = useState(currentSeason.year);
+  const [season, setSeason] = useState<AnimeSeason>(currentSeason.season);
+  const [items, setItems] = useState<AnimeItem[]>([]);
+  const [board, setBoard] = useState<BoardState | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<'local' | 'saving' | 'saved' | 'error'>('local');
+  const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
+  const [hideMovies, setHideMovies] = useState(false);
+  const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveAbortRef = useRef<AbortController | null>(null);
 
-  async function handleFetchStatuses() {
-    setFetchLoading(true);
+  const storageKey = useMemo(() => getStorageKey(seasonYear, season), [seasonYear, season]);
+  const isAuthenticated = Boolean(user && token);
+
+  const visibleItems = useMemo(
+    () => filterAnimeItems(items, { hideMovies, hideRerunCandidates, seasonYear }),
+    [hideMovies, hideRerunCandidates, items, seasonYear]
+  );
+  const itemMap = useMemo(
+    () => new Map(visibleItems.map((item) => [item.id, item])),
+    [visibleItems]
+  );
+  const visibleItemIds = useMemo(() => new Set(visibleItems.map((item) => item.id)), [visibleItems]);
+
+  const visibleTiers = useMemo(
+    () =>
+      board?.tiers.map((tier) => ({
+        ...tier,
+        itemIds: tier.itemIds.filter((itemId) => visibleItemIds.has(itemId)),
+      })) ?? [],
+    [board?.tiers, visibleItemIds]
+  );
+  const rankedTiers = visibleTiers.filter((tier) => tier.id !== UNRANKED_TIER_ID);
+  const unrankedTier = visibleTiers.find((tier) => tier.id === UNRANKED_TIER_ID);
+  const moveMenuItem = moveMenuItemId ? itemMap.get(moveMenuItemId) ?? null : null;
+  const moveMenuCurrentTierId =
+    board && moveMenuItemId ? findTierIdByItemId(board.tiers, moveMenuItemId) : null;
+
+  const yearOptions = useMemo(() => {
+    const start = currentSeason.year - 3;
+    return Array.from({ length: 8 }, (_, index) => start + index);
+  }, [currentSeason.year]);
+
+  const loadAnime = useCallback(async () => {
+    setLoading(true);
     setError(null);
-    setResult(null);
+    setWarning(null);
 
     try {
-      const parsed = await fetchStatusesWithAuth(token);
-      setResult(JSON.stringify(parsed, null, 2));
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      const payload = await fetchSeasonalAnime(seasonYear, season, token, handleUnauthorized);
+      const nextItems = payload.items;
+      const storedBoard = isAuthenticated && token
+        ? (await fetchRemoteBoard(seasonYear, season, token, handleUnauthorized)) ??
+          (await readStoredBoard(storageKey))
+        : await readStoredBoard(storageKey);
+      const nextBoard = reconcileBoard(
+        storedBoard ?? createDefaultBoard(seasonYear, season, nextItems),
+        nextItems,
+        seasonYear,
+        season
+      );
+
+      setItems(nextItems);
+      setBoard(nextBoard);
+      setSource(payload.source);
+      setWarning(payload.warning ?? payload.enrichWarning ?? null);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : String(loadError));
+      setItems([]);
+      setBoard(createDefaultBoard(seasonYear, season, []));
+      setSource(null);
     } finally {
-      setFetchLoading(false);
+      setLoading(false);
+    }
+  }, [seasonYear, season, token, isAuthenticated, storageKey, handleUnauthorized]);
+
+  useEffect(() => {
+    void loadAnime();
+  }, [loadAnime]);
+
+  useEffect(() => {
+    if (!board) {
+      return;
+    }
+
+    void writeStoredBoard(storageKey, board);
+
+    if (!isAuthenticated || !token) {
+      setSaveState('local');
+      return;
+    }
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveAbortRef.current?.abort();
+
+    saveTimeoutRef.current = setTimeout(() => {
+      setSaveState('saving');
+      void saveRemoteBoard(board, token, handleUnauthorized)
+        .then(() => setSaveState('saved'))
+        .catch(() => setSaveState('error'));
+    }, 500);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [board, isAuthenticated, token, storageKey, handleUnauthorized]);
+
+  function handleMoveItemToTier(itemId: string, targetTierId: string) {
+    setBoard((current) => (current ? moveItemToTier(current, itemId, targetTierId) : current));
+    setMoveMenuItemId(null);
+  }
+
+  async function handleStatusChange(status: Parameters<typeof updateStatus>[1]) {
+    if (!moveMenuItem) {
+      return;
+    }
+
+    try {
+      await updateStatus(moveMenuItem, status);
+    } catch {
+      // error surfaced via useStatuses
     }
   }
 
-  async function handleGoogleSignIn() {
-    setAuthError(null);
-    try {
-      await signInWithGoogle();
-    } catch (e: unknown) {
-      setAuthError(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  async function handleDevSignIn() {
-    setAuthError(null);
-    try {
-      await signInWithDev();
-    } catch (e: unknown) {
-      setAuthError(e instanceof Error ? e.message : String(e));
-    }
-  }
+  const saveStateLabel =
+    saveState === 'saving'
+      ? '保存中...'
+      : saveState === 'saved'
+        ? 'クラウド保存済み'
+        : saveState === 'error'
+          ? '保存エラー'
+          : 'ローカル保存';
 
   return (
     <SafeAreaView className="flex-1 bg-zinc-50 dark:bg-zinc-950">
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-4 py-6 gap-6 max-w-[680px] self-center w-full"
-      >
-        <View className="items-center gap-1">
-          <Text className="text-2xl font-bold text-zinc-900 dark:text-white tracking-tight">
-            Anime Tier Board
-          </Text>
+      <ScrollView className="flex-1" contentContainerClassName="px-4 py-4 gap-4 pb-8">
+        <View className="gap-1">
+          <Text className="text-2xl font-bold text-zinc-900 dark:text-white">今期アニメ Tier 表</Text>
           <Text className="text-sm text-zinc-500 dark:text-zinc-400">
-            認証フロー PoC (Issue #90)
+            {items.length}作品
+            {source ? ` / ${source === 'anilist' ? 'AniList' : 'Jikan'}` : ''}
+            {isAuthenticated ? ` / ${saveStateLabel}` : ''}
           </Text>
-          <View className="mt-1 px-3 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900">
-            <Text className="text-xs text-violet-700 dark:text-violet-300">
-              expo-auth-session + SecureStore
-            </Text>
-          </View>
         </View>
 
-        <View className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 gap-3">
-          <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            認証
-          </Text>
+        {!user ? (
+          <LoginPanel
+            title="ログインして同期"
+            description="Tier 表と視聴ステータスをクラウドに保存するにはログインが必要です。未ログインでもローカルで利用できます。"
+          />
+        ) : null}
 
-          {loading ? (
-            <View className="flex-row items-center gap-2">
-              <ActivityIndicator size="small" />
-              <Text className="text-sm text-zinc-500">セッション確認中...</Text>
-            </View>
-          ) : user ? (
-            <View className="gap-2">
-              <Text className="text-sm text-zinc-700 dark:text-zinc-300">
-                ログイン中: {user.name ?? user.email ?? user.id}
+        <View className="flex-row flex-wrap gap-2">
+          {yearOptions.map((year) => (
+            <Pressable
+              key={year}
+              onPress={() => setSeasonYear(year)}
+              className={`px-3 py-1.5 rounded-full border ${
+                seasonYear === year
+                  ? 'bg-zinc-900 border-zinc-900 dark:bg-white dark:border-white'
+                  : 'bg-white border-zinc-300 dark:bg-zinc-800 dark:border-zinc-600'
+              }`}
+            >
+              <Text
+                className={`text-xs font-medium ${
+                  seasonYear === year ? 'text-white dark:text-zinc-900' : 'text-zinc-700 dark:text-zinc-200'
+                }`}
+              >
+                {year}
               </Text>
-              <Text className="text-[10px] text-zinc-400 font-mono">token: {token?.slice(0, 24)}...</Text>
-              <Pressable
-                onPress={() => void signOut()}
-                className="self-start active:opacity-80 bg-zinc-200 dark:bg-zinc-700 px-4 py-2 rounded-xl"
-              >
-                <Text className="text-zinc-900 dark:text-zinc-100 font-medium">ログアウト</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View className="gap-2">
-              <Pressable
-                onPress={() => void handleGoogleSignIn()}
-                disabled={signingIn}
-                className="self-start active:opacity-80 bg-zinc-900 dark:bg-white px-4 py-2 rounded-xl"
-              >
-                <Text className="text-white dark:text-zinc-900 font-medium">
-                  {signingIn ? '認証中...' : 'Google でログイン'}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void handleDevSignIn()}
-                disabled={signingIn}
-                className="self-start active:opacity-80 border border-zinc-300 dark:border-zinc-600 px-4 py-2 rounded-xl"
-              >
-                <Text className="text-zinc-700 dark:text-zinc-200 font-medium">
-                  開発モードでログイン
-                </Text>
-              </Pressable>
-              <Text className="text-[10px] text-zinc-400">
-                Google ログインには EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID が必要です。
-              </Text>
-            </View>
-          )}
-
-          {authError && (
-            <View className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 p-3 rounded-xl">
-              <Text className="text-red-700 dark:text-red-300 text-sm">{authError}</Text>
-            </View>
-          )}
+            </Pressable>
+          ))}
         </View>
 
-        <View className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 gap-3">
-          <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            認証付き API 疎通
-          </Text>
-          <Text className="text-sm text-zinc-600 dark:text-zinc-400">
-            Bearer トークン付きで <Text className="font-mono text-xs">/api/statuses</Text> を取得します。
-          </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {(['WINTER', 'SPRING', 'SUMMER', 'FALL'] as AnimeSeason[]).map((option) => (
+            <Pressable
+              key={option}
+              onPress={() => setSeason(option)}
+              className={`px-3 py-1.5 rounded-full border ${
+                season === option
+                  ? 'bg-zinc-900 border-zinc-900 dark:bg-white dark:border-white'
+                  : 'bg-white border-zinc-300 dark:bg-zinc-800 dark:border-zinc-600'
+              }`}
+            >
+              <Text
+                className={`text-xs font-medium ${
+                  season === option ? 'text-white dark:text-zinc-900' : 'text-zinc-700 dark:text-zinc-200'
+                }`}
+              >
+                {SEASON_LABELS[option]}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
 
+        <View className="flex-row flex-wrap gap-2">
           <Pressable
-            onPress={() => void handleFetchStatuses()}
-            disabled={fetchLoading || !user}
-            className="self-start active:opacity-80 bg-zinc-900 dark:bg-white px-4 py-2 rounded-xl disabled:opacity-40"
+            onPress={() => setHideMovies((current) => !current)}
+            className={`px-3 py-1.5 rounded-full border ${
+              hideMovies
+                ? 'bg-violet-100 border-violet-300 dark:bg-violet-900 dark:border-violet-700'
+                : 'bg-white border-zinc-300 dark:bg-zinc-800 dark:border-zinc-600'
+            }`}
           >
-            <Text className="text-white dark:text-zinc-900 font-medium">
-              {fetchLoading ? '取得中...' : '認証付き /api/statuses をフェッチ'}
+            <Text className="text-xs text-zinc-700 dark:text-zinc-200">映画OFF</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setHideRerunCandidates((current) => !current)}
+            className={`px-3 py-1.5 rounded-full border ${
+              hideRerunCandidates
+                ? 'bg-violet-100 border-violet-300 dark:bg-violet-900 dark:border-violet-700'
+                : 'bg-white border-zinc-300 dark:bg-zinc-800 dark:border-zinc-600'
+            }`}
+          >
+            <Text className="text-xs text-zinc-700 dark:text-zinc-200">旧作OFF</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void loadAnime()}
+            disabled={loading}
+            className="px-3 py-1.5 rounded-full bg-zinc-900 dark:bg-white active:opacity-80 disabled:opacity-50"
+          >
+            <Text className="text-xs font-medium text-white dark:text-zinc-900">
+              {loading ? '取得中...' : '再取得'}
             </Text>
           </Pressable>
-
-          {fetchLoading && (
-            <View className="flex-row items-center gap-2">
-              <ActivityIndicator size="small" />
-              <Text className="text-sm text-zinc-500">Next サーバー起動を確認してください</Text>
-            </View>
-          )}
-
-          {error && (
-            <View className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 p-3 rounded-xl">
-              <Text className="text-red-700 dark:text-red-300 text-sm font-medium">エラー</Text>
-              <Text className="text-red-600 dark:text-red-400 text-xs mt-1">{error}</Text>
-            </View>
-          )}
-
-          {result && (
-            <View className="bg-zinc-950 rounded-xl p-3">
-              <Text className="text-emerald-400 text-xs mb-1">レスポンス</Text>
-              <Text className="text-zinc-200 font-mono text-[11px] leading-snug">{result}</Text>
-            </View>
-          )}
-
-          <Text className="text-[10px] text-zinc-400">ベースURL: {API_BASE}</Text>
         </View>
 
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between px-1">
-            <Text className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              AnimeCard 移植サンプル
-            </Text>
+        {warning ? (
+          <View className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-900 p-3 rounded-xl">
+            <Text className="text-amber-800 dark:text-amber-200 text-sm">{warning}</Text>
           </View>
+        ) : null}
 
-          <View className="items-center gap-4 py-2">
-            {SAMPLE_ITEMS.map((item) => (
-              <AnimeCard key={item.id} item={item} />
+        {error || statusError ? (
+          <View className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 p-3 rounded-xl">
+            <Text className="text-red-700 dark:text-red-300 text-sm">{error ?? statusError}</Text>
+          </View>
+        ) : null}
+
+        {loading && !board ? (
+          <View className="items-center py-8 gap-2">
+            <ActivityIndicator size="small" />
+            <Text className="text-sm text-zinc-500">アニメを読み込み中...</Text>
+          </View>
+        ) : null}
+
+        {board ? (
+          <View className="gap-1">
+            <Text className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 px-1">
+              {seasonYear}年 {SEASON_LABELS[season]}アニメ
+            </Text>
+            <Text className="text-xs text-zinc-500 px-1 mb-1">カードをタップして Tier 移動</Text>
+            {rankedTiers.map((tier) => (
+              <TierLane
+                key={tier.id}
+                tier={tier}
+                itemMap={itemMap}
+                statusMap={statusMap}
+                onOpenMoveMenu={setMoveMenuItemId}
+              />
             ))}
           </View>
-        </View>
+        ) : null}
+
+        {board && unrankedTier ? (
+          <View className="gap-1 mt-2">
+            <Text className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 px-1">未分類</Text>
+            <TierLane
+              tier={unrankedTier}
+              itemMap={itemMap}
+              statusMap={statusMap}
+              pool
+              onOpenMoveMenu={setMoveMenuItemId}
+            />
+          </View>
+        ) : null}
       </ScrollView>
+
+      <MoveItemSheet
+        visible={Boolean(moveMenuItem)}
+        item={moveMenuItem}
+        tiers={board?.tiers ?? []}
+        currentTierId={moveMenuCurrentTierId}
+        status={moveMenuItem ? statusMap[moveMenuItem.id] ?? null : null}
+        saving={moveMenuItem ? savingId === moveMenuItem.id : false}
+        onMove={handleMoveItemToTier}
+        onStatusChange={(nextStatus) => void handleStatusChange(nextStatus)}
+        onClose={() => setMoveMenuItemId(null)}
+      />
     </SafeAreaView>
   );
 }
