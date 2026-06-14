@@ -13,6 +13,7 @@ type TrackingPayload = {
   watchSlot?: string | null;
   notes?: string | null;
   watchRhythm?: WatchRhythm | null;
+  watchedEpisodes?: number | null;
 };
 
 export const GET = withApiRoute("watchlist.GET", async () => {
@@ -73,6 +74,7 @@ export const PUT = withApiRoute("watchlist.PUT", async (request: Request) => {
       favoriteLevel: payload.favoriteLevel ?? null,
       watchSlot: payload.watchSlot ?? null,
       notes: payload.notes ?? null,
+      watchedEpisodes: payload.watchedEpisodes ?? null,
     });
   }
 
