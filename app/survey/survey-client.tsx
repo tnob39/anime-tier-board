@@ -126,20 +126,34 @@ export function SurveyClient({ initialTotal }: { initialTotal: number }) {
               {q.title}
               {q.multi ? <span className="survey-multi-tag">複数可</span> : null}
             </h2>
-            <div className="survey-options">
-              {q.options.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={`survey-opt${isSelected(q.id, opt.value) ? " is-selected" : ""}`}
-                  onClick={() =>
-                    q.multi ? toggleMulti(q.id, opt.value) : setSingle(q.id, opt.value)
-                  }
-                  aria-pressed={isSelected(q.id, opt.value)}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className={q.visual ? "survey-visual-grid" : "survey-options"}>
+              {q.options.map((opt) =>
+                q.visual && opt.image ? (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`survey-visual-opt${isSelected(q.id, opt.value) ? " is-selected" : ""}`}
+                    onClick={() => setSingle(q.id, opt.value)}
+                    aria-pressed={isSelected(q.id, opt.value)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={opt.image} alt={opt.label} loading="lazy" />
+                    <span className="survey-visual-label">{opt.label}</span>
+                  </button>
+                ) : (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`survey-opt${isSelected(q.id, opt.value) ? " is-selected" : ""}`}
+                    onClick={() =>
+                      q.multi ? toggleMulti(q.id, opt.value) : setSingle(q.id, opt.value)
+                    }
+                    aria-pressed={isSelected(q.id, opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                )
+              )}
             </div>
           </section>
         ))}

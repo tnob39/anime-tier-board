@@ -4803,6 +4803,42 @@ a.cl-history-title:hover {
   flex-direction: column;
   gap: 8px;
 }
+.survey-visual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.survey-visual-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.survey-visual-opt img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+  background: var(--surface-soft);
+}
+.survey-visual-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.survey-visual-opt.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+.survey-visual-opt.is-selected .survey-visual-label {
+  color: #0f5e57;
+}
 .survey-opt {
   text-align: left;
   font-size: 13.5px;

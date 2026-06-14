@@ -2,17 +2,31 @@ import { getTursoClient } from "@/lib/turso";
 
 // ─── 質問定義（フロント・バックで共有） ──────────────────────────────
 
-export type SurveyQuestionId = "q1" | "q2" | "q3" | "q4" | "q5";
+export type SurveyQuestionId = "q0" | "q1" | "q2" | "q3" | "q4" | "q5";
 
 export type SurveyQuestion = {
   id: SurveyQuestionId;
   title: string;
   /** 複数選択可か */
   multi: boolean;
-  options: { value: string; label: string }[];
+  /** 選択肢に画像を出すビジュアル質問か */
+  visual?: boolean;
+  options: { value: string; label: string; image?: string }[];
 };
 
 export const SURVEY_QUESTIONS: SurveyQuestion[] = [
+  {
+    id: "q0",
+    title: "使ってみたいホーム画面はどれ？（画像をタップ）",
+    multi: false,
+    visual: true,
+    options: [
+      { value: "a", label: "A：今すぐ見られる未視聴が主役", image: "/survey/home-a.png" },
+      { value: "b", label: "B：未視聴を上から消す消化リスト", image: "/survey/home-b.png" },
+      { value: "c", label: "C：進捗バー＋記録でしっかり管理", image: "/survey/home-c.png" },
+      { value: "d", label: "D：評価・記録フィードが主役", image: "/survey/home-d.png" }
+    ]
+  },
   {
     id: "q1",
     title: "ふだんアニメをどう見ますか？",
@@ -75,6 +89,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
 // ─── 回答の型 ──────────────────────────────────────────────────────
 
 export type SurveyAnswers = {
+  q0?: string | null;
   q1?: string | null;
   q2?: string | null;
   q3?: string[];
@@ -99,6 +114,7 @@ export function ensureSurveySchema() {
     await client.execute(`create table if not exists survey_responses (
       respondent_id text primary key,
       user_id text,
+      q0 text,
       q1 text,
       q2 text,
       q3 text,
@@ -107,6 +123,10 @@ export function ensureSurveySchema() {
       created_at text not null,
       updated_at text not null
     )`);
+    // 既存テーブルへの後方互換（q0 を後から追加）
+    await client
+      .execute("alter table survey_responses add column q0 text")
+      .catch(() => undefined);
   })();
   return surveySchemaReady;
 }
@@ -138,6 +158,7 @@ export async function saveSurveyResponse(input: {
   await ensureSurveySchema();
   const now = new Date().toISOString();
 
+  const q0 = sanitizeSingle("q0", input.answers.q0);
   const q1 = sanitizeSingle("q1", input.answers.q1);
   const q2 = sanitizeSingle("q2", input.answers.q2);
   const q3 = sanitizeMulti("q3", input.answers.q3);
@@ -146,16 +167,18 @@ export async function saveSurveyResponse(input: {
 
   await getTursoClient().execute({
     sql: `insert into survey_responses
-            (respondent_id, user_id, q1, q2, q3, q4, q5, created_at, updated_at)
-          values (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (respondent_id, user_id, q0, q1, q2, q3, q4, q5, created_at, updated_at)
+          values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           on conflict(respondent_id) do update set
             user_id = excluded.user_id,
+            q0 = excluded.q0,
             q1 = excluded.q1, q2 = excluded.q2, q3 = excluded.q3,
             q4 = excluded.q4, q5 = excluded.q5,
             updated_at = excluded.updated_at`,
     args: [
       input.respondentId,
       input.userId ?? null,
+      q0,
       q1,
       q2,
       JSON.stringify(q3),
@@ -193,12 +216,12 @@ function parseArray(value: unknown): string[] {
 export async function getSurveyResults(): Promise<SurveyResults> {
   await ensureSurveySchema();
   const result = await getTursoClient().execute(
-    "select q1, q2, q3, q4, q5 from survey_responses"
+    "select q0, q1, q2, q3, q4, q5 from survey_responses"
   );
 
   const counts = emptyCounts();
   for (const row of result.rows) {
-    for (const qid of ["q1", "q2", "q4"] as const) {
+    for (const qid of ["q0", "q1", "q2", "q4"] as const) {
       const v = row[qid];
       if (typeof v === "string" && counts[qid][v] != null) {
         counts[qid][v] += 1;
