@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import HomeAddSection from "@/components/HomeAddSection";
 import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
+import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 import { useUiMode } from "@/lib/ui-mode";
@@ -21,6 +22,7 @@ type HomeClientProps = {
 export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientProps) {
   const { mode } = useUiMode();
   const [items, setItems] = useState(initialItems);
+  useSeasonalPrefetch(initialSeasonalAnime);
 
   const addSectionItems = useMemo(
     () => selectUnregisteredSeasonalAnime(initialSeasonalAnime, items),
