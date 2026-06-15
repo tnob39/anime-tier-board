@@ -7,12 +7,7 @@ import { useMemo } from "react";
 import { Star } from "lucide-react";
 import AnimeList, { type AnimeListItem } from "@/components/AnimeList";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
-import {
-  selectCatchup,
-  selectRecentRecords,
-  totalUnwatched,
-  unwatchedCount,
-} from "@/lib/home-data";
+import { selectCatchup, selectRecentRecords } from "@/lib/home-data";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 import { HomeEmptyGuide } from "./home-simple";
 
@@ -45,44 +40,23 @@ function formatDate(iso: string): string {
 }
 
 // ──────────────────────────────────────────
-// 進捗バー
+// 進捗カード
 // ──────────────────────────────────────────
 
 function ProgressCard({ records }: { records: AnimeStatusRecord[] }) {
-  const watchingRecords = records.filter((r) => r.status === "watching");
-  const total = totalUnwatched(records);
-  const watchingCount = watchingRecords.length;
+  const watchingCount = records.filter((r) => r.status === "watching").length;
 
   return (
     <div className="home-pro-progress">
       <div className="home-pro-progress-header">
-        {total === 0 ? (
-          <p className="home-pro-progress-caught">今期は追いつけています 🎉</p>
+        {watchingCount === 0 ? (
+          <p className="home-pro-progress-caught">視聴中の作品はありません</p>
         ) : (
-          <>
-            <span className="home-pro-progress-unwatched">
-              未視聴 <strong>{total}</strong> 話
-            </span>
-            <span className="home-pro-progress-tracking">
-              追跡 {watchingCount} 本
-            </span>
-          </>
+          <span className="home-pro-progress-tracking">
+            視聴中 <strong>{watchingCount}</strong> 本
+          </span>
         )}
       </div>
-      {watchingRecords.length > 0 && (
-        <div className="home-pro-progress-bar" aria-label="視聴進捗バー">
-          {watchingRecords.map((r) => {
-            const behind = unwatchedCount(r) > 0;
-            return (
-              <div
-                key={r.animeId}
-                className={`home-pro-progress-seg ${behind ? "is-behind" : "is-caught"}`}
-                title={`${r.anime?.title ?? r.animeId}${behind ? `（あと${unwatchedCount(r)}話）` : "（追いついた）"}`}
-              />
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
@@ -175,11 +149,11 @@ function TierLinkCard() {
 export function HomePro({ initialItems }: { initialItems: AnimeStatusRecord[] }) {
   const router = useRouter();
 
-  const catchupItems = useMemo((): AnimeListItem[] => {
+  const watchingItems = useMemo((): AnimeListItem[] => {
     return selectCatchup(initialItems)
       .map((r) =>
         toAnimeListItem(r, {
-          meta: `あと${unwatchedCount(r)}話`,
+          meta: r.anime?.streamingProvidersJp?.flatrate?.[0]?.name ?? null,
         })
       )
       .filter((x): x is AnimeListItem => x !== null);
@@ -190,32 +164,27 @@ export function HomePro({ initialItems }: { initialItems: AnimeStatusRecord[] })
     [initialItems]
   );
 
-  // 両方空なら空ガイド
-  if (catchupItems.length === 0 && recentRecords.length === 0) {
+  if (watchingItems.length === 0 && recentRecords.length === 0) {
     return <HomeEmptyGuide />;
   }
 
-  function handleCatchupClick() {
+  function handleWatchingClick() {
     router.push("/watchlist");
   }
 
   return (
     <main className="app-main home-main">
-      {/* 1. 進捗カード */}
       <ProgressCard records={initialItems} />
 
-      {/* 3. 今すぐ見られる */}
       <AnimeList
-        heading="今すぐ見られる"
-        count={catchupItems.length}
-        items={catchupItems}
-        onItemClick={handleCatchupClick}
+        heading="視聴中"
+        count={watchingItems.length}
+        items={watchingItems}
+        onItemClick={handleWatchingClick}
       />
 
-      {/* 4. 最近の記録フィード */}
       <RecentFeed records={recentRecords} />
 
-      {/* 5. Tier リンク */}
       <TierLinkCard />
     </main>
   );

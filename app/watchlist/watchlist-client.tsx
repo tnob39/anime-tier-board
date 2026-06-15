@@ -32,7 +32,7 @@ type BroadcastWeekday = (typeof BROADCAST_WEEKDAYS)[number];
 
 type TrackingDraft = Pick<
   AnimeStatusRecord,
-  "status" | "favoriteLevel" | "watchSlot" | "notes" | "watchedEpisodes"
+  "status" | "favoriteLevel" | "watchSlot" | "notes"
 >;
 
 type SaveResult = {
@@ -182,8 +182,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
           animeId: record.animeId,
           favoriteLevel: draft.favoriteLevel,
           watchSlot: draft.watchSlot,
-          notes: draft.notes,
-          watchedEpisodes: draft.watchedEpisodes
+          notes: draft.notes
         })
       });
 
@@ -345,23 +344,18 @@ function WatchlistCard({
   const [draftFavoriteLevel, setDraftFavoriteLevel] = useState(record.favoriteLevel);
   const [draftWatchSlot, setDraftWatchSlot] = useState(record.watchSlot ?? "");
   const [draftNotes, setDraftNotes] = useState(record.notes ?? "");
-  const [draftWatchedEpisodes, setDraftWatchedEpisodes] = useState<number | null>(
-    record.watchedEpisodes ?? null
-  );
   const [lastSaveResult, setLastSaveResult] = useState<SaveResult | null>(null);
   const schedule = getScheduleText(anime);
   const nextEpisode = getNextEpisodeText(anime);
   const cour = anime.airing?.courEstimate ?? estimateCourFromEpisodes(anime.episodes);
   const streamingLink = anime.streamingEpisodes?.find((episode) => episode.url);
-  const episodeMax = anime.episodes ?? null;
 
   useEffect(() => {
     setDraftStatus(record.status);
     setDraftFavoriteLevel(record.favoriteLevel);
     setDraftWatchSlot(record.watchSlot ?? "");
     setDraftNotes(record.notes ?? "");
-    setDraftWatchedEpisodes(record.watchedEpisodes ?? null);
-  }, [record.favoriteLevel, record.notes, record.status, record.watchSlot, record.watchedEpisodes]);
+  }, [record.favoriteLevel, record.notes, record.status, record.watchSlot]);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -383,8 +377,7 @@ function WatchlistCard({
     draftStatus !== record.status ||
     draftFavoriteLevel !== record.favoriteLevel ||
     draftWatchSlot !== (record.watchSlot ?? "") ||
-    draftNotes !== (record.notes ?? "") ||
-    draftWatchedEpisodes !== (record.watchedEpisodes ?? null);
+    draftNotes !== (record.notes ?? "");
 
   useEffect(() => {
     if (isDirty) {
@@ -410,20 +403,9 @@ function WatchlistCard({
       status: draftStatus,
       favoriteLevel: draftFavoriteLevel,
       watchSlot: draftWatchSlot || null,
-      notes: draftNotes || null,
-      watchedEpisodes: draftWatchedEpisodes
+      notes: draftNotes || null
     });
     setLastSaveResult(result);
-  }
-
-  function handleEpisodeStep(delta: number) {
-    setDraftWatchedEpisodes((prev) => {
-      const current = prev ?? 0;
-      const next = current + delta;
-      if (next < 0) return 0;
-      if (episodeMax !== null && next > episodeMax) return episodeMax;
-      return next;
-    });
   }
 
   return (
@@ -519,34 +501,6 @@ function WatchlistCard({
             ))}
           </select>
         </label>
-
-        <div className="watchlist-field watchlist-episode-stepper" aria-label="視聴済み話数">
-          <span>何話まで見た？</span>
-          <div className="episode-stepper-controls">
-            <button
-              type="button"
-              className="episode-stepper-btn"
-              aria-label="1話減らす"
-              disabled={(draftWatchedEpisodes ?? 0) <= 0}
-              onClick={() => handleEpisodeStep(-1)}
-            >
-              −
-            </button>
-            <span className="episode-stepper-value">
-              {draftWatchedEpisodes ?? 0}
-              {episodeMax !== null ? <span className="episode-stepper-max">/{episodeMax}</span> : null}
-            </span>
-            <button
-              type="button"
-              className="episode-stepper-btn"
-              aria-label="1話増やす"
-              disabled={episodeMax !== null && (draftWatchedEpisodes ?? 0) >= episodeMax}
-              onClick={() => handleEpisodeStep(1)}
-            >
-              ＋
-            </button>
-          </div>
-        </div>
 
         <label className="watchlist-field">
           <span>メモ</span>

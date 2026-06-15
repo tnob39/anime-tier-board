@@ -4,11 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import AnimeList, { type AnimeListItem } from "@/components/AnimeList";
-import {
-  selectCatchup,
-  selectComingSoon,
-  unwatchedCount,
-} from "@/lib/home-data";
+import { selectCatchup, selectComingSoon } from "@/lib/home-data";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 
 /**
@@ -32,12 +28,9 @@ function toAnimeListItem(
   };
 }
 
-/** 「今すぐ見られる」セクション用の meta 文字列を組み立てる。 */
-function buildCatchupMeta(record: AnimeStatusRecord): string {
-  const count = unwatchedCount(record);
-  const provider = record.anime?.streamingProvidersJp?.flatrate?.[0]?.name;
-  const countText = `あと${count}話`;
-  return provider ? `${countText}・${provider}` : countText;
+/** 「視聴中」セクション用の meta 文字列を組み立てる。 */
+function buildWatchingMeta(record: AnimeStatusRecord): string | null {
+  return record.anime?.streamingProvidersJp?.flatrate?.[0]?.name ?? null;
 }
 
 /** 「これから配信」セクション用の meta 文字列を組み立てる。 */
@@ -49,17 +42,16 @@ function buildComingSoonMeta(record: AnimeStatusRecord): string | null {
 
 /**
  * シンプルモードのホーム（ライト層「つん」向け）。
- * 主役は「キャッチアップ」— 今すぐ見られる未視聴話が溜まった作品。
- * S3 案: 今すぐ見られる / これから配信 / 見たい の3段構成。
+ * S3 案: 視聴中 / これから配信 / 見たい の3段構成。
  */
 export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[] }) {
   const router = useRouter();
 
-  const catchupItems = useMemo((): AnimeListItem[] => {
+  const watchingItems = useMemo((): AnimeListItem[] => {
     return selectCatchup(initialItems)
       .map((r) =>
         toAnimeListItem(r, {
-          meta: buildCatchupMeta(r),
+          meta: buildWatchingMeta(r),
           statusVariant: "watching",
         })
       )
@@ -85,7 +77,7 @@ export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[]
   }, [initialItems]);
 
   if (
-    catchupItems.length === 0 &&
+    watchingItems.length === 0 &&
     comingSoonItems.length === 0 &&
     plannedItems.length === 0
   ) {
@@ -99,9 +91,9 @@ export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[]
   return (
     <main className="app-main home-main">
       <AnimeList
-        heading="今すぐ見られる"
-        count={catchupItems.length}
-        items={catchupItems}
+        heading="視聴中"
+        count={watchingItems.length}
+        items={watchingItems}
         onItemClick={handleCardClick}
       />
       <AnimeList
