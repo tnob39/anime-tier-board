@@ -1,11 +1,9 @@
 "use client";
 
-import { ExternalLink, Loader2, Share2 } from "lucide-react";
+import { Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
-import type { AnimeStatusRecord, DashboardData, ViewingStatus } from "@/lib/statuses";
-import { selectTonightCandidates, type TonightCandidate, type TonightMode } from "@/lib/tonight-watch";
+import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -29,26 +27,6 @@ export function DashboardClient({
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [tonightMode, setTonightMode] = useState<TonightMode | null>(null);
-  const [tonightCandidates, setTonightCandidates] = useState<TonightCandidate[]>([]);
-  const [tonightIndex, setTonightIndex] = useState(0);
-  const [tonightLoading, setTonightLoading] = useState(false);
-
-  const hasTonightItems =
-    dashboard.statusCounts.watching + dashboard.statusCounts.paused + dashboard.statusCounts.planned > 0;
-
-  async function loadTonightCandidates(mode: TonightMode) {
-    setTonightLoading(true);
-    setTonightMode(mode);
-    setTonightIndex(0);
-    try {
-      const res = await fetch("/api/watchlist");
-      const data = (await res.json()) as { items: AnimeStatusRecord[] };
-      setTonightCandidates(selectTonightCandidates(data.items, mode));
-    } finally {
-      setTonightLoading(false);
-    }
-  }
 
   async function createShare() {
     setSharing(true);
@@ -132,173 +110,33 @@ export function DashboardClient({
         </Link>
       </section>
 
-      <Link className="dashboard-updates-link" href="/updates">
-        <span className="dashboard-updates-badge">NEW</span>
-        v1.6 — パーソナルホームとナビ刷新
-        <span className="dashboard-updates-arrow">›</span>
-      </Link>
-
-      {hasTonightItems ? (
-        <section className="tonight-watch-section" aria-label="今夜何見る？">
-          <div className="tonight-watch-header">
-            <span className="tonight-watch-icon">🎬</span>
-            <h2>今夜何見る？</h2>
-          </div>
-
-          {!tonightMode && !tonightLoading ? (
-            <div className="tonight-watch-cta">
-              <button
-                type="button"
-                className="command-button emphasis-button"
-                onClick={() => void loadTonightCandidates("continue")}
-              >
-                続きを見る
-              </button>
-              <button
-                type="button"
-                className="command-button"
-                onClick={() => void loadTonightCandidates("finish")}
-              >
-                今夜完結したい
-              </button>
-            </div>
-          ) : null}
-
-          {tonightLoading ? (
-            <div className="tonight-watch-loading">
-              <Loader2 className="spin" size={20} />
-              <span>候補を選んでいます…</span>
-            </div>
-          ) : null}
-
-          {tonightMode && !tonightLoading && tonightCandidates.length === 0 ? (
-            <div className="tonight-watch-empty">
-              <p>候補が見つかりませんでした。</p>
-              <button
-                type="button"
-                className="command-button"
-                onClick={() => setTonightMode(null)}
-              >
-                戻る
-              </button>
-            </div>
-          ) : null}
-
-          {tonightMode && !tonightLoading && tonightCandidates.length > 0 ? (
-            <TonightCandidateCard
-              candidate={tonightCandidates[tonightIndex]}
-              current={tonightIndex}
-              total={tonightCandidates.length}
-              onSkip={() => {
-                if (tonightIndex < tonightCandidates.length - 1) {
-                  setTonightIndex(tonightIndex + 1);
-                } else {
-                  setTonightMode(null);
-                }
-              }}
-              onReset={() => setTonightMode(null)}
-            />
-          ) : null}
-        </section>
-      ) : null}
-
       <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
-
-      <section className="dashboard-panel recent-panel">
-        <h2>最近更新した作品</h2>
-        {dashboard.recent.length ? (
-          <div className="recent-grid">
-            {dashboard.recent.map((record) => (
-              <article key={record.animeId} className="recent-card">
-                {record.anime ? (
-                  record.anime.proxiedImageUrl ? (
-                    <img src={record.anime.proxiedImageUrl} alt={record.anime.title} />
-                  ) : (
-                    <AnimeCardPlaceholder title={record.anime.title} />
-                  )
-                ) : null}
-                <div>
-                  <strong>{record.anime?.title ?? record.animeId}</strong>
-                  <span>{statusLabels[record.status]}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="comment-empty">ボードで作品にStatusを付けると、ここに反映されます。</p>
-        )}
-      </section>
     </main>
   );
 }
 
-function TonightCandidateCard({
-  candidate,
-  current,
-  total,
-  onSkip,
-  onReset: _onReset
-}: {
-  candidate: TonightCandidate;
-  current: number;
-  total: number;
-  onSkip: () => void;
-  onReset: () => void;
-}) {
-  const { record, tags, reason } = candidate;
-  const anime = record.anime;
-  if (!anime) return null;
-
-  const provider = anime.streamingPlatforms?.[0] ?? anime.streamingEpisodes?.[0];
-  const watchUrl = provider && "url" in provider ? provider.url : anime.siteUrl;
-  const providerName = provider ? ("name" in provider ? provider.name : provider.site ?? "配信") : null;
-
-  return (
-    <article className="tonight-candidate-card">
-      {anime.proxiedImageUrl ? (
-        <img src={anime.proxiedImageUrl} alt={anime.title} className="tonight-candidate-image" />
-      ) : (
-        <AnimeCardPlaceholder title={anime.title} className="tonight-candidate-image" />
-      )}
-      <div className="tonight-candidate-body">
-        {tags.length > 0 ? (
-          <div className="tonight-candidate-tags">
-            {tags.map((tag) => (
-              <span key={tag} className="tonight-candidate-tag">{tag}</span>
-            ))}
-          </div>
-        ) : null}
-        <strong className="tonight-candidate-title">{anime.title}</strong>
-        {reason ? (
-          <p className="tonight-candidate-reason">{reason}</p>
-        ) : null}
-        {anime.episodes ? (
-          <span className="tonight-candidate-meta">全{anime.episodes}話</span>
-        ) : null}
-        {providerName ? (
-          <span className="tonight-candidate-provider">▶ {providerName}</span>
-        ) : null}
-        <div className="tonight-candidate-actions">
-          <a
-            className="command-button emphasis-button"
-            href={watchUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <ExternalLink size={15} />
-            <span>見る</span>
-          </a>
-          <button type="button" className="command-button" onClick={onSkip}>
-            {current < total - 1 ? "スキップ" : "ウォッチリストを見る"}
-          </button>
-        </div>
-        <p className="tonight-candidate-counter">
-          {current + 1} / {total}
-        </p>
-      </div>
-    </article>
-  );
-}
+const GENRE_JA: Record<string, string> = {
+  Action: "アクション",
+  Adventure: "冒険",
+  Comedy: "コメディ",
+  Drama: "ドラマ",
+  Fantasy: "ファンタジー",
+  "Sci-Fi": "SF",
+  "Sci-Fi Fantasy": "SF/ファンタジー",
+  Mystery: "ミステリー",
+  Horror: "ホラー",
+  Romance: "ラブコメ",
+  "Slice of Life": "日常",
+  Sports: "スポーツ",
+  Supernatural: "超自然",
+  Ecchi: "エッチ",
+  Mecha: "メカ",
+  Music: "音楽",
+  Psychological: "心理",
+  Thriller: "スリラー",
+  "Martial Arts": "武道",
+  Military: "ミリタリー",
+};
 
 export function DashboardSummary({
   dashboard,
@@ -326,33 +164,39 @@ export function DashboardSummary({
         </div>
       </article>
 
-      <RankPanel title="ジャンル傾向" items={dashboard.topGenres} />
-      <RankPanel title="制作会社" items={dashboard.topStudios} />
-      <RankPanel title="声優" items={dashboard.topVoiceActors} />
+      <RankBarPanel
+        title="ジャンル傾向"
+        items={dashboard.topGenres.map((g) => ({ name: GENRE_JA[g.name] ?? g.name, count: g.count }))}
+      />
+      <RankBarPanel title="声優" items={dashboard.topVoiceActors} />
     </section>
   );
 }
 
-
-function RankPanel({
+function RankBarPanel({
   title,
   items
 }: {
   title: string;
   items: Array<{ name: string; count: number }>;
 }) {
+  const top = items.slice(0, 6);
+  const max = Math.max(1, ...top.map((i) => i.count));
   return (
     <article className="dashboard-panel rank-panel">
       <h2>{title}</h2>
-      {items.length ? (
-        <ol>
-          {items.map((item) => (
-            <li key={item.name}>
-              <span>{item.name}</span>
+      {top.length ? (
+        <div className="status-bars">
+          {top.map((item) => (
+            <div key={item.name} className="status-bar-row">
+              <span title={item.name}>{item.name}</span>
+              <div>
+                <i style={{ width: `${(item.count / max) * 100}%` }} />
+              </div>
               <strong>{item.count}</strong>
-            </li>
+            </div>
           ))}
-        </ol>
+        </div>
       ) : (
         <p className="comment-empty">データがまだありません。</p>
       )}

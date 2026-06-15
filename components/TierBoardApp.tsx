@@ -24,11 +24,9 @@ import {
   sortableKeyboardCoordinates,
   useSortable
 } from "@dnd-kit/sortable";
-import { toPng } from "html-to-image";
 import { signIn, useSession } from "next-auth/react";
 import {
   CalendarDays,
-  Download,
   ExternalLink,
   Heart,
   Loader2,
@@ -133,12 +131,10 @@ export function TierBoardApp() {
   const [statusMap, setStatusMap] = useState<Record<string, ViewingStatus>>({});
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
-  const boardRef = useRef<HTMLDivElement | null>(null);
   const dragOriginTierIdRef = useRef<string | null>(null);
 
   const storageKey = useMemo(
@@ -588,37 +584,6 @@ export function TierBoardApp() {
     });
   }
 
-  async function handleExport() {
-    if (!boardRef.current) {
-      return;
-    }
-
-    setExporting(true);
-
-    try {
-      await waitForImages(boardRef.current);
-      const dataUrl = await toPng(boardRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#f6f7f8",
-        filter: (node) =>
-          !(node instanceof HTMLElement && node.classList.contains("no-export"))
-      });
-      const link = document.createElement("a");
-      link.download = `anime-tier-${seasonYear}-${season.toLowerCase()}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (exportError) {
-      setError(
-        exportError instanceof Error
-          ? exportError.message
-          : "PNG出力に失敗しました。"
-      );
-    } finally {
-      setExporting(false);
-    }
-  }
-
   async function handleCreateShare() {
     if (!board || !items.length) {
       return;
@@ -740,19 +705,6 @@ export function TierBoardApp() {
 
           {!isSimple && (
             <button
-              className="command-button"
-              type="button"
-              onClick={handleAddTier}
-              disabled={!board}
-              title="Tierを追加"
-            >
-              <Plus size={18} />
-              <span>Tier追加</span>
-            </button>
-          )}
-
-          {!isSimple && (
-            <button
               className="command-button emphasis-button"
               type="button"
               onClick={handleAutoPublicTier}
@@ -761,19 +713,6 @@ export function TierBoardApp() {
             >
               <Sparkles size={18} />
               <span>出刃表</span>
-            </button>
-          )}
-
-          {!isSimple && (
-            <button
-              className="command-button"
-              type="button"
-              onClick={() => void handleExport()}
-              disabled={!board || exporting}
-              title="Tier表をPNGで出力"
-            >
-              {exporting ? <Loader2 className="spin" size={18} /> : <Download size={18} />}
-              <span>表出力</span>
             </button>
           )}
 
@@ -790,13 +729,14 @@ export function TierBoardApp() {
 
           {!isSimple && (
             <button
-              className="icon-button"
+              className="command-button"
               type="button"
               onClick={handleReset}
               disabled={!board}
               title="リセット"
             >
               <RotateCcw size={18} />
+              <span>リセット</span>
             </button>
           )}
         </div>
@@ -826,7 +766,7 @@ export function TierBoardApp() {
           }}
         >
           <section className="board-section" aria-label="Tier表">
-            <div ref={boardRef} className="export-surface">
+            <div className="export-surface">
               <div className="export-heading">
                 <strong>
                   {seasonYear}年 {SEASON_LABELS[season]}アニメ
@@ -860,6 +800,18 @@ export function TierBoardApp() {
                 )}
               </div>
             </div>
+            {!isSimple && (
+              <button
+                className="command-button tier-add-button"
+                type="button"
+                onClick={handleAddTier}
+                disabled={!board}
+                title="Tierを追加"
+              >
+                <Plus size={18} />
+                <span>Tierを追加</span>
+              </button>
+            )}
           </section>
 
           {!board ? (
@@ -1938,19 +1890,3 @@ function getReadableTextColor(hex: string): string {
   return luminance > 0.56 ? "#111827" : "#ffffff";
 }
 
-async function waitForImages(root: HTMLElement): Promise<void> {
-  const images = Array.from(root.querySelectorAll("img"));
-
-  await Promise.all(
-    images.map((image) => {
-      if (image.complete) {
-        return Promise.resolve();
-      }
-
-      return new Promise<void>((resolve) => {
-        image.onload = () => resolve();
-        image.onerror = () => resolve();
-      });
-    })
-  );
-}
