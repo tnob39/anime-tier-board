@@ -1,7 +1,7 @@
 import { selectCatchup } from "@/lib/home-data";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 
-/** 未視聴最新話がある作品数（PWAバッジ用）。watchedEpisodes 未入力は除外。 */
+/** 視聴中の作品数（PWAバッジ用）。 */
 export function countCatchupBadge(records: AnimeStatusRecord[]): number {
   return selectCatchup(records).length;
 }

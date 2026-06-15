@@ -27,10 +27,32 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.10",
+    date: "2026-06-15",
+    label: "視聴済み話数の手入力廃止",
+    isLatest: true,
+    changes: [
+      {
+        icon: ListChecks,
+        iconColor: "#10b981",
+        title: "視聴済み話数の手入力を廃止",
+        description: "視聴管理の「何話まで見た？」ステッパーを削除しました。ホームは視聴中の作品を手入力なしで一覧表示するシンプルな構成に戻しています。",
+        href: "/watchlist",
+      },
+      {
+        icon: Tv2,
+        iconColor: "#6366f1",
+        title: "ホームを視聴中ベースに簡素化",
+        description: "シンプル・プロ両モードで「今すぐ見られる」を「視聴中」に変更。未視聴話数の計算に依存せず、ステータスが視聴中の作品をそのまま表示します。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.9",
     date: "2026-06-14",
     label: "ナビ・バッジ・視聴リズム整理",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Smartphone,
