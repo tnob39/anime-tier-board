@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import AnimeList, { type AnimeListItem } from "@/components/AnimeList";
 import { selectCatchup, selectComingSoon } from "@/lib/home-data";
 import type { AnimeStatusRecord } from "@/lib/statuses";
@@ -44,7 +44,13 @@ function buildComingSoonMeta(record: AnimeStatusRecord): string | null {
  * シンプルモードのホーム（ライト層「つん」向け）。
  * S3 案: 視聴中 / これから配信 / 見たい の3段構成。
  */
-export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[] }) {
+export function HomeSimple({
+  initialItems,
+  addSection,
+}: {
+  initialItems: AnimeStatusRecord[];
+  addSection?: ReactNode;
+}) {
   const router = useRouter();
 
   const watchingItems = useMemo((): AnimeListItem[] => {
@@ -79,7 +85,8 @@ export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[]
   if (
     watchingItems.length === 0 &&
     comingSoonItems.length === 0 &&
-    plannedItems.length === 0
+    plannedItems.length === 0 &&
+    !addSection
   ) {
     return <HomeEmptyGuide />;
   }
@@ -96,6 +103,7 @@ export function HomeSimple({ initialItems }: { initialItems: AnimeStatusRecord[]
         items={watchingItems}
         onItemClick={handleCardClick}
       />
+      {addSection}
       <AnimeList
         heading="これから配信"
         count={comingSoonItems.length}

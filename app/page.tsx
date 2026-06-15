@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { fetchCurrentSeasonAnimeForHome } from "@/lib/home-seasonal-add";
 import { listStatuses } from "@/lib/statuses";
 import { HomeClient } from "./home-client";
 import { HomeGuest } from "./home-guest";
@@ -11,6 +12,10 @@ export default async function HomePage() {
     return <HomeGuest />;
   }
 
-  const items = await listStatuses(userId);
-  return <HomeClient initialItems={items} />;
+  const [items, seasonalAnime] = await Promise.all([
+    listStatuses(userId),
+    fetchCurrentSeasonAnimeForHome().catch(() => []),
+  ]);
+
+  return <HomeClient initialItems={items} initialSeasonalAnime={seasonalAnime} />;
 }

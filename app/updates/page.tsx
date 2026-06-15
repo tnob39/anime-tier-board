@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.11",
+    date: "2026-06-15",
+    label: "ホームに「今期から追加」導線を実装",
+    isLatest: true,
+    changes: [
+      {
+        icon: Compass,
+        iconColor: "#6366f1",
+        title: "ホームに「今期から追加」セクションを追加",
+        description: "未登録の今期アニメを人気順で表示し、その場で「見たい」「視聴中」に登録できます。登録後は視聴中・見たいセクションへ即時反映されます。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.10",
     date: "2026-06-15",
     label: "視聴済み話数の手入力廃止",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: ListChecks,

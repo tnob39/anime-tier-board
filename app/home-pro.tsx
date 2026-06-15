@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Star } from "lucide-react";
 import AnimeList, { type AnimeListItem } from "@/components/AnimeList";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
@@ -146,7 +146,13 @@ function TierLinkCard() {
 // HomePro（メインエクスポート）
 // ──────────────────────────────────────────
 
-export function HomePro({ initialItems }: { initialItems: AnimeStatusRecord[] }) {
+export function HomePro({
+  initialItems,
+  addSection,
+}: {
+  initialItems: AnimeStatusRecord[];
+  addSection?: ReactNode;
+}) {
   const router = useRouter();
 
   const watchingItems = useMemo((): AnimeListItem[] => {
@@ -164,7 +170,7 @@ export function HomePro({ initialItems }: { initialItems: AnimeStatusRecord[] })
     [initialItems]
   );
 
-  if (watchingItems.length === 0 && recentRecords.length === 0) {
+  if (watchingItems.length === 0 && recentRecords.length === 0 && !addSection) {
     return <HomeEmptyGuide />;
   }
 
@@ -182,6 +188,8 @@ export function HomePro({ initialItems }: { initialItems: AnimeStatusRecord[] })
         items={watchingItems}
         onItemClick={handleWatchingClick}
       />
+
+      {addSection}
 
       <RecentFeed records={recentRecords} />
 
