@@ -45,6 +45,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
+import { fetchSeasonalAnimeClient } from "@/lib/seasonal-anime-client-cache";
 import { useUiMode } from "@/lib/ui-mode";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
@@ -69,17 +70,6 @@ type BoardState = {
   seasonYear: number;
   tiers: TierRow[];
   updatedAt: string;
-};
-
-type SeasonalApiResponse = {
-  year: number;
-  season: AnimeSeason;
-  items: AnimeItem[];
-  source: AnimeSourceName;
-  cached: boolean;
-  warning?: string;
-  enrichWarning?: string;
-  error?: string;
 };
 
 type BoardApiResponse = {
@@ -237,18 +227,7 @@ export function TierBoardApp() {
     setWarning(null);
 
     try {
-      const response = await fetch(
-        `/api/anime/seasonal?year=${seasonYear}&season=${season}`,
-        {
-          cache: "no-store"
-        }
-      );
-      const payload = (await response.json()) as SeasonalApiResponse;
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "季節アニメの取得に失敗しました。");
-      }
-
+      const payload = await fetchSeasonalAnimeClient(seasonYear, season);
       const nextItems = payload.items;
       const storedBoard = isAuthenticated
         ? await readRemoteBoard(seasonYear, season)

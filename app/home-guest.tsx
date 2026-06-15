@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
 
 export function HomeGuest() {
+  useSeasonalPrefetch();
+
   return (
     <main className="app-main home-guest">
       <div className="home-guest-hero">

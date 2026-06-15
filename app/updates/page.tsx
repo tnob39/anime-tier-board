@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.12",
+    date: "2026-06-15",
+    label: "Tierデータをホームで先読みして高速化",
+    isLatest: true,
+    changes: [
+      {
+        icon: Zap,
+        iconColor: "#f59e0b",
+        title: "Tierデータをホームで先読みして高速化",
+        description: "ホーム表示時に今期アニメをバックグラウンドで先読みし、Tierページとキャッシュを共有。ホームからTierへ遷移したときの表示を速くしました。",
+        href: "/tier",
+      },
+    ]
+  },
+  {
     version: "1.11",
     date: "2026-06-15",
     label: "ホームに「今期から追加」導線を実装",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Compass,
