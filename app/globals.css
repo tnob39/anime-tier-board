@@ -230,6 +230,12 @@ button:disabled {
   color: var(--danger);
 }
 
+.explore-instant-watch-hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .notice.success {
   border-color: #9bd8c7;
   background: #edfaf5;

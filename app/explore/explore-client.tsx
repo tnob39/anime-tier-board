@@ -1,10 +1,13 @@
 "use client";
 
 import { Compass, Loader2, PlayCircle, Plus, Star, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
+import { STREAMING_SERVICES } from "@/lib/streaming-services";
+import type { UserSubscription } from "@/lib/subscriptions";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
 
 type SeasonalApiResponse = {
@@ -36,9 +39,11 @@ const statusLabels: Record<ViewingStatus, string> = {
 };
 
 export function ExploreClient({
-  initialStatuses
+  initialStatuses,
+  initialSubscriptions
 }: {
   initialStatuses: AnimeStatusRecord[];
+  initialSubscriptions: UserSubscription[];
 }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear - 10);
@@ -55,6 +60,15 @@ export function ExploreClient({
   const [hideMovies, setHideMovies] = useState(false);
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
   const [onlyInstantWatch, setOnlyInstantWatch] = useState(false);
+  const subscribedProviderIds = useMemo(
+    () =>
+      initialSubscriptions.flatMap((subscription) => {
+        const service = STREAMING_SERVICES.find((item) => item.id === subscription.serviceId);
+        return service?.tmdbProviderIds ?? [];
+      }),
+    [initialSubscriptions]
+  );
+  const hasSubscriptions = subscribedProviderIds.length > 0;
   const preferences = useMemo(() => buildPreferences(initialStatuses), [initialStatuses]);
   const yearOptions = useMemo(() => {
     const start = 1990;
@@ -66,9 +80,10 @@ export function ExploreClient({
         hideMovies,
         hideRerunCandidates,
         seasonYear: year,
-        onlyInstantWatch
+        onlyInstantWatch,
+        subscribedProviderIds
       }),
-    [hideMovies, hideRerunCandidates, items, year, onlyInstantWatch]
+    [hideMovies, hideRerunCandidates, items, year, onlyInstantWatch, subscribedProviderIds]
   );
   const rankedItems = useMemo(
     () => rankItems(filteredItems, preferences, statusMap, sortMode),
@@ -195,10 +210,21 @@ export function ExploreClient({
             type="button"
             onClick={() => setOnlyInstantWatch((current) => !current)}
             aria-pressed={onlyInstantWatch}
+            title={
+              hasSubscriptions
+                ? "加入中サービスで見られる作品に絞り込む"
+                : "配信のある作品に絞り込む（サブスクを登録すると加入中サービスで絞り込めます）"
+            }
           >
-            今すぐ見放題
+            {hasSubscriptions ? "今すぐ見放題（加入中）" : "今すぐ見放題"}
           </button>
         </div>
+        {onlyInstantWatch && !hasSubscriptions ? (
+          <p className="explore-instant-watch-hint">
+            サブスクを登録すると、加入中サービスで見られる作品だけに絞り込めます。{" "}
+            <Link href="/subscriptions">サブスクを登録する →</Link>
+          </p>
+        ) : null}
         <button
           className="command-button emphasis-button"
           type="button"

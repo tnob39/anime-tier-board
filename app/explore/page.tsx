@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { listStatuses } from "@/lib/statuses";
+import { getSubscriptionState } from "@/lib/subscriptions";
 import { ExploreClient } from "./explore-client";
 
 export default async function ExplorePage() {
@@ -11,7 +12,15 @@ export default async function ExplorePage() {
     redirect("/");
   }
 
-  const statuses = await listStatuses(userId);
+  const [statuses, subscriptionState] = await Promise.all([
+    listStatuses(userId),
+    getSubscriptionState(userId)
+  ]);
 
-  return <ExploreClient initialStatuses={statuses} />;
+  return (
+    <ExploreClient
+      initialStatuses={statuses}
+      initialSubscriptions={subscriptionState.subscriptions}
+    />
+  );
 }
