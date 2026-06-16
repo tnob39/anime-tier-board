@@ -101,6 +101,17 @@ npm.cmd run dev:local
 | Hermes | Orchestrator。worktree 作成・タスク分解・`orchestration` 利用 |
 | Cursor | `AGENTS.md` を Rules / Docs に登録推奨 |
 
+### Issue着手時の担当明示（必須）
+
+複数エージェント・複数 worktree が同時並行で動くため、同じファイル（例: `GlobalNav.tsx`）を
+別々のIssueで同時に触ってマージ時にコンフリクトする事故が起きている。これを防ぐため:
+
+- 対応する GitHub Issue に着手したら、**着手直後に**コメントまたは本文冒頭に
+  「担当: <エージェント名> (Orca worktree: `<worktree名>`)」を明記する。
+- 既に他のIssue/PRが同じファイルを編集中と分かった場合は、worktree comment と
+  GitHub Issueコメントの両方でその旨を記録し、マージ順序をユーザーに確認する。
+- 完了時は Issue に「完了・PR #<番号>」を追記してから close する。
+
 ---
 
 ## 関連ドキュメント
