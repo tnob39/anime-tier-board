@@ -27,10 +27,39 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.13",
+    date: "2026-06-16",
+    label: "分析・Tier・探索のUXをスッキリ整理",
+    isLatest: true,
+    changes: [
+      {
+        icon: BarChart3,
+        iconColor: "#6366f1",
+        title: "分析タブを整理してスッキリ",
+        description: "「今夜何見る」「最近更新した作品」「更新情報リンク」を削除。ジャンルと声優を横棒グラフで表示し、制作会社欄を廃止。ジャンル名も日本語に変換しました。",
+        href: "/dashboard",
+      },
+      {
+        icon: Layers,
+        iconColor: "#10b981",
+        title: "Tierツールバーを整理",
+        description: "使われにくい「表出力（PNG）」ボタンを削除。「Tier追加」ボタンをリスト末尾に移動し、「リセット」ボタンに文字ラベルを追加しました。",
+        href: "/tier",
+      },
+      {
+        icon: Compass,
+        iconColor: "#0ea5e9",
+        title: "探索ページの案内を統合",
+        description: "「ボードに戻る」ボタンを削除し、重複していたページタイトルとから文言案内を一本化しました。",
+        href: "/explore",
+      },
+    ]
+  },
+  {
     version: "1.12",
     date: "2026-06-15",
     label: "Tierデータをホームで先読みして高速化",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Zap,

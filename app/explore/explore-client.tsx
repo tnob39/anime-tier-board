@@ -1,7 +1,6 @@
 "use client";
 
 import { Compass, Loader2, PlayCircle, Plus, Star, TrendingUp } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
@@ -132,12 +131,9 @@ export function ExploreClient({
       <header className="explore-header">
         <div>
           <p className="eyebrow">過去作品探索</p>
-          <h1>次に見る候補を探す</h1>
+          <h1>年代・期を選んで作品を探す</h1>
           <p>選んだ年・期の作品を、人気・評価・あなたの好みで並べます。</p>
         </div>
-        <Link className="command-button" href="/">
-          ボードに戻る
-        </Link>
       </header>
 
       <section className="explore-controls">
@@ -272,8 +268,7 @@ export function ExploreClient({
         </section>
       ) : (
         <section className="watchlist-empty">
-          <h2>年代と期を選んで探索</h2>
-          <p>90年代から現在まで、選んだシーズンの作品を取得してランキングします。</p>
+          <p>年代と期を選ぶと、作品が表示されます。</p>
         </section>
       )}
     </main>
