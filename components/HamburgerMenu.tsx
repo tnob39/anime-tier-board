@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  CreditCard,
   Megaphone,
   Mic2,
+  Settings,
   X
 } from "lucide-react";
 import Link from "next/link";
@@ -16,7 +18,9 @@ type Props = {
 
 // ボトムタブにないページのみ
 const navItems = [
+  { href: "/subscriptions", label: "サブスク", icon: CreditCard },
   { href: "/voice-actors", label: "声優", icon: Mic2 },
+  { href: "/settings", label: "設定", icon: Settings },
 ];
 
 const modeOptions: Array<{ value: UiMode; label: string; desc: string }> = [

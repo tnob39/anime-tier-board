@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Search, LogOut, Menu, Settings, UserCircle2 } from "lucide-react";
+import { Home, LogOut, Menu, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -47,9 +47,6 @@ export function GlobalNav() {
           <Link href="/" className="global-nav-btn global-nav-home-pc" aria-label="ホーム" title="ホーム">
             <Home size={20} />
           </Link>
-          <Link href="/explore" className="global-nav-btn" aria-label="作品を探す" title="作品を探す">
-            <Search size={20} />
-          </Link>
 
           {status !== "loading" && (
             isAuthenticated ? (
@@ -73,14 +70,6 @@ export function GlobalNav() {
                       <p className="user-dropdown-name">
                         {session?.user?.name ?? session?.user?.email}
                       </p>
-                      <Link
-                        href="/settings"
-                        className="user-dropdown-item"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <Settings size={15} />
-                        <span>設定</span>
-                      </Link>
                       <button
                         className="user-dropdown-item user-dropdown-logout"
                         onClick={() => {
