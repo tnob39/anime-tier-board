@@ -2089,6 +2089,17 @@ button:disabled {
   background: var(--surface-soft);
 }
 
+.watchlist-card-menu-item-danger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #dc2626;
+}
+
+.watchlist-card-menu-item-danger:hover {
+  background: rgba(220, 38, 38, 0.08);
+}
+
 .evangelist-sheet-backdrop {
   position: fixed;
   inset: 0;

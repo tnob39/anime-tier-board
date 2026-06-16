@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Copy, ExternalLink, Loader2, MoreVertical, Share2, Star } from "lucide-react";
+import { CalendarDays, Copy, ExternalLink, Loader2, MoreVertical, Share2, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
@@ -207,6 +207,41 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
     }
   }
 
+  async function removeItem(record: AnimeStatusRecord) {
+    if (!record.anime) {
+      return;
+    }
+
+    const confirmed = window.confirm(`「${record.anime.title}」を視聴リストから削除しますか？`);
+    if (!confirmed) {
+      return;
+    }
+
+    const previous = items;
+    setItems((records) => records.filter((item) => item.animeId !== record.animeId));
+    setSavingId(record.animeId);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/statuses?animeId=${encodeURIComponent(record.animeId)}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        throw new Error("削除に失敗しました。");
+      }
+
+      setMessageKind("success");
+      setMessage(`「${record.anime.title}」を視聴リストから削除しました。`);
+    } catch (error) {
+      setItems(previous);
+      setMessageKind("error");
+      setMessage(error instanceof Error ? error.message : "削除に失敗しました。");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   async function createShare() {
     setSharing(true);
     setMessage(null);
@@ -287,6 +322,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
                 onStatusChange={(status) => void updateStatus(record, status)}
                 onSave={(draft) => saveTrackingDraft(record, draft)}
                 onCreateEvangelistCard={() => setEvangelistAnime(record.anime as AnimeItem)}
+                onRemove={() => void removeItem(record)}
               />
             ) : null
           )}
@@ -324,6 +360,7 @@ function WatchlistCard({
   onStatusChange,
   onSave,
   onCreateEvangelistCard,
+  onRemove,
 }: {
   record: AnimeStatusRecord;
   saving: boolean;
@@ -333,6 +370,7 @@ function WatchlistCard({
   onStatusChange: (status: ViewingStatus) => void;
   onSave: (draft: TrackingDraft) => Promise<SaveResult>;
   onCreateEvangelistCard: () => void;
+  onRemove: () => void;
 }) {
   const anime = record.anime as AnimeItem;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -446,6 +484,18 @@ function WatchlistCard({
                     }}
                   >
                     布教カードを作る
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="watchlist-card-menu-item-danger"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onRemove();
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    <span>視聴解除（リストから削除）</span>
                   </button>
                 </div>
               ) : null}
