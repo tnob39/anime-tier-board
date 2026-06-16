@@ -3,18 +3,32 @@
 import { Home, Search, LogOut, Menu, Settings, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
 
 export function GlobalNav() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
 
+  useEffect(() => {
+    function handleScroll() {
+      setIsCompact(window.scrollY > 40);
+    }
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <>
-      <nav className="global-nav" role="navigation" aria-label="グローバルナビゲーション">
+      <nav
+        className={isCompact ? "global-nav is-compact" : "global-nav"}
+        role="navigation"
+        aria-label="グローバルナビゲーション"
+      >
         <div className="global-nav-left">
           <button
             className="global-nav-btn"

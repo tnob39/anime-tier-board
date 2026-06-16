@@ -53,6 +53,7 @@ import { SEASON_LABELS, SEASONS } from "@/lib/types";
 const STORAGE_VERSION = 1;
 const STORAGE_PREFIX = "anime-tier-board:v1";
 const UNRANKED_TIER_ID = "tier-unranked";
+const MOVE_HINT_STORAGE_KEY = "numanie:tier:move-hint-seen";
 
 type TierRow = {
   id: string;
@@ -135,7 +136,29 @@ export function TierBoardApp() {
   const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
+  const [moveHintSeen, setMoveHintSeen] = useState(true);
+  const [poolDrawerOpen, setPoolDrawerOpen] = useState(false);
   const dragOriginTierIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setMoveHintSeen(window.localStorage.getItem(MOVE_HINT_STORAGE_KEY) === "1");
+  }, []);
+
+  const dismissMoveHint = useCallback(() => {
+    setMoveHintSeen((current) => {
+      if (current) return current;
+      window.localStorage.setItem(MOVE_HINT_STORAGE_KEY, "1");
+      return true;
+    });
+  }, []);
+
+  const handleOpenMoveMenu = useCallback(
+    (itemId: string) => {
+      dismissMoveHint();
+      setMoveMenuItemId(itemId);
+    },
+    [dismissMoveHint]
+  );
 
   const storageKey = useMemo(
     () => getStorageKey(seasonYear, season),
@@ -387,6 +410,7 @@ export function TierBoardApp() {
     const overId = event.over ? String(event.over.id) : null;
     const originTierId = dragOriginTierIdRef.current;
 
+    dismissMoveHint();
     setActiveItemId(null);
     dragOriginTierIdRef.current = null;
 
@@ -622,7 +646,7 @@ export function TierBoardApp() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={moveHintSeen ? "app-shell move-hint-seen" : "app-shell"}>
       <header className="topbar">
         <div className="title-block">
           <h1>今期アニメTier表</h1>
@@ -792,7 +816,7 @@ export function TierBoardApp() {
                       onRename={handleRenameTier}
                       onColor={handleColorTier}
                       onDelete={handleDeleteTier}
-                      onOpenMoveMenu={setMoveMenuItemId}
+                      onOpenMoveMenu={handleOpenMoveMenu}
                       statusMap={statusMap}
                       onStatusChange={handleStatusChange}
                     />
@@ -823,7 +847,22 @@ export function TierBoardApp() {
               </div>
             </section>
           ) : unrankedTier ? (
-            <section className="pool-section" aria-label="未分類">
+            <>
+              <button
+                type="button"
+                className="pool-drawer-trigger"
+                onClick={() => setPoolDrawerOpen((current) => !current)}
+                aria-expanded={poolDrawerOpen}
+              >
+                未分類 {unrankedTier.itemIds.length}件 {poolDrawerOpen ? "▼" : "▲"}
+              </button>
+              <section
+                className={
+                  poolDrawerOpen ? "pool-section pool-drawer is-open" : "pool-section pool-drawer"
+                }
+                aria-label="未分類"
+                aria-hidden={!poolDrawerOpen}
+              >
               <TierLane
                 tier={unrankedTier}
                 itemMap={itemMap}
@@ -831,11 +870,12 @@ export function TierBoardApp() {
                 onRename={handleRenameTier}
                 onColor={handleColorTier}
                 onDelete={handleDeleteTier}
-                onOpenMoveMenu={setMoveMenuItemId}
+                onOpenMoveMenu={handleOpenMoveMenu}
                 statusMap={statusMap}
                 onStatusChange={handleStatusChange}
               />
-            </section>
+              </section>
+            </>
           ) : null}
 
           <DragOverlay>
