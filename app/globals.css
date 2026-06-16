@@ -411,6 +411,40 @@ button:disabled {
   margin-top: 18px;
 }
 
+.pool-drawer-trigger {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  width: 100%;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -4px 16px rgba(20, 26, 32, 0.08);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+}
+
+.pool-drawer {
+  margin-top: 0;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.22s ease, opacity 0.18s ease;
+}
+
+.pool-drawer.is-open {
+  max-height: 70vh;
+  overflow: auto;
+  opacity: 1;
+  margin-top: 8px;
+}
+
 .pool-lane {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
@@ -847,6 +881,10 @@ button:disabled {
     font-size: 9px;
     font-weight: 700;
     pointer-events: none;
+  }
+
+  .move-hint-seen .sortable-card-shell::after {
+    display: none;
   }
 }
 
@@ -4044,6 +4082,19 @@ a.cl-history-title:hover {
   background: rgba(255, 255, 255, 0.96);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
+  transition: height 0.18s ease, padding 0.18s ease;
+  will-change: height;
+}
+.global-nav.is-compact {
+  height: 38px;
+  padding: 0 12px;
+}
+.global-nav.is-compact .global-nav-logo {
+  font-size: 14px;
+}
+.global-nav.is-compact .global-nav-btn {
+  width: 30px;
+  height: 30px;
 }
 .global-nav-btn {
   display: flex;
