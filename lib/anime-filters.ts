@@ -1,3 +1,4 @@
+import { getAnimeTmdbProviderIds } from "./subscription-stats";
 import type { AnimeItem } from "./types";
 
 export type FilterAnimeItemsOptions = {
@@ -5,6 +6,8 @@ export type FilterAnimeItemsOptions = {
   hideRerunCandidates: boolean;
   seasonYear: number;
   onlyInstantWatch?: boolean;
+  /** 加入中サービスのTMDb providerId。指定があれば「今すぐ見放題」はこの中での視聴可否を見る */
+  subscribedProviderIds?: number[];
 };
 
 export function filterAnimeItems(
@@ -20,7 +23,7 @@ export function filterAnimeItems(
       return false;
     }
 
-    if (options.onlyInstantWatch && !hasInstantWatch(item)) {
+    if (options.onlyInstantWatch && !hasInstantWatch(item, options.subscribedProviderIds)) {
       return false;
     }
 
@@ -28,7 +31,12 @@ export function filterAnimeItems(
   });
 }
 
-function hasInstantWatch(item: AnimeItem): boolean {
+function hasInstantWatch(item: AnimeItem, subscribedProviderIds?: number[]): boolean {
+  if (subscribedProviderIds && subscribedProviderIds.length > 0) {
+    const providerIds = getAnimeTmdbProviderIds(item);
+    return providerIds.some((id) => subscribedProviderIds.includes(id));
+  }
+
   const flatrate = item.streamingProvidersJp?.flatrate;
   return Array.isArray(flatrate) && flatrate.length > 0;
 }
