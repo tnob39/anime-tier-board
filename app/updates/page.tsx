@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import {
   BarChart3, Bell, CalendarDays, Compass, CreditCard,
-  Filter, Layers, ListChecks, Menu, Mic2, Search, Share2, Smartphone, Sparkles, Star,
-  Tv2, UserCheck, Zap, Download, Loader2, Bookmark, type LucideIcon
+  Filter, Layers, ListChecks, Menu, Mic2, PlayCircle, Search, Share2, Smartphone, Sparkles, Star,
+  Trash2, Tv2, UserCheck, Zap, Download, Loader2, Bookmark, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,10 +27,45 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.14",
+    date: "2026-06-17",
+    label: "ヘッダー集約・視聴解除・サブスク連動フィルタ",
+    isLatest: true,
+    changes: [
+      {
+        icon: Menu,
+        iconColor: "#6366f1",
+        title: "ヘッダーを集約",
+        description: "ヘッダーの「探す」アイコンを削除。ユーザーメニューの設定項目をハンバーガードロワーに統合し、サブスクへの導線もドロワーに追加しました。",
+      },
+      {
+        icon: Layers,
+        iconColor: "#10b981",
+        title: "Tier表のタップヒント・ヘッダー・未分類欄を調整",
+        description: "カードタップ時の移動ヒントは初回のみ表示に。スクロール時はヘッダーが自動でコンパクト化。未分類プールはトリガー式のアコーディオンドロワーに変更しました。",
+        href: "/tier",
+      },
+      {
+        icon: Trash2,
+        iconColor: "#ef4444",
+        title: "視聴解除アクションを追加",
+        description: "視聴管理リストの作品を視聴解除（削除）できるアクションを追加しました。",
+        href: "/watchlist",
+      },
+      {
+        icon: PlayCircle,
+        iconColor: "#0ea5e9",
+        title: "「今すぐ見放題」がサブスク連動に",
+        description: "探索ページの「今すぐ見放題」フィルタが、登録済みのサブスクサービスと連動するようになりました。未登録の場合は従来の動作にフォールバックします。",
+        href: "/explore",
+      },
+    ]
+  },
+  {
     version: "1.13",
     date: "2026-06-16",
     label: "分析・Tier・探索のUXをスッキリ整理",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: BarChart3,
