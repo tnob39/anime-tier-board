@@ -2,10 +2,9 @@
 
 import { CalendarDays, Copy, ExternalLink, Loader2, MoreVertical, Share2, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
-import AnimeList from "@/components/AnimeList";
-import { type LaneCardData } from "@/components/CardLane";
+import CardLane, { type LaneCardData } from "@/components/CardLane";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
 import { searchUrlFromProviderId } from "@/lib/service-search";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
@@ -584,6 +583,7 @@ function WeeklyBroadcastCalendar({
   grouped: Record<BroadcastWeekday, AnimeStatusRecord[]>;
 }) {
   const TODAY_JA = ["日", "月", "火", "水", "木", "金", "土"][new Date().getDay()] as BroadcastWeekday;
+  const todayLaneRef = useRef<HTMLDivElement>(null);
 
   // 曜日ラベル（月〜日の順）
   const DAY_LABELS: Record<BroadcastWeekday, string> = {
@@ -598,6 +598,10 @@ function WeeklyBroadcastCalendar({
 
   // アイテムがある曜日だけ表示（アイテムゼロの日は非表示）
   const activeDays = BROADCAST_WEEKDAYS.filter((day) => grouped[day].length > 0);
+
+  useEffect(() => {
+    todayLaneRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, []);
 
   function toCardData(record: AnimeStatusRecord): LaneCardData {
     const anime = record.anime as AnimeItem;
@@ -616,13 +620,14 @@ function WeeklyBroadcastCalendar({
       <h2 className="watchlist-broadcast-lanes-heading">今週の放映カレンダー</h2>
       <div className="watchlist-broadcast-lanes-list">
         {activeDays.map((day) => (
-          <AnimeList
-            key={day}
-            heading={`${DAY_LABELS[day]}${day === TODAY_JA ? " 🔴" : ""}`}
-            count={grouped[day].length}
-            items={grouped[day].map(toCardData)}
-            className={day === TODAY_JA ? "anime-list-section--today" : undefined}
-          />
+          <div key={day} ref={day === TODAY_JA ? todayLaneRef : undefined}>
+            <CardLane
+              heading={`${DAY_LABELS[day]}${day === TODAY_JA ? " 🔴" : ""}`}
+              count={grouped[day].length}
+              items={grouped[day].map(toCardData)}
+              className={day === TODAY_JA ? "card-lane--today" : undefined}
+            />
+          </div>
         ))}
       </div>
     </section>
