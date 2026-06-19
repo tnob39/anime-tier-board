@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.15",
+    date: "2026-06-19",
+    label: "放映カレンダーを横スクロールレーンに復元",
+    isLatest: true,
+    changes: [
+      {
+        icon: CalendarDays,
+        iconColor: "#a07ef7",
+        title: "放映カレンダーを横スクロールレーンに復元",
+        description: "視聴管理ページの放映カレンダーを、曜日ごとの横スクロールレーンで表示するように戻しました。今日の曜日レーンへ自動スクロールし、ハイライト表示します。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.14",
     date: "2026-06-17",
     label: "ヘッダー集約・視聴解除・サブスク連動フィルタ",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Menu,
