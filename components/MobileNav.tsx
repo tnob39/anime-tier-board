@@ -2,7 +2,6 @@
 
 import {
   BarChart3,
-  Compass,
   CreditCard,
   Home,
   ListChecks,
@@ -24,7 +23,7 @@ type NavItem = {
 const SIMPLE_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "ホーム", icon: Home, exact: true },
   { href: "/watchlist", label: "視聴中", icon: ListChecks, exact: false },
-  { href: "/explore", label: "さがす", icon: Search, exact: false },
+  { href: "/explore", label: "探す", icon: Search, exact: false },
   { href: "/subscriptions", label: "サブスク", icon: CreditCard, exact: false },
 ];
 
@@ -32,7 +31,7 @@ const PRO_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "ホーム", icon: Home, exact: true },
   { href: "/tier", label: "Tier", icon: Table2, exact: false },
   { href: "/dashboard", label: "分析", icon: BarChart3, exact: false },
-  { href: "/explore", label: "探索", icon: Compass, exact: false },
+  { href: "/explore", label: "探す", icon: Search, exact: false },
 ];
 
 export function MobileNav() {

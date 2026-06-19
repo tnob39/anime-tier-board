@@ -1,6 +1,6 @@
 "use client";
 
-import { Compass, Loader2, PlayCircle, Plus, Star, TrendingUp } from "lucide-react";
+import { Loader2, PlayCircle, Plus, Search, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
@@ -8,28 +8,17 @@ import { filterAnimeItems } from "@/lib/anime-filters";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import { STREAMING_SERVICES } from "@/lib/streaming-services";
 import type { UserSubscription } from "@/lib/subscriptions";
-import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
+import type { AnimeItem } from "@/lib/types";
 
 type SeasonalApiResponse = {
   year: number;
-  season: AnimeSeason;
   items: AnimeItem[];
-  source: AnimeSourceName;
-  cached: boolean;
   warning?: string;
   error?: string;
 };
 
 type SortMode = "fit" | "popularity" | "score";
 
-const seasonLabels: Record<AnimeSeason, string> = {
-  WINTER: "冬",
-  SPRING: "春",
-  SUMMER: "夏",
-  FALL: "秋"
-};
-
-const seasons: AnimeSeason[] = ["WINTER", "SPRING", "SUMMER", "FALL"];
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
   watching: "視聴中",
@@ -47,13 +36,11 @@ export function ExploreClient({
 }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear - 10);
-  const [season, setSeason] = useState<AnimeSeason>("SPRING");
   const [sortMode, setSortMode] = useState<SortMode>("fit");
   const [items, setItems] = useState<AnimeItem[]>([]);
   const [statusMap, setStatusMap] = useState<Record<string, ViewingStatus>>(() =>
     Object.fromEntries(initialStatuses.map((record) => [record.animeId, record.status]))
   );
-  const [source, setSource] = useState<AnimeSourceName | null>(null);
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -90,12 +77,12 @@ export function ExploreClient({
     [filteredItems, preferences, statusMap, sortMode]
   );
 
-  async function loadSeason() {
+  async function loadYear() {
     setLoading(true);
     setMessage(null);
 
     try {
-      const response = await fetch(`/api/anime/seasonal?year=${year}&season=${season}`, {
+      const response = await fetch(`/api/anime/seasonal?year=${year}&season=all`, {
         cache: "no-store"
       });
       const payload = (await response.json()) as SeasonalApiResponse;
@@ -105,12 +92,10 @@ export function ExploreClient({
       }
 
       setItems(payload.items);
-      setSource(payload.source);
       setMessage(payload.warning ?? null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "作品の取得に失敗しました。");
       setItems([]);
-      setSource(null);
     } finally {
       setLoading(false);
     }
@@ -146,8 +131,8 @@ export function ExploreClient({
       <header className="explore-header">
         <div>
           <p className="eyebrow">過去作品探索</p>
-          <h1>年代・期を選んで作品を探す</h1>
-          <p>選んだ年・期の作品を、人気・評価・あなたの好みで並べます。</p>
+          <h1>年代を選んで作品を探す</h1>
+          <p>選んだ年の作品を、人気・評価・あなたの好みで並べます。</p>
         </div>
       </header>
 
@@ -158,16 +143,6 @@ export function ExploreClient({
             {yearOptions.map((option) => (
               <option key={option} value={option}>
                 {option}年
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>期</span>
-          <select value={season} onChange={(event) => setSeason(event.target.value as AnimeSeason)}>
-            {seasons.map((option) => (
-              <option key={option} value={option}>
-                {seasonLabels[option]}
               </option>
             ))}
           </select>
@@ -228,18 +203,15 @@ export function ExploreClient({
         <button
           className="command-button emphasis-button"
           type="button"
-          onClick={() => void loadSeason()}
+          onClick={() => void loadYear()}
           disabled={loading}
         >
-          {loading ? <Loader2 className="spin" size={18} /> : <Compass size={18} />}
+          {loading ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
           <span>探す</span>
         </button>
       </section>
 
       {message ? <div className="notice warning">{message}</div> : null}
-      {source ? (
-        <p className="explore-source">データ元: {source === "anilist" ? "AniList" : "Jikan"}</p>
-      ) : null}
 
       {rankedItems.length ? (
         <section className="explore-grid" aria-label="作品候補">
@@ -294,7 +266,7 @@ export function ExploreClient({
         </section>
       ) : (
         <section className="watchlist-empty">
-          <p>年代と期を選ぶと、作品が表示されます。</p>
+          <p>年代を選んで「探す」を押すと、作品が表示されます。</p>
         </section>
       )}
     </main>

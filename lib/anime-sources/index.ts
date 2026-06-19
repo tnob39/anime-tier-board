@@ -1,4 +1,5 @@
 import type { AnimeItem, AnimeSeason, SeasonalAnimeResult } from "../types";
+import { SEASONS } from "../types";
 import { fetchAniListSeasonalAnime } from "./anilist";
 import { fetchJikanSeasonalAnime } from "./jikan";
 
@@ -10,6 +11,55 @@ type CacheEntry = {
 };
 
 const cache = new Map<string, CacheEntry>();
+
+export async function fetchYearlyAnime(year: number): Promise<SeasonalAnimeResult> {
+  const cacheKey = `${year}:ALL`;
+  const cached = cache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return {
+      ...cached.result,
+      cached: true
+    };
+  }
+
+  const settled = await Promise.allSettled(
+    SEASONS.map((season) => fetchSeasonalAnime(year, season))
+  );
+
+  const fulfilled = settled.filter(
+    (result): result is PromiseFulfilledResult<SeasonalAnimeResult> =>
+      result.status === "fulfilled"
+  );
+
+  if (!fulfilled.length) {
+    const reasons = settled
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map((result) => formatError(result.reason));
+    throw new Error(`年単位の作品取得に失敗しました: ${reasons.join(" / ")}`);
+  }
+
+  const itemsById = new Map<string, AnimeItem>();
+  for (const result of fulfilled) {
+    for (const item of result.value.items) {
+      itemsById.set(item.id, item);
+    }
+  }
+
+  const warnings = fulfilled
+    .map((result) => result.value.warning)
+    .filter((warning): warning is string => Boolean(warning));
+
+  const source = fulfilled.some((result) => result.value.source === "anilist")
+    ? "anilist"
+    : "jikan";
+
+  return cacheAndReturn(cacheKey, {
+    items: Array.from(itemsById.values()),
+    source,
+    ...(warnings.length ? { warning: warnings.join(" ") } : {})
+  });
+}
 
 export async function fetchSeasonalAnime(
   year: number,
