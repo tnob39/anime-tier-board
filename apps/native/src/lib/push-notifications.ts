@@ -55,6 +55,27 @@ export async function getExpoPushToken(): Promise<string | null> {
   return token.data;
 }
 
+// 既に許可済みの場合だけトークンを取得する。未許可の場合は requestPermissionsAsync を
+// 呼ばない（OSの許可ダイアログをユーザーの明示操作（subscribe）より先に出さないため）。
+export async function getExpoPushTokenIfPermitted(): Promise<string | null> {
+  if (!Device.isDevice) {
+    return null;
+  }
+
+  const current = await Notifications.getPermissionsAsync();
+  if (!current.granted) {
+    return null;
+  }
+
+  const projectId = getExpoProjectId();
+  if (!projectId) {
+    return null;
+  }
+
+  const token = await Notifications.getExpoPushTokenAsync({ projectId });
+  return token.data;
+}
+
 export async function registerNativePushToken(
   token: string,
   authToken: string,

@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useAuth } from '@/contexts/auth-context';
 import {
   getExpoPushToken,
+  getExpoPushTokenIfPermitted,
   getNativePushSubscriptionStatus,
   registerNativePushToken,
   unregisterNativePushToken,
@@ -24,15 +25,12 @@ export function NativePushToggle() {
       return;
     }
 
-    const pushToken = await getExpoPushToken();
-    setExpoPushToken(pushToken);
-
-    if (!pushToken) {
-      setState('unsupported');
-      return;
-    }
-
+    // 購読状態はサーバー側の記録で判定する。通知許可ダイアログは
+    // ユーザーが「有効にする」を押すまで出さないため、ここでは
+    // 既に許可済みの場合のみトークンを取得する（unsubscribe操作用）。
     const subscribed = await getNativePushSubscriptionStatus(token, handleUnauthorized);
+    const pushToken = await getExpoPushTokenIfPermitted();
+    setExpoPushToken(pushToken);
     setState(subscribed ? 'subscribed' : 'unsubscribed');
   }, [token, user, handleUnauthorized]);
 
