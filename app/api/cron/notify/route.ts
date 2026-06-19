@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { getTursoClient } from "@/lib/turso";
+import {
+  getAllNativePushTokens,
+  removeNativePushToken,
+  sendExpoPushNotifications
+} from "@/lib/native-push";
 import { getAllSubscriptions, removeSubscription, sendPushNotification } from "@/lib/push";
 import type { AnimeItem } from "@/lib/types";
 
@@ -64,16 +69,17 @@ export async function POST(request: Request) {
   }
 
   const allSubs = await getAllSubscriptions();
-  if (allSubs.length === 0) {
-    return NextResponse.json({ sent: 0, message: "購読者なし" });
+  const allNativeTokens = await getAllNativePushTokens();
+
+  if (allSubs.length === 0 && allNativeTokens.length === 0) {
+    return NextResponse.json({ sent: 0, nativeSent: 0, message: "購読者なし" });
   }
 
   const todayAnimeByUser = await getTodayWatchingByUser();
   if (todayAnimeByUser.size === 0) {
-    return NextResponse.json({ sent: 0, message: "今日放送のアニメなし" });
+    return NextResponse.json({ sent: 0, nativeSent: 0, message: "今日放送のアニメなし" });
   }
 
-  // userId → subscriptions のマップを作成
   const subsByUser = new Map<string, typeof allSubs>();
   for (const sub of allSubs) {
     const list = subsByUser.get(sub.userId) ?? [];
@@ -81,12 +87,25 @@ export async function POST(request: Request) {
     subsByUser.set(sub.userId, list);
   }
 
+  const nativeTokensByUser = new Map<string, string[]>();
+  for (const token of allNativeTokens) {
+    const list = nativeTokensByUser.get(token.userId) ?? [];
+    list.push(token.expoPushToken);
+    nativeTokensByUser.set(token.userId, list);
+  }
+
   let sent = 0;
   let expired = 0;
+  let nativeSent = 0;
+  let nativeExpired = 0;
 
   for (const [userId, animeList] of todayAnimeByUser) {
     const subs = subsByUser.get(userId);
-    if (!subs || subs.length === 0) continue;
+    const nativeTokens = nativeTokensByUser.get(userId);
+
+    if ((!subs || subs.length === 0) && (!nativeTokens || nativeTokens.length === 0)) {
+      continue;
+    }
 
     const titles = animeList.map((a) => a.title).join("、");
     const body =
@@ -94,24 +113,39 @@ export async function POST(request: Request) {
         ? `「${titles}」が今日放送されます`
         : `${animeList.length}作品が今日放送されます: ${titles}`;
 
-    for (const sub of subs) {
-      const result = await sendPushNotification(sub, {
+    if (subs?.length) {
+      for (const sub of subs) {
+        const result = await sendPushNotification(sub, {
+          title: "今日の放送",
+          body,
+          url: "/watchlist"
+        });
+
+        if (result.ok) {
+          sent++;
+        } else if (result.error === "expired") {
+          await removeSubscription(userId, sub.endpoint).catch(() => undefined);
+          expired++;
+        }
+      }
+    }
+
+    if (nativeTokens?.length) {
+      const nativeResult = await sendExpoPushNotifications(nativeTokens, {
         title: "今日の放送",
         body,
         url: "/watchlist"
       });
+      nativeSent += nativeResult.sent;
+      nativeExpired += nativeResult.expired;
 
-      if (result.ok) {
-        sent++;
-      } else if (result.error === "expired") {
-        // 期限切れの購読を削除
-        await removeSubscription(userId, sub.endpoint).catch(() => undefined);
-        expired++;
+      for (const token of nativeResult.expiredTokens) {
+        await removeNativePushToken(userId, token).catch(() => undefined);
       }
     }
   }
 
-  return NextResponse.json({ sent, expired });
+  return NextResponse.json({ sent, expired, nativeSent, nativeExpired });
 }
 
 // GET でも呼べるように（Vercel Cron は GET を使う場合もある）

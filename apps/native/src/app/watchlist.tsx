@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LoginPanel } from '@/components/LoginPanel';
+import { NativePushToggle } from '@/components/NativePushToggle';
 import { StatusChips } from '@/components/StatusChips';
 import { useAuth } from '@/contexts/auth-context';
 import { useStatuses } from '@/hooks/use-statuses';
@@ -28,7 +29,9 @@ export default function WatchlistScreen() {
             title="ログインが必要です"
             description="視聴ステータスの表示・変更にはログインが必要です。"
           />
-        ) : null}
+        ) : (
+          <NativePushToggle />
+        )}
 
         {loading ? (
           <View className="items-center py-8 gap-2">

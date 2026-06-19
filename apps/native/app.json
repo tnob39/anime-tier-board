@@ -1,16 +1,21 @@
 {
   "expo": {
-    "name": "native",
-    "slug": "native",
+    "name": "numanie",
+    "slug": "numanie",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "anime-tier-board",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "app.anime-tier-board.native",
+      "infoPlist": {
+        "NSSiriUsageDescription": "今夜見るアニメを Siri から開くために使用します。"
+      }
     },
     "android": {
+      "package": "app.animetierboard.native",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -28,11 +33,63 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#6366f1",
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#6366f1"
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "TonightWidget",
+              "displayName": "今夜何見る？",
+              "description": "今夜見る候補アニメを表示します",
+              "supportedFamilies": ["systemSmall", "systemMedium"]
+            }
+          ]
+        }
+      ],
+      [
+        "expo-quick-actions",
+        {
+          "iosActions": [
+            {
+              "id": "tonight",
+              "title": "今夜何見る？",
+              "subtitle": "放送日が近い作品を確認",
+              "icon": "symbol:play.tv",
+              "params": { "href": "/tonight" }
+            },
+            {
+              "id": "tier",
+              "title": "ティア表",
+              "icon": "symbol:list.star",
+              "params": { "href": "/" }
+            },
+            {
+              "id": "watchlist",
+              "title": "視聴管理",
+              "icon": "symbol:list.bullet",
+              "params": { "href": "/watchlist" }
+            },
+            {
+              "id": "explore",
+              "title": "Explore",
+              "icon": "symbol:sparkles",
+              "params": { "href": "/explore" }
+            }
+          ]
         }
       ]
     ],
