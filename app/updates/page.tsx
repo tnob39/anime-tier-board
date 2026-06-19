@@ -27,10 +27,32 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.16",
+    date: "2026-06-19",
+    label: "探すナビ・探索フィルタの整理",
+    isLatest: true,
+    changes: [
+      {
+        icon: Search,
+        iconColor: "#6366f1",
+        title: "「探す」アイコンを虫眼鏡に統一",
+        description: "下部ナビと探索ページの「探す」ボタンを、コンパスから虫眼鏡アイコンに変更しました。",
+        href: "/explore",
+      },
+      {
+        icon: Filter,
+        iconColor: "#0ea5e9",
+        title: "探索を年単位のフィルタに簡素化",
+        description: "季節（春夏秋冬）の選択を廃止し、年代だけ選べばその年の作品をまとめて探せるようにしました。",
+        href: "/explore",
+      },
+    ]
+  },
+  {
     version: "1.15",
     date: "2026-06-19",
     label: "放映カレンダーを横スクロールレーンに復元",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: CalendarDays,

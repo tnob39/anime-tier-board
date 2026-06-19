@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchSeasonalAnime } from "@/lib/anime-sources";
+import { fetchSeasonalAnime, fetchYearlyAnime } from "@/lib/anime-sources";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { AppError } from "@/lib/errors/app-error";
 import { getCurrentAnimeSeason, normalizeSeason } from "@/lib/season";
@@ -14,7 +14,9 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
   const url = new URL(request.url);
   const current = getCurrentAnimeSeason();
   const yearParam = url.searchParams.get("year");
-  const seasonParam = normalizeSeason(url.searchParams.get("season"));
+  const rawSeason = url.searchParams.get("season");
+  const isYearScope = rawSeason?.toLowerCase() === "all";
+  const seasonParam = isYearScope ? null : normalizeSeason(rawSeason);
   const year = yearParam ? Number(yearParam) : current.year;
   const season = seasonParam ?? current.season;
 
@@ -29,7 +31,9 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
 
   let result;
   try {
-    result = await fetchSeasonalAnime(year, season);
+    result = isYearScope
+      ? await fetchYearlyAnime(year)
+      : await fetchSeasonalAnime(year, season);
   } catch (error) {
     throw new AppError({
       message:
@@ -51,7 +55,7 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
 
   return NextResponse.json({
     year,
-    season,
+    season: isYearScope ? "ALL" : season,
     generatedAt: new Date().toISOString(),
     ...result,
     items: enrichedItems,
