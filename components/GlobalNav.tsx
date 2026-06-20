@@ -1,8 +1,7 @@
 "use client";
 
-import { Home, LogOut, Menu, UserCircle2 } from "lucide-react";
+import { LogOut, Menu, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
 
@@ -44,10 +43,6 @@ export function GlobalNav() {
         </div>
 
         <div className="global-nav-right">
-          <Link href="/" className="global-nav-btn global-nav-home-pc" aria-label="ホーム" title="ホーム">
-            <Home size={20} />
-          </Link>
-
           {status !== "loading" && (
             isAuthenticated ? (
               <div className="user-menu-wrap">

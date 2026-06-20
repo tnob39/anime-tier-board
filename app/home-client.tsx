@@ -6,8 +6,6 @@ import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
 import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
-import { useUiMode } from "@/lib/ui-mode";
-import { HomePro } from "./home-pro";
 import { HomeSimple } from "./home-simple";
 
 type HomeClientProps = {
@@ -16,11 +14,11 @@ type HomeClientProps = {
 };
 
 /**
- * ホームのモード別ディスパッチャ。
+ * ホームのクライアントエントリ。
  * ステータス変更の楽観更新はここで一元管理し、今期から追加 ↔ 視聴中/見たい の反映を担う。
+ * 方針③ N1a: モード分岐を撤去し HomeSimple に一本化。ホームのカレンダー化は N1c で実施。
  */
 export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientProps) {
-  const { mode } = useUiMode();
   const [items, setItems] = useState(initialItems);
   useSeasonalPrefetch(initialSeasonalAnime);
 
@@ -69,10 +67,6 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   const addSection = (
     <HomeAddSection items={addSectionItems} onQuickStatus={handleQuickStatus} />
   );
-
-  if (mode === "pro") {
-    return <HomePro initialItems={items} addSection={addSection} />;
-  }
 
   return <HomeSimple initialItems={items} addSection={addSection} />;
 }

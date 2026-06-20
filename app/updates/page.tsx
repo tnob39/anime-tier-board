@@ -27,10 +27,37 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.17",
+    date: "2026-06-21",
+    label: "表示モード廃止・ナビを4タブに統一",
+    isLatest: true,
+    changes: [
+      {
+        icon: Layers,
+        iconColor: "#6366f1",
+        title: "シンプル / プロの表示モードを廃止",
+        description: "表示モードの切り替えをなくし、すべての機能を1つの画面で使えるようにしました。設定からモード切替の項目も削除しています。",
+      },
+      {
+        icon: Menu,
+        iconColor: "#0ea5e9",
+        title: "下部ナビを4タブに統一",
+        description: "下部ナビゲーションを「ホーム / Tier / 分析 / さがす」の4タブに統一しました。",
+      },
+      {
+        icon: Sparkles,
+        iconColor: "#f59e0b",
+        title: "Tier表のツールバーを整理",
+        description: "よく使う操作（年・期の切り替え／再取得／共有）を前面に残し、フィルタや自動配置・リセットは「⋯」メニューにまとめました。",
+        href: "/tier",
+      },
+    ]
+  },
+  {
     version: "1.16",
     date: "2026-06-19",
     label: "探すナビ・探索フィルタの整理",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Search,
