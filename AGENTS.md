@@ -112,6 +112,16 @@ npm.cmd run dev:local
   GitHub Issueコメントの両方でその旨を記録し、マージ順序をユーザーに確認する。
 - 完了時は Issue に「完了・PR #<番号>」を追記してから close する。
 
+### 設計ドキュメント・計画・レビューの永続化（必須）
+
+設計方針・実装計画・エージェントのレビュー結果は **必ずリポジトリにコミットして共有する**（PR で `main` へ）。
+端末出力のまま／ローカルのみ／side ブランチ放置で終わらせない。**全員が `main` で参照できる状態**にして初めて完了とする。
+
+- **設計方針 / IA**: `docs/`（UIUX は `docs/UX_DIRECTION.md` が source of truth）
+- **実装計画**: `plans/`（命名 `plans/<topic>-<YYYYMMDD>.md`）
+- **エージェントのレビュー結果**（Codex / Claude など）: `docs/reviews/`（命名 `docs/reviews/<topic>-<reviewer>-<YYYYMMDD>.md`）
+- Codex / Grok にレビューや調査を依頼するときは、**「結果をファイルに書いてコミットする」ところまで指示**する（端末出力だけで終わらせると共有されない）。
+
 ---
 
 ## 関連ドキュメント
@@ -127,6 +137,7 @@ npm.cmd run dev:local
 | [plans/error-catching-20260608.md](./plans/error-catching-20260608.md) | API エラー契約・並行タスクのファイル所有権 |
 | [worktrees/claude-review.md](./worktrees/claude-review.md) | claude-review worktree ミニガイド |
 | [docs/GITHUB_ISSUES.md](./docs/GITHUB_ISSUES.md) | タスク管理（GitHub Issues） |
+| [docs/reviews/](./docs/reviews/) | エージェントのレビュー結果アーカイブ（例: 方針③ Codexレビュー） |
 | [SESSION_HANDOFF.md](./SESSION_HANDOFF.md) | セッション引き継ぎ |
 | [HERMES_GROK_HANDOFF.md](./HERMES_GROK_HANDOFF.md) | WIP 機能仕様 |
 | [DESIGN.md](./DESIGN.md) | UI デザイン方針 |
