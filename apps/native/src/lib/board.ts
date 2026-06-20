@@ -104,6 +104,11 @@ export function moveItemToTier(board: BoardState, itemId: string, targetTierId: 
     return board;
   }
 
+  const targetExists = board.tiers.some((tier) => tier.id === targetTierId);
+  if (!targetExists) {
+    return board;
+  }
+
   return {
     ...board,
     tiers: board.tiers.map((tier) => {
@@ -128,6 +133,22 @@ function ensureUnrankedTier(tiers: TierRow[]): TierRow[] {
   return unranked ? [...tiers, { ...unranked, itemIds: [] }] : tiers;
 }
 
+function isTierRow(value: unknown): value is TierRow {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const tier = value as TierRow;
+  return (
+    typeof tier.id === 'string' &&
+    typeof tier.label === 'string' &&
+    typeof tier.color === 'string' &&
+    Array.isArray(tier.itemIds) &&
+    tier.itemIds.every((itemId) => typeof itemId === 'string') &&
+    (tier.locked === undefined || typeof tier.locked === 'boolean')
+  );
+}
+
 export function isBoardState(value: unknown): value is BoardState {
   if (!value || typeof value !== 'object') {
     return false;
@@ -138,6 +159,8 @@ export function isBoardState(value: unknown): value is BoardState {
     board.version === STORAGE_VERSION &&
     typeof board.seasonYear === 'number' &&
     typeof board.season === 'string' &&
-    Array.isArray(board.tiers)
+    Array.isArray(board.tiers) &&
+    board.tiers.every(isTierRow) &&
+    typeof board.updatedAt === 'string'
   );
 }

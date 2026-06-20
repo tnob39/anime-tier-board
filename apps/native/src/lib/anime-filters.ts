@@ -27,7 +27,15 @@ export function filterAnimeItems(items: AnimeItem[], options: FilterAnimeItemsOp
 
 function hasInstantWatch(item: AnimeItem): boolean {
   const flatrate = item.streamingProvidersJp?.flatrate;
-  return Array.isArray(flatrate) && flatrate.length > 0;
+  if (Array.isArray(flatrate) && flatrate.length > 0) {
+    return true;
+  }
+
+  if (item.streamingPlatforms?.some((platform) => platform.url && platform.name)) {
+    return true;
+  }
+
+  return (item.streamingEpisodes ?? []).some((episode) => Boolean(episode.url));
 }
 
 function isMovie(item: AnimeItem): boolean {

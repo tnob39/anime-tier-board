@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,6 +32,7 @@ export default function ExploreScreen() {
   const [hideMovies, setHideMovies] = useState(false);
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
   const [onlyInstantWatch, setOnlyInstantWatch] = useState(false);
+  const loadGenerationRef = useRef(0);
 
   const preferences = useMemo(() => buildPreferences(records), [records]);
   const yearOptions = useMemo(() => {
@@ -56,20 +57,32 @@ export default function ExploreScreen() {
   );
 
   async function loadSeason() {
+    const generation = loadGenerationRef.current + 1;
+    loadGenerationRef.current = generation;
     setLoading(true);
     setMessage(null);
 
     try {
       const payload = await fetchSeasonalAnime(year, season, token, handleUnauthorized);
+      if (generation !== loadGenerationRef.current) {
+        return;
+      }
+
       setItems(payload.items);
       setSource(payload.source);
       setMessage(payload.warning ?? null);
     } catch (error) {
+      if (generation !== loadGenerationRef.current) {
+        return;
+      }
+
       setMessage(error instanceof Error ? error.message : '作品の取得に失敗しました。');
       setItems([]);
       setSource(null);
     } finally {
-      setLoading(false);
+      if (generation === loadGenerationRef.current) {
+        setLoading(false);
+      }
     }
   }
 
@@ -288,7 +301,11 @@ export default function ExploreScreen() {
                         </Pressable>
                       )}
                       <Pressable
-                        onPress={() => void Linking.openURL(entry.item.siteUrl)}
+                        onPress={() => {
+                          void Linking.openURL(entry.item.siteUrl).catch(() => {
+                            setMessage('リンクを開けませんでした。');
+                          });
+                        }}
                         className="px-3 py-1.5 rounded-full border border-zinc-300 dark:border-zinc-600 active:opacity-80"
                       >
                         <Text className="text-xs text-zinc-700 dark:text-zinc-200">詳細</Text>
