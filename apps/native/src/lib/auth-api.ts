@@ -12,6 +12,46 @@ type ExchangeResponse = {
   user: AuthUser;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isAuthUser(value: unknown): value is AuthUser {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    (value.email === null || typeof value.email === 'string') &&
+    (value.name === null || typeof value.name === 'string')
+  );
+}
+
+function parseExchangeResponse(payload: unknown, message: string): ExchangeResponse {
+  if (!isRecord(payload) || typeof payload.token !== 'string' || !isAuthUser(payload.user)) {
+    throw new Error(message);
+  }
+
+  return {
+    token: payload.token,
+    user: payload.user,
+  };
+}
+
+function getResponseErrorMessage(payload: unknown, fallback: string): string {
+  if (!isRecord(payload)) {
+    return fallback;
+  }
+
+  if (typeof payload.error === 'string') {
+    return payload.error;
+  }
+
+  if (typeof payload.message === 'string') {
+    return payload.message;
+  }
+
+  return fallback;
+}
+
 export async function exchangeGoogleIdToken(idToken: string): Promise<ExchangeResponse> {
   const response = await fetch(`${API_BASE}/api/auth/native`, {
     method: 'POST',
@@ -23,17 +63,15 @@ export async function exchangeGoogleIdToken(idToken: string): Promise<ExchangeRe
   });
 
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
+  const payload: unknown = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    throw new Error(
-      (typeof payload?.error === 'string' ? payload.error : payload?.message) ??
-        `Exchange failed (${response.status})`
-    );
+    throw new Error(getResponseErrorMessage(payload, `Exchange failed (${response.status})`));
   }
 
-  await setStoredSessionToken(payload.token);
-  return payload as ExchangeResponse;
+  const exchange = parseExchangeResponse(payload, 'Invalid native auth exchange response');
+  await setStoredSessionToken(exchange.token);
+  return exchange;
 }
 
 export async function exchangeDevSession(): Promise<ExchangeResponse> {
@@ -51,17 +89,15 @@ export async function exchangeDevSession(): Promise<ExchangeResponse> {
   });
 
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
+  const payload: unknown = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    throw new Error(
-      (typeof payload?.error === 'string' ? payload.error : payload?.message) ??
-        `Dev exchange failed (${response.status})`
-    );
+    throw new Error(getResponseErrorMessage(payload, `Dev exchange failed (${response.status})`));
   }
 
-  await setStoredSessionToken(payload.token);
-  return payload as ExchangeResponse;
+  const exchange = parseExchangeResponse(payload, 'Invalid native dev auth exchange response');
+  await setStoredSessionToken(exchange.token);
+  return exchange;
 }
 
 export async function fetchCurrentUser(token?: string | null): Promise<AuthUser | null> {
@@ -87,7 +123,11 @@ export async function fetchCurrentUser(token?: string | null): Promise<AuthUser 
     throw new Error(`Session validation failed (${response.status})`);
   }
 
-  const payload = (await response.json()) as { user: AuthUser };
+  const payload: unknown = await response.json();
+  if (!isRecord(payload) || !isAuthUser(payload.user)) {
+    throw new Error('Invalid current user response');
+  }
+
   return payload.user;
 }
 
