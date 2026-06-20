@@ -33,6 +33,37 @@ export type SubscriptionStats = {
   uncoveredAnime: AnimeItem[];
 };
 
+export type PublicServiceCoverage = {
+  serviceId: string;
+  serviceName: string;
+  monthlyPrice: number;
+  logoUrl: string;
+  count: number;
+  percentage: number;
+  coveredAnime: AnimeItem[];
+};
+
+export type PublicAdditionalServiceEffect = {
+  serviceId: string;
+  serviceName: string;
+  monthlyPrice: number;
+  logoUrl: string;
+  outboundUrl: string | null;
+  additionalCount: number;
+  additionalAnime: AnimeItem[];
+};
+
+export type PublicSubscriptionDiagnosis = {
+  watchlistCount: number;
+  coveredCount: number;
+  coveragePercentage: number;
+  recommendedServiceId: string | null;
+  outboundUrl: string | null;
+  subscribedCoverage: PublicServiceCoverage[];
+  additionalByService: PublicAdditionalServiceEffect[];
+  uncoveredAnime: AnimeItem[];
+};
+
 export function getAnimeTmdbProviderIds(anime: AnimeItem): number[] {
   const providerIds = new Set<number>();
 
@@ -115,6 +146,40 @@ export function calcSubscriptionStats(
     subscribedCoverage,
     additionalByService,
     uncoveredAnime
+  };
+}
+
+export function toPublicSubscriptionDiagnosis(stats: SubscriptionStats): PublicSubscriptionDiagnosis {
+  const recommended = stats.additionalByService.find((entry) => entry.additionalCount > 0) ?? null;
+
+  return {
+    watchlistCount: stats.watchlistCount,
+    coveredCount: stats.coveredCount,
+    coveragePercentage: stats.coveragePercentage,
+    recommendedServiceId: recommended?.service.id ?? null,
+    outboundUrl: recommended?.service.affiliateUrl ?? null,
+    subscribedCoverage: stats.subscribedCoverage.map((entry) => ({
+      ...toPublicStreamingServiceFields(entry.service),
+      count: entry.count,
+      percentage: entry.percentage,
+      coveredAnime: entry.coveredAnime
+    })),
+    additionalByService: stats.additionalByService.map((entry) => ({
+      ...toPublicStreamingServiceFields(entry.service),
+      outboundUrl: entry.service.affiliateUrl,
+      additionalCount: entry.additionalCount,
+      additionalAnime: entry.additionalAnime
+    })),
+    uncoveredAnime: stats.uncoveredAnime
+  };
+}
+
+function toPublicStreamingServiceFields(service: StreamingService) {
+  return {
+    serviceId: service.id,
+    serviceName: service.name,
+    monthlyPrice: service.monthlyPrice,
+    logoUrl: service.logoUrl
   };
 }
 
