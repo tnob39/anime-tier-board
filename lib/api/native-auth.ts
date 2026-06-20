@@ -1,7 +1,10 @@
 import { decode, encode } from "@auth/core/jwt";
 
-export const SESSION_COOKIE_NAME = "authjs.session-token";
+import { createNativeSession, isNativeSessionValid, revokeNativeSession } from "@/lib/native-sessions";
+
+const NATIVE_SESSION_SALT = "native-auth-session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
 
 export type NativeSessionUser = {
   id: string;
@@ -13,14 +16,16 @@ type GoogleTokenInfo = {
   sub?: string;
   email?: string;
   name?: string;
-  aud?: string;
   email_verified?: string;
+  aud?: string;
+  iss?: string;
+  exp?: string;
 };
 
-function getAuthSecret(): string {
-  const secret = process.env.AUTH_SECRET;
+function getNativeAuthSecret(): string {
+  const secret = process.env.NATIVE_AUTH_SECRET;
   if (!secret) {
-    throw new Error("AUTH_SECRET is not configured");
+    throw new Error("NATIVE_AUTH_SECRET is not configured");
   }
   return secret;
 }
@@ -34,14 +39,17 @@ function getAllowedGoogleClientIds(): string[] {
 }
 
 export async function createNativeSessionToken(user: NativeSessionUser): Promise<string> {
+  const { sessionId } = await createNativeSession(user.id);
+
   return encode({
     token: {
       sub: user.id,
+      sid: sessionId,
       email: user.email ?? undefined,
       name: user.name ?? undefined,
     },
-    secret: getAuthSecret(),
-    salt: SESSION_COOKIE_NAME,
+    secret: getNativeAuthSecret(),
+    salt: NATIVE_SESSION_SALT,
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
 }
@@ -49,11 +57,16 @@ export async function createNativeSessionToken(user: NativeSessionUser): Promise
 export async function getUserFromSessionToken(token: string): Promise<NativeSessionUser | null> {
   const decoded = await decode({
     token,
-    secret: getAuthSecret(),
-    salt: SESSION_COOKIE_NAME,
+    secret: getNativeAuthSecret(),
+    salt: NATIVE_SESSION_SALT,
   });
 
-  if (!decoded?.sub) {
+  if (!decoded?.sub || typeof decoded.sid !== "string") {
+    return null;
+  }
+
+  const valid = await isNativeSessionValid(decoded.sid);
+  if (!valid) {
     return null;
   }
 
@@ -64,20 +77,51 @@ export async function getUserFromSessionToken(token: string): Promise<NativeSess
   };
 }
 
-export async function getUserIdFromAuthorizationHeader(
+export async function getSessionIdFromAuthorizationHeader(
   authorizationHeader: string | null
 ): Promise<string | null> {
-  if (!authorizationHeader?.startsWith("Bearer ")) {
+  const token = extractBearerToken(authorizationHeader);
+  if (!token) {
     return null;
   }
 
-  const token = authorizationHeader.slice("Bearer ".length).trim();
+  const decoded = await decode({
+    token,
+    secret: getNativeAuthSecret(),
+    salt: NATIVE_SESSION_SALT,
+  });
+
+  return typeof decoded?.sid === "string" ? decoded.sid : null;
+}
+
+export async function revokeSessionFromAuthorizationHeader(
+  authorizationHeader: string | null
+): Promise<void> {
+  const sessionId = await getSessionIdFromAuthorizationHeader(authorizationHeader);
+  if (sessionId) {
+    await revokeNativeSession(sessionId);
+  }
+}
+
+export async function getUserIdFromAuthorizationHeader(
+  authorizationHeader: string | null
+): Promise<string | null> {
+  const token = extractBearerToken(authorizationHeader);
   if (!token) {
     return null;
   }
 
   const user = await getUserFromSessionToken(token);
   return user?.id ?? null;
+}
+
+function extractBearerToken(authorizationHeader: string | null): string | null {
+  if (!authorizationHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const token = authorizationHeader.slice("Bearer ".length).trim();
+  return token || null;
 }
 
 export async function verifyGoogleIdToken(idToken: string): Promise<NativeSessionUser> {
@@ -92,12 +136,29 @@ export async function verifyGoogleIdToken(idToken: string): Promise<NativeSessio
   const payload = (await response.json()) as GoogleTokenInfo;
   const allowedClientIds = getAllowedGoogleClientIds();
 
-  if (!payload.sub) {
-    throw new Error("Google ID token is missing subject");
+  if (allowedClientIds.length === 0) {
+    throw new Error("No allowed Google client IDs configured");
   }
 
-  if (allowedClientIds.length > 0 && (!payload.aud || !allowedClientIds.includes(payload.aud))) {
+  if (!payload.aud || !allowedClientIds.includes(payload.aud)) {
     throw new Error("Google ID token audience is not allowed");
+  }
+
+  if (!payload.iss || !GOOGLE_ISSUERS.includes(payload.iss)) {
+    throw new Error("Google ID token issuer is not allowed");
+  }
+
+  if (payload.email_verified !== "true") {
+    throw new Error("Google account email is not verified");
+  }
+
+  const expSeconds = payload.exp ? Number(payload.exp) : NaN;
+  if (!Number.isFinite(expSeconds) || expSeconds * 1000 <= Date.now()) {
+    throw new Error("Google ID token has expired");
+  }
+
+  if (!payload.sub) {
+    throw new Error("Google ID token is missing subject");
   }
 
   return {

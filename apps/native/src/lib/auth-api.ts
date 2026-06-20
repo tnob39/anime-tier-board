@@ -127,6 +127,19 @@ export async function fetchStatusesWithAuth(token?: string | null): Promise<unkn
   return parsed;
 }
 
-export async function signOutNative(): Promise<void> {
+export async function signOutNative(token?: string | null): Promise<void> {
+  const sessionToken = token ?? (await getStoredSessionToken());
+
+  if (sessionToken) {
+    try {
+      await fetch(`${API_BASE}/api/auth/native`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+    } catch (error) {
+      console.error('Failed to revoke native session on server', error);
+    }
+  }
+
   await clearStoredSessionToken();
 }

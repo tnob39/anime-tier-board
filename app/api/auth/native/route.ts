@@ -4,6 +4,7 @@ import { withApiRoute } from "@/lib/api/with-api-route";
 import {
   createNativeSessionToken,
   getUserFromSessionToken,
+  revokeSessionFromAuthorizationHeader,
   verifyGoogleIdToken,
 } from "@/lib/api/native-auth";
 import { AppError } from "@/lib/errors/app-error";
@@ -15,8 +16,34 @@ type ExchangePayload = {
   name?: string;
 };
 
+function isValidExchangePayload(value: unknown): value is ExchangePayload {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const optionalString = (key: string) =>
+    candidate[key] === undefined || typeof candidate[key] === "string";
+
+  return (
+    (candidate.idToken === undefined || typeof candidate.idToken === "string") &&
+    (candidate.devMode === undefined || typeof candidate.devMode === "boolean") &&
+    optionalString("email") &&
+    optionalString("name")
+  );
+}
+
 export const POST = withApiRoute("auth.native.POST", async (request: Request) => {
-  const payload = (await request.json()) as ExchangePayload;
+  const rawPayload = await request.json();
+  if (!isValidExchangePayload(rawPayload)) {
+    throw new AppError({
+      message: "リクエストの形式が不正です。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
+  }
+  const payload = rawPayload;
 
   let user;
   if (payload.devMode) {
@@ -89,4 +116,9 @@ export const GET = withApiRoute("auth.native.GET", async (request: Request) => {
   }
 
   return NextResponse.json({ user });
+});
+
+export const DELETE = withApiRoute("auth.native.DELETE", async (request: Request) => {
+  await revokeSessionFromAuthorizationHeader(request.headers.get("authorization"));
+  return NextResponse.json({ ok: true });
 });
