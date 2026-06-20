@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireUserId } from "@/lib/api/auth-helpers";
+import { withApiRoute } from "@/lib/api/with-api-route";
+import { AppError } from "@/lib/errors/app-error";
 import { isValidServiceId } from "@/lib/streaming-services";
 import { getSubscriptionState, replaceSubscriptions } from "@/lib/subscriptions";
 
@@ -8,14 +10,8 @@ type SubscriptionPayload = {
   onboardingComplete?: boolean;
 };
 
-export async function GET() {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withApiRoute("subscriptions.GET", async () => {
+  const userId = await requireUserId();
   const state = await getSubscriptionState(userId);
 
   return NextResponse.json({
@@ -23,22 +19,21 @@ export async function GET() {
     subscriptions: state.subscriptions,
     onboardingDone: state.onboardingDone
   });
-}
+});
 
-export async function POST(request: Request) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withApiRoute("subscriptions.POST", async (request: Request) => {
+  const userId = await requireUserId();
   let payload: SubscriptionPayload;
 
   try {
     payload = (await request.json()) as SubscriptionPayload;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    throw new AppError({
+      message: "Invalid JSON",
+      status: 400,
+      code: "VALIDATION",
+      expose: true
+    });
   }
 
   const serviceIds = Array.isArray(payload.serviceIds)
@@ -62,4 +57,4 @@ export async function POST(request: Request) {
     serviceIds: state.subscriptions.map((subscription) => subscription.serviceId),
     onboardingDone: state.onboardingDone
   });
-}
+});
