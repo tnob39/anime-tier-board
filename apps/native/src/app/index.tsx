@@ -41,6 +41,7 @@ export default function TierBoardScreen() {
   const loadGenerationRef = useRef(0);
   const saveGenerationRef = useRef(0);
   const remoteBaselineRef = useRef<string | null>(null);
+  const remoteSyncReliableRef = useRef(false);
   const itemsRef = useRef<AnimeItem[]>(items);
   itemsRef.current = items;
 
@@ -91,15 +92,18 @@ export default function TierBoardScreen() {
 
       const nextItems = payload.items;
       let storedBoard: BoardState | null = null;
+      let remoteSyncReliable = !isAuthenticated;
 
       if (isAuthenticated && token) {
         try {
           storedBoard = await fetchRemoteBoard(seasonYear, season, token, handleUnauthorized);
+          remoteSyncReliable = true;
         } catch (remoteError) {
           if (generation !== loadGenerationRef.current) {
             return;
           }
 
+          remoteSyncReliable = false;
           setWarning(
             remoteError instanceof Error
               ? remoteError.message
@@ -117,6 +121,7 @@ export default function TierBoardScreen() {
       }
 
       remoteBaselineRef.current = storedBoard?.updatedAt ?? null;
+      remoteSyncReliableRef.current = remoteSyncReliable;
       const nextBoard = reconcileBoard(
         storedBoard ?? createDefaultBoard(seasonYear, season, nextItems),
         nextItems,
@@ -138,6 +143,7 @@ export default function TierBoardScreen() {
       setBoard(createDefaultBoard(seasonYear, season, []));
       setSource(null);
       remoteBaselineRef.current = null;
+      remoteSyncReliableRef.current = false;
     } finally {
       if (generation === loadGenerationRef.current) {
         setLoading(false);
@@ -158,6 +164,12 @@ export default function TierBoardScreen() {
 
     if (!isAuthenticated || !token) {
       setSaveState('local');
+      return;
+    }
+
+    if (!remoteSyncReliableRef.current) {
+      setSaveState('error');
+      setWarning((current) => current ?? 'クラウド同期できていません。通信状態を確認して再取得してください。');
       return;
     }
 
