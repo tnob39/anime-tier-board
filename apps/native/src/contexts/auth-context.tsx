@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -55,6 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     iosClientId: googleIosClientId,
     androidClientId: googleAndroidClientId,
   });
+
+  // expo-auth-sessionのpromptAsync()戻り値とuseAuthRequestのresponse状態更新は
+  // 同じ成功結果に対して両方発火するため、同一idTokenの二重交換を防ぐガード。
+  const exchangedIdTokenRef = useRef<string | null>(null);
+
+  const exchangeGoogleIdTokenOnce = useCallback(async (idToken: string) => {
+    if (exchangedIdTokenRef.current === idToken) {
+      return null;
+    }
+    exchangedIdTokenRef.current = idToken;
+    return await exchangeGoogleIdToken(idToken);
+  }, []);
 
   const clearAuthState = useCallback(() => {
     setToken(null);
@@ -112,7 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSigningIn(true);
       setAuthError(null);
       try {
-        const result = await exchangeGoogleIdToken(idToken);
+        const result = await exchangeGoogleIdTokenOnce(idToken);
+        if (!result) {
+          return;
+        }
         setToken(result.token);
         setUser(result.user);
         setSessionExpired(false);
@@ -123,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSigningIn(false);
       }
     })();
-  }, [googleResponse]);
+  }, [googleResponse, exchangeGoogleIdTokenOnce]);
 
   const signInWithGoogle = useCallback(async () => {
     if (!googleWebClientId && !googleIosClientId && !googleAndroidClientId) {
@@ -141,9 +157,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (result?.type === 'success' && result.authentication?.idToken) {
-        const exchange = await exchangeGoogleIdToken(result.authentication.idToken);
-        setToken(exchange.token);
-        setUser(exchange.user);
+        // 実際のトークン交換は googleResponse を監視する useEffect 側で行う
+        // （exchangeGoogleIdTokenOnce が同一idTokenの二重交換を防ぐ）。
         return;
       }
 
@@ -178,11 +193,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await signOutNative();
+    await signOutNative(token);
     clearAuthState();
     setSessionExpired(false);
     setAuthError(null);
-  }, [clearAuthState]);
+  }, [token, clearAuthState]);
 
   const clearAuthError = useCallback(() => {
     setAuthError(null);
