@@ -39,8 +39,19 @@ export async function getBoard(
   return JSON.parse(raw) as PersistedBoard;
 }
 
-export async function saveBoard(userId: string, board: PersistedBoard) {
+export async function saveBoard(
+  userId: string,
+  board: PersistedBoard,
+  options?: { expectedUpdatedAt?: string | null }
+): Promise<"saved" | "conflict"> {
   await ensureSchema();
+
+  if (options?.expectedUpdatedAt) {
+    const existing = await getBoard(userId, board.seasonYear, board.season);
+    if (existing && existing.updatedAt > options.expectedUpdatedAt) {
+      return "conflict";
+    }
+  }
 
   await getTursoClient().execute({
     sql: `insert into tier_boards
@@ -57,6 +68,8 @@ export async function saveBoard(userId: string, board: PersistedBoard) {
       board.updatedAt
     ]
   });
+
+  return "saved";
 }
 
 function ensureSchema() {

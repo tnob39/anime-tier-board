@@ -39,8 +39,12 @@ export const PUT = withApiRoute("boards.PUT", async (request: Request) => {
   }
 
   let board: unknown;
+  let expectedUpdatedAt: string | null | undefined;
   try {
-    board = (JSON.parse(rawBody) as { board?: unknown }).board;
+    const parsed = JSON.parse(rawBody) as { board?: unknown; expectedUpdatedAt?: unknown };
+    board = parsed.board;
+    expectedUpdatedAt =
+      typeof parsed.expectedUpdatedAt === "string" ? parsed.expectedUpdatedAt : null;
   } catch {
     throw new AppError({
       message: "JSONの形式が正しくありません。",
@@ -60,6 +64,18 @@ export const PUT = withApiRoute("boards.PUT", async (request: Request) => {
     });
   }
 
-  await saveBoard(userId, board as Parameters<typeof saveBoard>[1]);
+  const result = await saveBoard(userId, board as Parameters<typeof saveBoard>[1], {
+    expectedUpdatedAt
+  });
+
+  if (result === "conflict") {
+    throw new AppError({
+      message: "別の端末で更新されたため、保存できませんでした。",
+      status: 409,
+      code: "VALIDATION",
+      expose: true
+    });
+  }
+
   return NextResponse.json({ ok: true });
 });

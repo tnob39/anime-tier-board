@@ -38,8 +38,12 @@ export default function TierBoardScreen() {
   const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const saveAbortRef = useRef<AbortController | null>(null);
+  const loadGenerationRef = useRef(0);
+  const saveGenerationRef = useRef(0);
+  const remoteBaselineRef = useRef<string | null>(null);
+  const remoteSyncReliableRef = useRef(false);
+  const itemsRef = useRef<AnimeItem[]>(items);
+  itemsRef.current = items;
 
   const storageKey = useMemo(() => getStorageKey(seasonYear, season), [seasonYear, season]);
   const isAuthenticated = Boolean(user && token);
@@ -74,17 +78,50 @@ export default function TierBoardScreen() {
   }, [currentSeason.year]);
 
   const loadAnime = useCallback(async () => {
+    const generation = loadGenerationRef.current + 1;
+    loadGenerationRef.current = generation;
     setLoading(true);
     setError(null);
     setWarning(null);
 
     try {
       const payload = await fetchSeasonalAnime(seasonYear, season, token, handleUnauthorized);
+      if (generation !== loadGenerationRef.current) {
+        return;
+      }
+
       const nextItems = payload.items;
-      const storedBoard = isAuthenticated && token
-        ? (await fetchRemoteBoard(seasonYear, season, token, handleUnauthorized)) ??
-          (await readStoredBoard(storageKey))
-        : await readStoredBoard(storageKey);
+      let storedBoard: BoardState | null = null;
+      let remoteSyncReliable = !isAuthenticated;
+
+      if (isAuthenticated && token) {
+        try {
+          storedBoard = await fetchRemoteBoard(seasonYear, season, token, handleUnauthorized);
+          remoteSyncReliable = true;
+        } catch (remoteError) {
+          if (generation !== loadGenerationRef.current) {
+            return;
+          }
+
+          remoteSyncReliable = false;
+          setWarning(
+            remoteError instanceof Error
+              ? remoteError.message
+              : 'クラウド上のボード取得に失敗したため、ローカルデータを使用します。'
+          );
+        }
+      }
+
+      if (generation !== loadGenerationRef.current) {
+        return;
+      }
+
+      if (!storedBoard) {
+        storedBoard = await readStoredBoard(storageKey);
+      }
+
+      remoteBaselineRef.current = storedBoard?.updatedAt ?? null;
+      remoteSyncReliableRef.current = remoteSyncReliable;
       const nextBoard = reconcileBoard(
         storedBoard ?? createDefaultBoard(seasonYear, season, nextItems),
         nextItems,
@@ -95,14 +132,22 @@ export default function TierBoardScreen() {
       setItems(nextItems);
       setBoard(nextBoard);
       setSource(payload.source);
-      setWarning(payload.warning ?? payload.enrichWarning ?? null);
+      setWarning((current) => current ?? payload.warning ?? payload.enrichWarning ?? null);
     } catch (loadError) {
+      if (generation !== loadGenerationRef.current) {
+        return;
+      }
+
       setError(loadError instanceof Error ? loadError.message : String(loadError));
       setItems([]);
       setBoard(createDefaultBoard(seasonYear, season, []));
       setSource(null);
+      remoteBaselineRef.current = null;
+      remoteSyncReliableRef.current = false;
     } finally {
-      setLoading(false);
+      if (generation === loadGenerationRef.current) {
+        setLoading(false);
+      }
     }
   }, [seasonYear, season, token, isAuthenticated, storageKey, handleUnauthorized]);
 
@@ -122,22 +167,73 @@ export default function TierBoardScreen() {
       return;
     }
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+    if (!remoteSyncReliableRef.current) {
+      setSaveState('error');
+      setWarning((current) => current ?? 'クラウド同期できていません。通信状態を確認して再取得してください。');
+      return;
     }
-    saveAbortRef.current?.abort();
 
-    saveTimeoutRef.current = setTimeout(() => {
+    const controller = new AbortController();
+    const saveGeneration = saveGenerationRef.current + 1;
+    saveGenerationRef.current = saveGeneration;
+    const boardSnapshot = board;
+
+    const timeout = setTimeout(() => {
       setSaveState('saving');
-      void saveRemoteBoard(board, token, handleUnauthorized)
-        .then(() => setSaveState('saved'))
-        .catch(() => setSaveState('error'));
+      void saveRemoteBoard(boardSnapshot, token, {
+        expectedUpdatedAt: remoteBaselineRef.current,
+        signal: controller.signal,
+        onUnauthorized: handleUnauthorized,
+      })
+        .then(async (result) => {
+          if (saveGeneration !== saveGenerationRef.current) {
+            return;
+          }
+
+          if (!result.ok) {
+            try {
+              const remoteBoard = await fetchRemoteBoard(
+                boardSnapshot.seasonYear,
+                boardSnapshot.season,
+                token,
+                handleUnauthorized
+              );
+              if (saveGeneration !== saveGenerationRef.current) {
+                return;
+              }
+
+              const currentItems = itemsRef.current;
+              const mergedBoard = reconcileBoard(
+                remoteBoard ??
+                  createDefaultBoard(boardSnapshot.seasonYear, boardSnapshot.season, currentItems),
+                currentItems,
+                boardSnapshot.seasonYear,
+                boardSnapshot.season
+              );
+              remoteBaselineRef.current = mergedBoard.updatedAt;
+              setBoard(mergedBoard);
+              setWarning('別の端末で更新がありました。最新の状態に同期しました。');
+              setSaveState('saved');
+            } catch {
+              setSaveState('error');
+            }
+            return;
+          }
+
+          remoteBaselineRef.current = boardSnapshot.updatedAt;
+          setSaveState('saved');
+        })
+        .catch(() => {
+          if (controller.signal.aborted || saveGeneration !== saveGenerationRef.current) {
+            return;
+          }
+          setSaveState('error');
+        });
     }, 500);
 
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      controller.abort();
+      clearTimeout(timeout);
     };
   }, [board, isAuthenticated, token, storageKey, handleUnauthorized]);
 

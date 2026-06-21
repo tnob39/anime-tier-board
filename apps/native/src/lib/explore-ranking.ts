@@ -124,8 +124,20 @@ export function getPopularity(item: AnimeItem) {
 }
 
 export function getScore(item: AnimeItem) {
-  const score = item.score ?? item.reputation?.score ?? 0;
-  return item.reputation?.scoreMax === 10 ? score * 10 : score;
+  const raw = item.score ?? item.reputation?.score ?? 0;
+  if (!raw) {
+    return 0;
+  }
+
+  const scoreMax =
+    item.reputation?.scoreMax ??
+    (item.source === 'jikan' ? 10 : 100);
+
+  if (scoreMax <= 0) {
+    return 0;
+  }
+
+  return (raw / scoreMax) * 100;
 }
 
 export function formatScore(item: AnimeItem) {
