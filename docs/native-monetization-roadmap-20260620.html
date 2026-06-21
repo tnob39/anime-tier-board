@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anime Tier Board — ネイティブ化＆収益化 方針資料 (2026-06-20)</title>
+<style>
+  :root{
+    --indigo:#6366f1; --indigo-d:#4f46e5; --ink:#1f2330; --sub:#5b6172;
+    --line:#e7e8ef; --bg:#f6f7fb; --card:#fff; --ok:#16a34a; --warn:#d97706;
+    --pink:#ec4899; --sky:#0ea5e9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px 80px}
+  header.hero{background:linear-gradient(135deg,var(--indigo),#8b5cf6);color:#fff;padding:48px 20px 40px;text-align:center}
+  header.hero h1{margin:0 0 8px;font-size:30px;letter-spacing:.02em}
+  header.hero p{margin:0;opacity:.92;font-size:15px}
+  .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:4px 14px;font-size:12px;margin-top:14px}
+  h2{font-size:21px;margin:44px 0 14px;padding-left:12px;border-left:5px solid var(--indigo)}
+  h3{font-size:16px;margin:22px 0 8px}
+  p{margin:8px 0}
+  .lead{font-size:15px;color:var(--sub)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:14px 0;
+    box-shadow:0 1px 2px rgba(20,20,40,.04)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+  .pill{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px}
+  .p-now{background:#fee2e2;color:#b91c1c}
+  .p-1{background:#dbeafe;color:#1d4ed8}
+  .p-2{background:#dcfce7;color:#15803d}
+  .p-long{background:#f3e8ff;color:#7c3aed}
+  .analogy{background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 18px;margin:12px 0}
+  .analogy b{color:var(--warn)}
+  .lane{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+  @media(max-width:760px){.lane{grid-template-columns:1fr}}
+  .lane .box{border-radius:14px;padding:18px 20px;color:#fff}
+  .lane .fast{background:linear-gradient(135deg,#0ea5e9,#2563eb)}
+  .lane .slow{background:linear-gradient(135deg,#7c3aed,#a855f7)}
+  .lane h3{margin:0 0 6px;color:#fff;font-size:17px}
+  .lane ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;opacity:.96}
+  /* phone mockups */
+  .mocks{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  .phone{width:248px;background:#0b0e16;border-radius:34px;padding:10px;box-shadow:0 14px 30px rgba(20,20,50,.22)}
+  .phone .scr{background:#fff;border-radius:26px;overflow:hidden;height:500px;display:flex;flex-direction:column}
+  .phone .notch{height:22px;display:flex;justify-content:center}
+  .phone .notch::after{content:"";width:90px;height:16px;background:#0b0e16;border-radius:0 0 14px 14px}
+  .ph-top{background:var(--indigo);color:#fff;padding:12px 14px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+  .ph-body{padding:12px 12px;overflow:auto;flex:1;font-size:12.5px}
+  .mlabel{text-align:center;font-size:13px;color:var(--sub);margin-top:8px;font-weight:600}
+  .gauge{height:12px;border-radius:999px;background:#eef0f6;overflow:hidden;margin:6px 0}
+  .gauge>span{display:block;height:100%;background:linear-gradient(90deg,#16a34a,#22c55e)}
+  .srow{display:flex;align-items:center;gap:8px;padding:8px 6px;border-bottom:1px solid #f0f1f6}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .chip{font-size:10.5px;background:#eef1ff;color:#4338ca;border-radius:6px;padding:1px 6px;white-space:nowrap}
+  .chip.live{background:#ecfdf5;color:#047857}
+  .cta{display:block;text-align:center;background:var(--indigo);color:#fff;border-radius:10px;
+    padding:9px;font-weight:700;margin-top:10px;font-size:12.5px}
+  .pr{font-size:9.5px;color:#9aa0b4;border:1px solid #e2e4ee;border-radius:5px;padding:0 4px;margin-left:6px}
+  .day{font-weight:700;font-size:12px;color:var(--sub);margin:10px 2px 2px}
+  /* roadmap timeline */
+  .road{position:relative;margin-top:10px}
+  .step{display:grid;grid-template-columns:120px 1fr;gap:14px;border-left:3px solid var(--line);padding:0 0 22px 18px;margin-left:8px;position:relative}
+  .step::before{content:"";position:absolute;left:-9px;top:3px;width:15px;height:15px;border-radius:50%;background:#fff;border:3px solid var(--indigo)}
+  .step .when{font-weight:800;font-size:13px}
+  .step .what h3{margin:0 0 6px}
+  .step ul{margin:4px 0;padding-left:18px;font-size:13.5px}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#f0f2f9}
+  .who{font-weight:700}
+  .note{font-size:12.5px;color:var(--sub)}
+  .big{font-size:15px}
+  ul.clean{padding-left:20px;margin:6px 0}
+  .kpi{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .kpi div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 14px;text-align:center;flex:1;min-width:120px}
+  .kpi b{display:block;font-size:20px;color:var(--indigo)}
+  .kpi small{color:var(--sub)}
+  .loop{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;justify-content:center;margin:10px 0}
+  .lstep{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center;min-width:116px;flex:1}
+  .lstep b{display:block;font-size:13px;margin:3px 0}
+  .lstep small{color:var(--sub);font-size:11px}
+  .arrow{display:flex;align-items:center;color:var(--indigo);font-weight:900;font-size:18px}
+  @media(max-width:760px){.arrow{transform:rotate(90deg)}}
+  footer{ text-align:center;color:var(--sub);font-size:12px;margin-top:50px}
+  .star{color:#f59e0b}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>Anime Tier Board — ネイティブ化 ＆ 収益化 方針</h1>
+  <p>夏アニメ（2026年夏）に間に合わせる「最速でアプリを出す」計画</p>
+  <div class="tag">2026-06-20 ／ Claude + Codex レビュー統合版</div>
+</header>
+
+<div class="wrap">
+
+  <!-- 1. 一言で -->
+  <h2>① まず一言でいうと</h2>
+  <div class="card big">
+    <p><b>いまある Web アプリを“そのまま”アプリの皮で包んで（=Capacitor）、まず <span class="star">Android</span> から出す。</b>
+    機能は <b>サブスク診断</b> と <b>放映カレンダー</b> に絞り、<b>紹介リンク（アフィリエイト）</b>で収益化する。
+    そして入口として、<b>Tier表を「人気＋自分の視聴」つきで SNS にシェア</b>し、新規ユーザーを呼び込む（＝成長エンジン）。</p>
+    <div class="kpi">
+      <div><b>1〜2週</b><small>Android 配信まで（目標）</small></div>
+      <div><b>0画面</b><small>作り直す画面の数（Web再利用）</small></div>
+      <div><b>2レーン</b><small>速さのCapacitor / 品質のExpo</small></div>
+    </div>
+  </div>
+
+  <!-- growth loop (acquisition engine) -->
+  <h2>🔥 成長エンジン：シェアで広がる（最小構成でも必須）</h2>
+  <div class="card">
+    <p class="big"><b>このアプリの“入口”は、Tier表を SNS にシェアして新しい人が入ってくる流れ。</b>
+    だから最小構成でも、この拡散ループは外しません。</p>
+    <div class="loop">
+      <div class="lstep">📊<b>Tier表を作る</b><small>今期を並べる</small></div>
+      <div class="arrow">→</div>
+      <div class="lstep">🔥<b>人気＋自分の視聴</b><small>が一目で</small></div>
+      <div class="arrow">→</div>
+      <div class="lstep">🖼️<b>シェアカード</b><small>画像で生成</small></div>
+      <div class="arrow">→</div>
+      <div class="lstep">📣<b>SNSへ</b><small>X / LINE / IG</small></div>
+      <div class="arrow">→</div>
+      <div class="lstep">🙋<b>友達が流入</b><small>新規ユーザー</small></div>
+    </div>
+    <div class="analogy" style="margin-top:14px">
+      💡 <b>朗報：この共有機能はもう全部 Web にあります。</b>
+      共有ページ（<code>/api/shares</code>）・リアクション/コメント・<b>シェアカード画像（エヴァンジェリストカード＝OG画像）</b>まで実装済み。
+      Capacitor で包めば<b>そのまま native に乗る</b>ので、追加コストはごく小さい。
+    </div>
+    <p>ネイティブで足すのは <b>2つだけ</b>：</p>
+    <ul class="clean">
+      <li><b>ワンタップ共有（共有シート）</b> — タップ一発で X / LINE / Instagram へ（<code>@capacitor/share</code>）</li>
+      <li><b>共有リンクがアプリで開く（ディープリンク）</b> — 友達がリンクを踏むとアプリが起動して回遊（<code>@capacitor/app</code>）</li>
+    </ul>
+    <p class="note">＝ ファネル：<b>入口（獲得）＝Tier＋シェア</b> → <b>価値（滞在）＝カレンダー</b> → <b>収益＝サブスク診断＋紹介リンク</b>。</p>
+  </div>
+
+  <!-- 2. なぜ速いのか -->
+  <h2>② なぜこれが最速なのか（かみ砕き）</h2>
+  <div class="analogy">
+    🍱 <b>Capacitor＝お弁当箱に詰めるだけ。</b> 料理（＝今すでに本番で動いている Web アプリ）は完成済み。
+    それを「アプリの皮（お弁当箱）」に入れてストアに並べるだけなので、<b>中身を作り直さない</b>。
+    だから Tier・視聴管理・サブスク・カレンダーなど<b>全機能がそのまま入る</b>。
+  </div>
+  <div class="analogy">
+    🍳 <b>Expo（今ある別アプリ）＝一から作り直して高級な器に盛る。</b>
+    通知・ウィジェット・Siri など“本物のネイティブ品質”が出せるが、画面を1枚ずつ作り直すので時間がかかる。
+    → <b>捨てずに「長期レーン」として並走</b>させる。
+  </div>
+
+  <h2>③ 2つのレーンで進める</h2>
+  <div class="lane">
+    <div class="box fast">
+      <h3>🚀 高速レーン（Capacitor）</h3>
+      <p style="font-size:13px;margin:2px 0 0">夏に出す。今のWebを包むだけ。</p>
+      <ul>
+        <li>本番Webをそのまま表示</li>
+        <li>Android は Windows で直接ビルド</li>
+        <li>iOS は後追い（クラウドMacビルド）</li>
+        <li>更新は Web デプロイで即反映（再審査ほぼ不要）</li>
+        <li><b>シェア／SNS拡散の仕組みも既存のまま乗る</b></li>
+      </ul>
+    </div>
+    <div class="box slow">
+      <h3>🏆 長期レーン（Expo・既存）</h3>
+      <p style="font-size:13px;margin:2px 0 0">本物のネイティブ品質を後から。</p>
+      <ul>
+        <li>既に5画面＋認証＋通知＋ウィジェット＋Siri実装済</li>
+        <li>プッシュ通知・ウィジェットが強い</li>
+        <li>急がず品質を上げる枠</li>
+        <li>夏MVPの担当ではない</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">※ 旧方針の「Windowsだと iOSが作れない」は、クラウドMacビルド（Codemagic等）で解決できるため、Capacitor採用の障害ではなくなりました。</p>
+
+  <!-- 4. モック -->
+  <h2>④ 画面イメージ（モック）</h2>
+  <p class="lead">夏MVPで作る3つの体験。中身は今のWebをそのまま使うので、ほぼ「並べ替え」で実現できます。</p>
+  <div class="mocks">
+
+    <!-- Mock 1: サブスク診断 -->
+    <div>
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="ph-top"><span>サブスク診断</span><span>⚙️</span></div>
+        <div class="ph-body">
+          <div style="font-weight:700;margin-bottom:4px">今期のカバー率</div>
+          <div class="gauge"><span style="width:75%"></span></div>
+          <div style="font-size:11.5px;color:#5b6172">視聴12本中 <b>9本</b> がカバー（75%）</div>
+
+          <div style="font-weight:700;margin:12px 0 4px">加入中</div>
+          <div class="srow"><span class="dot" style="background:#16a34a"></span>dアニメストア<span class="chip live" style="margin-left:auto">¥440</span></div>
+          <div class="srow"><span class="dot" style="background:#16a34a"></span>Netflix<span class="chip live" style="margin-left:auto">¥1,590</span></div>
+
+          <div style="font-weight:700;margin:12px 0 4px">おすすめ追加</div>
+          <div style="background:#f7f8ff;border:1px solid #e2e5fb;border-radius:10px;padding:8px">
+            <b>U-NEXT</b> を足すと <b style="color:#16a34a">+2本</b> カバー
+            <div style="font-size:11px;color:#5b6172">残り未カバー3本のうち2本に対応</div>
+            <a class="cta">U-NEXT を見る →<span class="pr">PR</span></a>
+          </div>
+        </div>
+      </div></div>
+      <div class="mlabel">① サブスク診断＋紹介リンク</div>
+    </div>
+
+    <!-- Mock 2: 放映カレンダー -->
+    <div>
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="ph-top"><span>放映カレンダー</span><span>📅</span></div>
+        <div class="ph-body">
+          <div class="day">月曜</div>
+          <div class="srow"><span class="dot" style="background:#6366f1"></span>
+            <div>葬送のフリーレン<div style="font-size:10.5px;color:#5b6172">視聴中 ・ 第5話</div></div>
+            <span class="chip" style="margin-left:auto">dアニメ</span></div>
+          <div class="day">火曜</div>
+          <div class="srow"><span class="dot" style="background:#94a3b8"></span>
+            <div>薬屋のひとりごと<div style="font-size:10.5px;color:#5b6172">予定</div></div>
+            <span class="chip">Netflix</span></div>
+          <div class="day">水曜</div>
+          <div class="srow"><span class="dot" style="background:#6366f1"></span>
+            <div>ダンジョン飯<div style="font-size:10.5px;color:#5b6172">視聴中 ・ 第8話</div></div>
+            <span class="chip live">見放題</span></div>
+          <div class="day">金曜</div>
+          <div class="srow"><span class="dot" style="background:#94a3b8"></span>
+            <div>スパイファミリー<div style="font-size:10.5px;color:#5b6172">予定</div></div>
+            <span class="chip">U-NEXT</span></div>
+        </div>
+      </div></div>
+      <div class="mlabel">② 曜日別の放映カレンダー</div>
+    </div>
+
+    <!-- Mock 3: ホーム/まとめ -->
+    <div>
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="ph-top"><span>ホーム</span><span>🏠</span></div>
+        <div class="ph-body">
+          <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border-radius:12px;padding:12px">
+            <div style="font-size:12px;opacity:.9">2026年 夏アニメ</div>
+            <div style="font-size:18px;font-weight:800">今期 視聴 12本</div>
+            <div style="font-size:11.5px;opacity:.9">今夜の放送 2本 ・ 未カバー 3本</div>
+          </div>
+          <div style="font-weight:700;margin:12px 0 4px">今夜見られる</div>
+          <div class="srow"><span class="dot" style="background:#ec4899"></span>ダンジョン飯<span class="chip live" style="margin-left:auto">見放題</span></div>
+          <div class="srow"><span class="dot" style="background:#ec4899"></span>frieren<span class="chip" style="margin-left:auto">dアニメ</span></div>
+          <a class="cta" style="background:#16a34a">サブスク診断を見る</a>
+          <a class="cta">今期アニメを追加</a>
+        </div>
+      </div></div>
+      <div class="mlabel">③ ホーム（今夜＋導線）</div>
+    </div>
+
+    <!-- Mock 4: Tier share card -->
+    <div>
+      <div class="phone"><div class="scr">
+        <div class="notch"></div>
+        <div class="ph-top"><span>シェアカード</span><span>🔗</span></div>
+        <div class="ph-body">
+          <div style="background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border-radius:12px;padding:12px">
+            <div style="font-size:11px;opacity:.9">Nobu の 2026夏 Tier</div>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:6px"><span style="font-weight:800;width:16px">S</span><span class="chip" style="background:rgba(255,255,255,.22);color:#fff">フリーレン</span><span class="chip" style="background:rgba(255,255,255,.22);color:#fff">ダンジョン飯</span></div>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-weight:800;width:16px">A</span><span class="chip" style="background:rgba(255,255,255,.22);color:#fff">薬屋</span><span class="chip" style="background:rgba(255,255,255,.22);color:#fff">スパイ</span></div>
+          </div>
+          <div style="font-weight:700;margin:12px 0 4px">今期みんなの人気</div>
+          <div class="srow"><span style="font-weight:800;color:#f59e0b">#1</span>葬送のフリーレン<span class="chip" style="margin-left:auto">人気87%</span></div>
+          <div class="srow"><span style="font-weight:800;color:#9aa0b4">#2</span>薬屋のひとりごと<span class="chip" style="margin-left:auto">人気81%</span></div>
+          <div style="font-size:11.5px;color:#5b6172;margin-top:8px">私の視聴 <b>12本</b> ・ <b>34</b> リアクション</div>
+          <a class="cta" style="background:#111">𝕏 でシェア</a>
+          <a class="cta" style="background:#16a34a">画像で保存</a>
+        </div>
+      </div></div>
+      <div class="mlabel">④ Tierシェアカード（拡散の核）</div>
+    </div>
+
+  </div>
+  <p class="note">※ モックはイメージです。配信タイミングは「放送日」ベースで、配信解禁の正確な時刻を約束する表現は避けます（データ精度上の注意）。</p>
+
+  <!-- 5. お金の話 -->
+  <h2>⑤ 収益化の考え方（かみ砕き）</h2>
+  <div class="grid2">
+    <div class="card">
+      <span class="pill p-1">Phase 1（夏）</span>
+      <h3>紹介リンク（アフィリエイト）が主役</h3>
+      <ul class="clean">
+        <li>「あなたの作品を一番カバーするサービス」を出し、そのリンクから加入してもらう</li>
+        <li>押し売りしない：<b>診断の中だけ</b>に表示・煽らない</li>
+        <li>並び順は<b>カバー本数で固定</b>（報酬額で並べ替えない＝信頼維持）</li>
+        <li>コードは小さい。<b>本当の時間は「提携審査」</b>（数日〜数週）</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="pill p-2">Phase 2（夏の後）</span>
+      <h3>アプリ内課金（IAP）を追加</h3>
+      <ul class="clean">
+        <li>RevenueCat を使って Apple / Google の課金を扱う</li>
+        <li><b>決定ゲート</b>：Expo先 か Capacitor先 を1つ選んでから着手</li>
+        <li>Capacitorは WebViewから課金を呼べない → <b>購入画面はネイティブで</b>用意</li>
+        <li>権限保存テーブルは <code>user_entitlements</code>（既存の <code>user_subscriptions</code> と名前衝突回避）</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 6. ロードマップ -->
+  <h2>⑥ ロードマップ（どう進めるか）</h2>
+  <div class="road">
+
+    <div class="step">
+      <div class="when"><span class="pill p-now">今すぐ</span><br>Phase 0</div>
+      <div class="what">
+        <h3>下ごしらえ（並行で着手）</h3>
+        <ul>
+          <li><b>提携申請を今日から</b>：Amazon アソシエイト / A8.net / バリューコマース（審査に時間がかかる＝最優先）</li>
+          <li><b>認証スパイク（1〜2日）</b>：Capacitor の中で Google ログインが通るか検証（唯一の技術的な未知）</li>
+          <li>Google Play 登録 $25 ／ Privacy Policy・利用規約・AniList商用ライセンス</li>
+        </ul>
+        <p class="note">ここが詰まると全部止まる“律速”。コードより先に動かす。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="when"><span class="pill p-1">1〜2週</span><br>Phase 1</div>
+      <div class="what">
+        <h3>夏MVPを作って Android で出す</h3>
+        <ul>
+          <li><b>① 認証移行</b>：<code>/api/subscriptions</code> を Cookie/アプリ両対応に（最初の必須作業）</li>
+          <li><b>② 紹介リンクのデータ投入</b>：仕組みは<b>もう実装済</b>（URLを入れるだけ）</li>
+          <li><b>③ 診断API</b>：必要な項目だけ返す“公開DTO”を新設（内部情報を漏らさない）</li>
+          <li><b>④ 計測リンク</b>：<code>/api/go/affiliate</code> でクリックを数えられるように</li>
+          <li><b>⑤ Capacitorで包む → Android内部テスト配信</b></li>
+          <li><b>⑥ 拡散ループをネイティブ強化</b>：ワンタップ共有シート＋共有リンクのディープリンク（共有機能自体はWeb既存）</li>
+          <li>仕上げ：日本語の文字化け（mojibake）修正</li>
+        </ul>
+        <p class="note">作業は5つの小さなworktreeに分割（バラバラに並行できる形）。</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="when"><span class="pill p-2">夏の後</span><br>Phase 2</div>
+      <div class="what">
+        <h3>iOS 公開 ＋ アプリ内課金</h3>
+        <ul>
+          <li>iOS：Apple Developer $99 ＋ クラウドMacビルドで TestFlight → 審査</li>
+          <li>IAP：RevenueCat（Expo先/Capacitor先を決定）・<code>user_entitlements</code>・プレミアム機能の定義</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="when"><span class="pill p-long">継続</span><br>長期</div>
+      <div class="what">
+        <h3>Expoレーンで本物ネイティブ品質</h3>
+        <ul>
+          <li>プッシュ通知（放映・新エピ）・ウィジェット・Siri を磨く</li>
+          <li>Capacitorで出した後、体験を底上げ</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 7. 役割分担 -->
+  <h2>⑦ 誰が何をやるか</h2>
+  <table>
+    <tr><th>担当</th><th>やること</th></tr>
+    <tr><td class="who">Nobu（手動）</td><td>提携申請・ストア登録・ポリシー作成・方針決定（Expo/Capacitorの選択）</td></tr>
+    <tr><td class="who">Claude</td><td>設計・API/DTOの形・レビュー・小タスク化・文字化けチェック</td></tr>
+    <tr><td class="who">Codex</td><td>認証移行・紹介データ・診断API・nativeクライアントの実装（小スライス）</td></tr>
+    <tr><td class="who">Grok / Composer</td><td>ネイティブUI（サブスク画面など）</td></tr>
+    <tr><td class="who">Hermes</td><td>worktree分割・Issue管理・スコープが膨らまない見張り</td></tr>
+  </table>
+
+  <!-- 8. 意思決定 -->
+  <h2>⑧ いま決めること</h2>
+  <div class="grid3">
+    <div class="card"><h3>路線</h3><p class="note">Capacitor高速レーンを新設し、Expoは温存して並走？<br><b>推奨：はい</b></p></div>
+    <div class="card"><h3>先行OS</h3><p class="note">Android を先に出す？（Windowsで直接ビルド・審査が緩い）<br><b>推奨：Android先行</b></p></div>
+    <div class="card"><h3>IAPの順番</h3><p class="note">Phase 2 で Expo先 / Capacitor先 どちらで課金を作る？<br><b>後で決定（決定ゲート）</b></p></div>
+  </div>
+
+  <!-- 9. リスク -->
+  <h2>⑨ リスクと対策</h2>
+  <table>
+    <tr><th>リスク</th><th>対策</th></tr>
+    <tr><td>Capacitor内の Google ログインが弾かれる</td><td>Day1にスパイク。ダメなら既存のアプリ用ログイン（Bearer）を流用</td></tr>
+    <tr><td>Appleの「ただのWeb」審査拒否（4.2）</td><td>通知・共有などネイティブ機能を足す＋<b>Android先行</b>でリスク回避</td></tr>
+    <tr><td>提携審査が間に合わない</td><td>今すぐ申請。リンクが空でもアプリは動く作りにして遅延を吸収</td></tr>
+    <tr><td>配信タイミングを過大表現</td><td>「放送日」ベースと明記し、解禁時刻は約束しない</td></tr>
+  </table>
+
+  <h2>⑩ 今日やる “たった2つ”</h2>
+  <div class="card big">
+    <p>① <b>アフィリエイト提携を申請する</b>（Amazon / A8.net / バリューコマース）— 一番時間がかかるので最初に。</p>
+    <p>② <b>Capacitorの認証スパイク</b>を回す（1〜2日）— ここが通れば、あとは定型作業。</p>
+  </div>
+
+  <footer>
+    Anime Tier Board ・ ネイティブ化＆収益化 方針資料 ・ 2026-06-20<br>
+    根拠：Claude＋Codex 統合レビュー（PR #138 / plans/monetization-affiliate-iap-implementation-plan-review-20260620.md）
+  </footer>
+
+</div>
+</body>
+</html>
