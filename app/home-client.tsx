@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import HomeAddSection from "@/components/HomeAddSection";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay } from "@/lib/broadcast-calendar";
@@ -16,6 +16,8 @@ type HomeClientProps = {
   initialSeasonalAnime: AnimeItem[];
 };
 
+const ONBOARDING_DISMISSED_KEY = "anime-tier-board:onboarding:n2-dismissed";
+
 /**
  * ホームのクライアントエントリ（方針③ N1c）。
  * ログイン済みホームは「今週の放映カレンダー」を中心に構成する。
@@ -24,7 +26,14 @@ type HomeClientProps = {
 export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientProps) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
+  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
+  const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
   useSeasonalPrefetch(initialSeasonalAnime);
+
+  useEffect(() => {
+    setIsOnboardingDismissed(window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "true");
+    setHasCheckedOnboarding(true);
+  }, []);
 
   const addSectionItems = useMemo(
     () => selectUnregisteredSeasonalAnime(initialSeasonalAnime, items),
@@ -71,6 +80,10 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   const addSection = (
     <HomeAddSection items={addSectionItems} onQuickStatus={handleQuickStatus} />
   );
+  const handleDismissOnboarding = useCallback(() => {
+    setIsOnboardingDismissed(true);
+    window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, "true");
+  }, []);
 
   const visibleItems = items.filter((item) => item.anime);
   const calendarItems = useMemo(
@@ -81,7 +94,13 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   const hasCalendar = BROADCAST_WEEKDAYS.some((day) => grouped[day].length > 0);
 
   if (visibleItems.length === 0) {
-    return <HomeEmptyGuide />;
+    return (
+      <HomeEmptyGuide
+        addSection={addSection}
+        showOnboarding={hasCheckedOnboarding && !isOnboardingDismissed}
+        onDismiss={handleDismissOnboarding}
+      />
+    );
   }
 
   return (
@@ -102,24 +121,40 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
 }
 
 /** ログイン済み・未登録ユーザー向けのインラインガイド。 */
-export function HomeEmptyGuide() {
+type HomeEmptyGuideProps = {
+  addSection: ReactNode;
+  showOnboarding: boolean;
+  onDismiss: () => void;
+};
+
+export function HomeEmptyGuide({ addSection, showOnboarding, onDismiss }: HomeEmptyGuideProps) {
   return (
-    <main className="app-main">
-      <div className="home-guide">
+    <main className="app-main home-main">
+      {showOnboarding ? (
+        <section className="home-guide" aria-labelledby="home-guide-title">
         <p className="home-guide-step-label">STEP 1 / 3</p>
-        <h2 className="home-guide-title">まずはアニメを探してみよう</h2>
+        <h2 className="home-guide-title" id="home-guide-title">
+          まずは視聴中を1本だけ追加
+        </h2>
         <p className="home-guide-body">
-          気になる作品に「見たい」や「視聴中」をつけると、ここに表示されます。
+          今季の作品から気になる1本を「視聴中」にすると、ホームが今夜見るリストとして使えます。
         </p>
-        <div className="home-guide-hints">
-          <span>📋 今期アニメを一覧表示</span>
-          <span>✅ ステータスで管理</span>
-          <span>⭐ Tier表で評価</span>
+        <ol className="home-guide-hints">
+          <li>下の「今季から追加」で作品を探す</li>
+          <li>気になる作品を「視聴中」にする</li>
+          <li>あとはホームで追いかける</li>
+        </ol>
+        <div className="home-guide-actions">
+          <Link href="#home-add-section" className="command-button emphasis-button">
+            今季の作品を見る
+          </Link>
+          <button className="command-button" type="button" onClick={onDismiss}>
+            あとで
+          </button>
         </div>
-        <Link href="/explore" className="command-button emphasis-button">
-          作品を探す
-        </Link>
-      </div>
+        </section>
+      ) : null}
+      <div id="home-add-section">{addSection}</div>
     </main>
   );
 }

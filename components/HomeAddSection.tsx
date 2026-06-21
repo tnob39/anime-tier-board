@@ -33,7 +33,7 @@ export default function HomeAddSection({ items, onQuickStatus }: HomeAddSectionP
   return (
     <section className="anime-list-section home-add-section">
       <div className="anime-list-header">
-        <h2 className="anime-list-heading">今期から追加</h2>
+        <h2 className="anime-list-heading">今季から追加</h2>
         <Link href="/explore" className="home-add-more-link">
           もっと
         </Link>
