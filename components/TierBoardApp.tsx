@@ -115,6 +115,19 @@ const nextTierColors = [
 export function TierBoardApp() {
   const { status: authStatus } = useSession();
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
+  const toolbarMoreButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!toolbarMenuOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setToolbarMenuOpen(false);
+        toolbarMoreButtonRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [toolbarMenuOpen]);
   const currentSeason = useMemo(() => getCurrentAnimeSeason(), []);
   const [seasonYear, setSeasonYear] = useState(currentSeason.year);
   const [season, setSeason] = useState<AnimeSeason>(currentSeason.season);
@@ -711,10 +724,11 @@ export function TierBoardApp() {
 
           <div className="toolbar-more-wrap">
             <button
+              ref={toolbarMoreButtonRef}
               className="command-button"
               type="button"
               onClick={() => setToolbarMenuOpen((open) => !open)}
-              aria-haspopup="menu"
+              aria-haspopup="true"
               aria-expanded={toolbarMenuOpen}
               title="その他の操作"
             >
@@ -729,7 +743,7 @@ export function TierBoardApp() {
                   onClick={() => setToolbarMenuOpen(false)}
                   aria-hidden="true"
                 />
-                <div className="toolbar-more-menu" role="menu">
+                <div className="toolbar-more-menu" aria-label="その他の操作">
                   <div className="toolbar-more-filters no-export" aria-label="表示フィルター">
                     <button
                       className={hideMovies ? "filter-chip is-active" : "filter-chip"}
@@ -754,7 +768,6 @@ export function TierBoardApp() {
                   <button
                     className="toolbar-more-item"
                     type="button"
-                    role="menuitem"
                     onClick={() => {
                       setToolbarMenuOpen(false);
                       handleAutoPublicTier();
@@ -769,7 +782,6 @@ export function TierBoardApp() {
                   <button
                     className="toolbar-more-item"
                     type="button"
-                    role="menuitem"
                     onClick={() => {
                       setToolbarMenuOpen(false);
                       handleReset();
