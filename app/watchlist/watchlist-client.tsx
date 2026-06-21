@@ -2,10 +2,11 @@
 
 import { CalendarDays, Copy, ExternalLink, Loader2, MoreVertical, Share2, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
-import CardLane, { type LaneCardData } from "@/components/CardLane";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
+import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
+import { groupItemsByBroadcastDay, normalizeBroadcastDay } from "@/lib/broadcast-calendar";
 import { searchUrlFromProviderId } from "@/lib/service-search";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
@@ -25,9 +26,6 @@ const watchSlotOptions = [
   "配信されたら見る",
   "時間がある時に見る"
 ];
-
-const BROADCAST_WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"] as const;
-type BroadcastWeekday = (typeof BROADCAST_WEEKDAYS)[number];
 
 type TrackingDraft = Pick<
   AnimeStatusRecord,
@@ -288,7 +286,7 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
       </header>
 
       {visibleItems.length ? (
-        <WeeklyBroadcastCalendar grouped={broadcastCalendar.grouped} />
+        <WeeklyBroadcastCalendar grouped={broadcastCalendar} />
       ) : null}
 
       {message ? <div className={`notice ${messageKind}`}>{message}</div> : null}
@@ -577,109 +575,6 @@ function WatchlistCard({
   );
 }
 
-function WeeklyBroadcastCalendar({
-  grouped
-}: {
-  grouped: Record<BroadcastWeekday, AnimeStatusRecord[]>;
-}) {
-  const TODAY_JA = ["日", "月", "火", "水", "木", "金", "土"][new Date().getDay()] as BroadcastWeekday;
-  const todayLaneRef = useRef<HTMLDivElement>(null);
-
-  // 曜日ラベル（月〜日の順）
-  const DAY_LABELS: Record<BroadcastWeekday, string> = {
-    月: "月曜",
-    火: "火曜",
-    水: "水曜",
-    木: "木曜",
-    金: "金曜",
-    土: "土曜",
-    日: "日曜"
-  };
-
-  // アイテムがある曜日だけ表示（アイテムゼロの日は非表示）
-  const activeDays = BROADCAST_WEEKDAYS.filter((day) => grouped[day].length > 0);
-
-  useEffect(() => {
-    todayLaneRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, []);
-
-  function toCardData(record: AnimeStatusRecord): LaneCardData {
-    const anime = record.anime as AnimeItem;
-    return {
-      id: record.animeId,
-      title: anime.title,
-      coverImage: anime.proxiedImageUrl ?? anime.imageUrl ?? null,
-      statusVariant: record.status === "watching" ? "watching" : "planned"
-    };
-  }
-
-  if (activeDays.length === 0) return null;
-
-  return (
-    <section className="watchlist-broadcast-lanes" aria-label="今週の放映カレンダー">
-      <h2 className="watchlist-broadcast-lanes-heading">今週の放映カレンダー</h2>
-      <div className="watchlist-broadcast-lanes-list">
-        {activeDays.map((day) => (
-          <div key={day} ref={day === TODAY_JA ? todayLaneRef : undefined}>
-            <CardLane
-              heading={`${DAY_LABELS[day]}${day === TODAY_JA ? " 🔴" : ""}`}
-              count={grouped[day].length}
-              items={grouped[day].map(toCardData)}
-              className={day === TODAY_JA ? "card-lane--today" : undefined}
-            />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function groupItemsByBroadcastDay(items: AnimeStatusRecord[]) {
-  const grouped = Object.fromEntries(
-    BROADCAST_WEEKDAYS.map((day) => [day, [] as AnimeStatusRecord[]])
-  ) as Record<BroadcastWeekday, AnimeStatusRecord[]>;
-
-  for (const record of items) {
-    if (!record.anime) {
-      continue;
-    }
-
-    const day = getBroadcastDayLabel(record.anime);
-    if (day && grouped[day]) {
-      grouped[day].push(record);
-    }
-  }
-
-  return { grouped };
-}
-
-function getBroadcastDayLabel(item: AnimeItem): BroadcastWeekday | null {
-  const nextAiring = item.airing?.nextEpisode?.airingAt;
-  if (nextAiring) {
-    const weekday = extractWeekdayLabel(nextAiring);
-    if (weekday) {
-      return weekday;
-    }
-  }
-
-  const broadcastDay = normalizeBroadcastDay(item.airing?.broadcastDay);
-  if (broadcastDay && BROADCAST_WEEKDAYS.includes(broadcastDay as BroadcastWeekday)) {
-    return broadcastDay as BroadcastWeekday;
-  }
-
-  return null;
-}
-
-function extractWeekdayLabel(value: string): BroadcastWeekday | null {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  const labels: BroadcastWeekday[] = ["日", "月", "火", "水", "木", "金", "土"];
-  return labels[date.getDay()] ?? null;
-}
-
 function StatusChips({
   status,
   onChange
@@ -828,32 +723,6 @@ function formatWeekdayTime(value?: string | null): string | null {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
-}
-
-function normalizeBroadcastDay(value?: string | null): string | null {
-  if (!value) {
-    return null;
-  }
-
-  const normalized = value.toLowerCase();
-  const days: Record<string, string> = {
-    monday: "月",
-    mondays: "月",
-    tuesday: "火",
-    tuesdays: "火",
-    wednesday: "水",
-    wednesdays: "水",
-    thursday: "木",
-    thursdays: "木",
-    friday: "金",
-    fridays: "金",
-    saturday: "土",
-    saturdays: "土",
-    sunday: "日",
-    sundays: "日"
-  };
-
-  return days[normalized] ?? value;
 }
 
 function normalizeTime(value: string): string {
