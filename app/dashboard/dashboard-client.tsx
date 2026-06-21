@@ -105,7 +105,7 @@ export function DashboardClient({
               : "加入中のサブスクを登録するとカバー率を表示できます。"}
           </p>
         </div>
-        <Link className="command-button emphasis-button" href="/subscriptions">
+        <Link className="command-button emphasis-button" href="/dashboard?section=subscriptions">
           サブスク診断を見る →
         </Link>
       </section>

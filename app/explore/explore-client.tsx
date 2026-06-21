@@ -197,7 +197,7 @@ export function ExploreClient({
         {onlyInstantWatch && !hasSubscriptions ? (
           <p className="explore-instant-watch-hint">
             サブスクを登録すると、加入中サービスで見られる作品だけに絞り込めます。{" "}
-            <Link href="/subscriptions">サブスクを登録する →</Link>
+            <Link href="/dashboard?section=subscriptions">サブスクを登録する →</Link>
           </p>
         ) : null}
         <button
