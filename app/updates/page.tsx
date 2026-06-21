@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.18",
+    date: "2026-06-21",
+    label: "ホームを今週の放映カレンダーに刷新",
+    isLatest: true,
+    changes: [
+      {
+        icon: CalendarDays,
+        iconColor: "#6366f1",
+        title: "ホームが今週の放映カレンダーに",
+        description: "ホームを開くと、視聴中・見たい作品が曜日別の放映カレンダーで表示されるようになりました。今日の曜日へ自動でスクロールします。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.17",
     date: "2026-06-21",
     label: "表示モード廃止・ナビを4タブに統一",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Layers,
