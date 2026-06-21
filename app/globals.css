@@ -2056,13 +2056,6 @@ button:disabled {
   padding: 8px 9px;
 }
 
-/* 上部ナビのホームアイコンは PC幅のみ（スマホは下部ナビにホームがあるため非表示） */
-@media (max-width: 520px) {
-  .global-nav-home-pc {
-    display: none;
-  }
-}
-
 .watchlist-empty {
   display: grid;
   justify-items: start;
@@ -3966,46 +3959,59 @@ a.cl-history-title:hover {
   padding: 0;
 }
 
-/* --- UIモード切り替え --- */
-.ui-mode-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 16px;
+/* --- Tier ツールバー: その他メニュー (方針③ N1a) --- */
+.toolbar-more-wrap {
+  position: relative;
+  display: inline-flex;
 }
-.ui-mode-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-soft);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+.toolbar-more-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
 }
-.ui-mode-option input[type="radio"] {
-  margin-top: 3px;
-  flex-shrink: 0;
-  accent-color: var(--accent);
-}
-.ui-mode-option.is-selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 6%, var(--surface-soft));
-}
-.ui-mode-option-body {
+.toolbar-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 41;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 190px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 }
-.ui-mode-option-label {
-  font-size: 0.95rem;
-  font-weight: 600;
+.toolbar-more-filters {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
 }
-.ui-mode-option-desc {
-  font-size: 0.82rem;
-  color: var(--muted);
-  line-height: 1.5;
+.toolbar-more-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.toolbar-more-item:hover:not(:disabled) {
+  background: var(--surface-soft);
+}
+.toolbar-more-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ========================================
@@ -4292,35 +4298,6 @@ a.cl-history-title:hover {
   height: 1px;
   background: var(--line);
   margin: 0 8px;
-}
-.hamburger-mode-toggle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-.hamburger-mode-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 10px 8px;
-  border: 1.5px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface-soft);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.hamburger-mode-btn.is-active {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-}
-.hamburger-mode-label {
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-.hamburger-mode-desc {
-  font-size: 0.72rem;
-  color: var(--muted);
 }
 .hamburger-nav-item {
   display: flex;

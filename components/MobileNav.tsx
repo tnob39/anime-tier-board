@@ -2,16 +2,13 @@
 
 import {
   BarChart3,
-  CreditCard,
   Home,
-  ListChecks,
   Search,
   Table2,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUiMode } from "@/lib/ui-mode";
 
 type NavItem = {
   href: string;
@@ -20,28 +17,20 @@ type NavItem = {
   exact: boolean;
 };
 
-const SIMPLE_NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "ホーム", icon: Home, exact: true },
-  { href: "/watchlist", label: "視聴中", icon: ListChecks, exact: false },
-  { href: "/explore", label: "探す", icon: Search, exact: false },
-  { href: "/subscriptions", label: "サブスク", icon: CreditCard, exact: false },
-];
-
-const PRO_NAV_ITEMS: NavItem[] = [
+// 方針③ N1a: モード別の2配列を廃止し、単一4タブに統合。
+const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "ホーム", icon: Home, exact: true },
   { href: "/tier", label: "Tier", icon: Table2, exact: false },
   { href: "/dashboard", label: "分析", icon: BarChart3, exact: false },
-  { href: "/explore", label: "探す", icon: Search, exact: false },
+  { href: "/explore", label: "さがす", icon: Search, exact: false },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { mode } = useUiMode();
-  const navItems = mode === "pro" ? PRO_NAV_ITEMS : SIMPLE_NAV_ITEMS;
 
   return (
     <nav className="mobile-bottom-nav" aria-label="主要ページ">
-      {navItems.map((item) => {
+      {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         const active = item.exact
           ? pathname === item.href

@@ -30,6 +30,7 @@ import {
   ExternalLink,
   Heart,
   Loader2,
+  MoreHorizontal,
   Plus,
   PlayCircle,
   RefreshCw,
@@ -44,7 +45,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import { fetchSeasonalAnimeClient } from "@/lib/seasonal-anime-client-cache";
-import { useUiMode } from "@/lib/ui-mode";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
@@ -113,9 +113,21 @@ const nextTierColors = [
 ];
 
 export function TierBoardApp() {
-  const { mode } = useUiMode();
-  const isSimple = mode === "simple";
   const { status: authStatus } = useSession();
+  const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
+  const toolbarMoreButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!toolbarMenuOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setToolbarMenuOpen(false);
+        toolbarMoreButtonRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [toolbarMenuOpen]);
   const currentSeason = useMemo(() => getCurrentAnimeSeason(), []);
   const [seasonYear, setSeasonYear] = useState(currentSeason.year);
   const [season, setSeason] = useState<AnimeSeason>(currentSeason.season);
@@ -660,61 +672,33 @@ export function TierBoardApp() {
         </div>
 
         <div className="control-bar">
+          <label className="field">
+            <span>年</span>
+            <select
+              value={seasonYear}
+              onChange={(event) => setSeasonYear(Number(event.target.value))}
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </label>
 
-          {!isSimple && (
-            <label className="field">
-              <span>年</span>
-              <select
-                value={seasonYear}
-                onChange={(event) => setSeasonYear(Number(event.target.value))}
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          {!isSimple && (
-            <label className="field">
-              <span>期</span>
-              <select
-                value={season}
-                onChange={(event) => setSeason(event.target.value as AnimeSeason)}
-              >
-                {SEASONS.map((option) => (
-                  <option key={option} value={option}>
-                    {SEASON_LABELS[option]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          {!isSimple && (
-            <div className="filter-chip-group no-export" aria-label="表示フィルター">
-              <button
-                className={hideMovies ? "filter-chip is-active" : "filter-chip"}
-                type="button"
-                onClick={() => setHideMovies((current) => !current)}
-                aria-pressed={hideMovies}
-                title="映画を非表示"
-              >
-                映画OFF
-              </button>
-              <button
-                className={hideRerunCandidates ? "filter-chip is-active" : "filter-chip"}
-                type="button"
-                onClick={() => setHideRerunCandidates((current) => !current)}
-                aria-pressed={hideRerunCandidates}
-                title="旧作・再放送候補を非表示"
-              >
-                旧作OFF
-              </button>
-            </div>
-          )}
+          <label className="field">
+            <span>期</span>
+            <select
+              value={season}
+              onChange={(event) => setSeason(event.target.value as AnimeSeason)}
+            >
+              {SEASONS.map((option) => (
+                <option key={option} value={option}>
+                  {SEASON_LABELS[option]}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <button
             className="command-button"
@@ -727,19 +711,6 @@ export function TierBoardApp() {
             <span>再取得</span>
           </button>
 
-          {!isSimple && (
-            <button
-              className="command-button emphasis-button"
-              type="button"
-              onClick={handleAutoPublicTier}
-              disabled={!board || loading || !items.length}
-              title="人気順で自動的にTier配置"
-            >
-              <Sparkles size={18} />
-              <span>出刃表</span>
-            </button>
-          )}
-
           <button
             className="command-button"
             type="button"
@@ -751,18 +722,80 @@ export function TierBoardApp() {
             <span>共有</span>
           </button>
 
-          {!isSimple && (
+          <div className="toolbar-more-wrap">
             <button
+              ref={toolbarMoreButtonRef}
               className="command-button"
               type="button"
-              onClick={handleReset}
-              disabled={!board}
-              title="リセット"
+              onClick={() => setToolbarMenuOpen((open) => !open)}
+              aria-haspopup="true"
+              aria-expanded={toolbarMenuOpen}
+              title="その他の操作"
             >
-              <RotateCcw size={18} />
-              <span>リセット</span>
+              <MoreHorizontal size={18} />
+              <span>その他</span>
             </button>
-          )}
+
+            {toolbarMenuOpen && (
+              <>
+                <div
+                  className="toolbar-more-backdrop"
+                  onClick={() => setToolbarMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <div className="toolbar-more-menu" aria-label="その他の操作">
+                  <div className="toolbar-more-filters no-export" aria-label="表示フィルター">
+                    <button
+                      className={hideMovies ? "filter-chip is-active" : "filter-chip"}
+                      type="button"
+                      onClick={() => setHideMovies((current) => !current)}
+                      aria-pressed={hideMovies}
+                      title="映画を非表示"
+                    >
+                      映画OFF
+                    </button>
+                    <button
+                      className={hideRerunCandidates ? "filter-chip is-active" : "filter-chip"}
+                      type="button"
+                      onClick={() => setHideRerunCandidates((current) => !current)}
+                      aria-pressed={hideRerunCandidates}
+                      title="旧作・再放送候補を非表示"
+                    >
+                      旧作OFF
+                    </button>
+                  </div>
+
+                  <button
+                    className="toolbar-more-item"
+                    type="button"
+                    onClick={() => {
+                      setToolbarMenuOpen(false);
+                      handleAutoPublicTier();
+                    }}
+                    disabled={!board || loading || !items.length}
+                    title="人気順で自動的にTier配置"
+                  >
+                    <Sparkles size={16} />
+                    <span>自動配置</span>
+                  </button>
+
+                  <button
+                    className="toolbar-more-item"
+                    type="button"
+                    onClick={() => {
+                      setToolbarMenuOpen(false);
+                      handleReset();
+                    }}
+                    disabled={!board}
+                    title="Tier表をリセット"
+                  >
+                    <RotateCcw size={16} />
+                    <span>リセット</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -824,18 +857,16 @@ export function TierBoardApp() {
                 )}
               </div>
             </div>
-            {!isSimple && (
-              <button
-                className="command-button tier-add-button"
-                type="button"
-                onClick={handleAddTier}
-                disabled={!board}
-                title="Tierを追加"
-              >
-                <Plus size={18} />
-                <span>Tierを追加</span>
-              </button>
-            )}
+            <button
+              className="command-button tier-add-button"
+              type="button"
+              onClick={handleAddTier}
+              disabled={!board}
+              title="Tierを追加"
+            >
+              <Plus size={18} />
+              <span>Tierを追加</span>
+            </button>
           </section>
 
           {!board ? (
