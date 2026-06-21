@@ -9,6 +9,8 @@ export type StreamingService = {
   tmdbProviderIds: number[];
   affiliateUrl: string | null;
   affiliateTag: string | null;
+  /** 公式トップページ(日本向け)。アフィリエイトURL未設定時のアウトバウンド遷移先。サーバー側固定値。 */
+  homeUrl: string;
 };
 
 export const STREAMING_SERVICES: StreamingService[] = [
@@ -20,6 +22,7 @@ export const STREAMING_SERVICES: StreamingService[] = [
     tmdbProviderIds: [8, 1796],   // Netflix / Netflix Standard with Ads
     affiliateUrl: null,
     affiliateTag: null,
+    homeUrl: "https://www.netflix.com/jp/",
   },
   {
     id: "amazon_prime",
@@ -29,6 +32,7 @@ export const STREAMING_SERVICES: StreamingService[] = [
     tmdbProviderIds: [9, 2100],   // Amazon Prime Video / Amazon Prime Video with Ads
     affiliateUrl: null,
     affiliateTag: null,
+    homeUrl: "https://www.amazon.co.jp/primevideo",
   },
   {
     id: "unext",
@@ -38,6 +42,7 @@ export const STREAMING_SERVICES: StreamingService[] = [
     tmdbProviderIds: [84],        // U-NEXT (was 97 — wrong)
     affiliateUrl: null,
     affiliateTag: null,
+    homeUrl: "https://video.unext.jp/",
   },
   {
     id: "danime",
@@ -47,6 +52,7 @@ export const STREAMING_SERVICES: StreamingService[] = [
     tmdbProviderIds: [391, 2494], // dアニメ direct + dAnime Amazon Channel
     affiliateUrl: null,
     affiliateTag: null,
+    homeUrl: "https://animestore.docomo.ne.jp/animestore/",
   },
   {
     id: "abema",
@@ -56,6 +62,7 @@ export const STREAMING_SERVICES: StreamingService[] = [
     tmdbProviderIds: [223],       // ABEMA
     affiliateUrl: null,
     affiliateTag: null,
+    homeUrl: "https://abema.tv/",
   },
   {
     id: "hulu_disney",
@@ -65,6 +72,7 @@ export const STREAMING_SERVICES: StreamingService[] = [
     tmdbProviderIds: [15, 337],   // Hulu + Disney Plus (was 258 — wrong)
     affiliateUrl: null,
     affiliateTag: null,
+    homeUrl: "https://www.hulu.jp/",
   },
 ];
 
@@ -78,6 +86,18 @@ export function getServiceUrl(serviceId: string): string | null {
   const service = STREAMING_SERVICES.find((s) => s.id === serviceId);
   if (!service) return null;
   return service.affiliateUrl ?? null;
+}
+
+/**
+ * アウトバウンド遷移先URLを返す。許可リスト(STREAMING_SERVICES)に存在する
+ * serviceId のみ解決し、アフィリエイトURLがあれば優先、無ければ公式トップURLを返す。
+ * いずれもサーバー側の固定値なのでオープンリダイレクトにはならない。未知のIDは null。
+ */
+export function getServiceLandingUrl(serviceId: string): string | null {
+  if (!isValidServiceId(serviceId)) return null;
+  const service = STREAMING_SERVICES.find((s) => s.id === serviceId);
+  if (!service) return null;
+  return service.affiliateUrl ?? service.homeUrl;
 }
 
 // ---- AniList アイテムから配信URLを取り出すユーティリティ (evangelist-card 向け) ----
