@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnimeList App - 開発仕様書 v1.0 (Wireframe版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Noto+Sans+JP:wght@400;500;700&amp;display=swap');
+        
+        :root {
+            --primary: #22c55e;
+        }
+        
+        body {
+            font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+        }
+        
+        .app-container {
+            max-width: 390px;
+            margin: 0 auto;
+            background: #111827;
+            box-shadow: 0 0 0 12px #1f2937;
+            border-radius: 48px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .phone-frame {
+            border: 12px solid #1f2937;
+            border-radius: 60px;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+        }
+        
+        .status-pill {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .anime-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .anime-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+        }
+        
+        .wireframe-label {
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            background: #374151;
+            color: #9ca3af;
+            padding: 1px 6px;
+            border-radius: 3px;
+        }
+        
+        .section-header {
+            background: linear-gradient(to right, #1f2937, transparent);
+        }
+        
+        .mock-tab {
+            position: relative;
+        }
+        
+        .mock-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #22c55e;
+        }
+        
+        .nav-active {
+            color: #22c55e;
+        }
+        
+        .affiliate-btn {
+            background: #be123c;
+            color: white;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            transition: all 0.2s;
+        }
+        
+        .affiliate-btn:hover {
+            background: #9f1239;
+            transform: scale(1.02);
+        }
+        
+        .spec-table th {
+            background: #1f2937;
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 py-8">
+    <!-- Header -->
+    <div class="max-w-[1100px] mx-auto px-6 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">AnimeList App</h1>
+                <p class="text-zinc-400 mt-1">開発仕様書 v1.0 — Wireframe + 画面構成</p>
+            </div>
+            <div class="flex items-center gap-x-3">
+                <div class="px-4 py-1.5 bg-zinc-900 rounded-2xl text-sm flex items-center gap-x-2">
+                    <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span class="font-medium">個人開発 / お小遣い程度収益化</span>
+                </div>
+                <div class="text-xs px-3 py-1 bg-zinc-900 rounded-xl text-zinc-400">2026年6月</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-[1100px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Sidebar: プロジェクト概要 -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Project Overview -->
+            <div class="bg-zinc-900 rounded-3xl p-6">
+                <div class="flex items-center gap-x-3 mb-4">
+                    <i class="fa-solid fa-info-circle text-emerald-400 text-xl"></i>
+                    <h2 class="text-xl font-semibold">プロジェクト概要</h2>
+                </div>
+                
+                <div class="space-y-4 text-sm">
+                    <div>
+                        <div class="text-zinc-400 text-xs mb-1">目的</div>
+                        <p class="leading-snug">アニメの視聴管理 + Tierリスト作成・共有 + サブスクアフィリエイト（お小遣い程度）</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <div class="text-zinc-400 text-xs mb-1">ターゲット</div>
+                            <div class="text-sm">アニメ好きの個人ユーザー<br>（特にTierリストを共有したい層）</div>
+                        </div>
+                        <div>
+                            <div class="text-zinc-400 text-xs mb-1">収益モデル</div>
+                            <div class="text-sm">U-NEXT / ABEMA / Disney+ / Amazon Prime のアフィリエイト</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tech Stack -->
+            <div class="bg-zinc-900 rounded-3xl p-6">
+                <div class="flex items-center gap-x-3 mb-4">
+                    <i class="fa-solid fa-layer-group text-emerald-400 text-xl"></i>
+                    <h2 class="text-xl font-semibold">推奨技術スタック</h2>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <div class="flex items-center gap-x-2">
+                        <span class="font-mono text-xs bg-zinc-800 px-2 py-0.5 rounded">Frontend</span>
+                        <span>Svelte + Vite（推奨）</span>
+                    </div>
+                    <div class="flex items-center gap-x-2">
+                        <span class="font-mono text-xs bg-zinc-800 px-2 py-0.5 rounded">Native</span>
+                        <span>Capacitor</span>
+                    </div>
+                    <div class="flex items-center gap-x-2">
+                        <span class="font-mono text-xs bg-zinc-800 px-2 py-0.5 rounded">DB</span>
+                        <span>Turso (SQLite + HTTP API)</span>
+                    </div>
+                    <div class="flex items-center gap-x-2">
+                        <span class="font-mono text-xs bg-zinc-800 px-2 py-0.5 rounded">AI</span>
+                        <span>Groq (Llama3) または Gemini Flash</span>
+                    </div>
+                    <div class="flex items-center gap-x-2">
+                        <span class="font-mono text-xs bg-zinc-800 px-2 py-0.5 rounded">Data</span>
+                        <span>manami-project + AniList API（選択的）</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Estimation -->
+            <div class="bg-zinc-900 rounded-3xl p-6">
+                <div class="flex items-center gap-x-3 mb-4">
+                    <i class="fa-solid fa-chart-line text-emerald-400 text-xl"></i>
+                    <h2 class="text-xl font-semibold">収益試算（現実的シナリオ）</h2>
+                </div>
+                
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-zinc-700">
+                            <th class="text-left py-2 font-normal text-zinc-400">MAU</th>
+                            <th class="text-right py-2 font-normal text-zinc-400">月間収益目安</th>
+                            <th class="text-right py-2 font-normal text-zinc-400">年間収益</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-800">
+                        <tr>
+                            <td class="py-2">500人</td>
+                            <td class="text-right">6,600円</td>
+                            <td class="text-right text-zinc-400">79,200円</td>
+                        </tr>
+                        <tr class="bg-emerald-950/30">
+                            <td class="py-2 font-medium">2,000人</td>
+                            <td class="text-right font-medium">26,400円</td>
+                            <td class="text-right font-medium">316,800円</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2">5,000人</td>
+                            <td class="text-right">66,000円</td>
+                            <td class="text-right text-zinc-400">792,000円</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-[10px] text-zinc-500 mt-3">※ コンバージョン率 1.2% / 平均単価 1,100円 で試算</p>
+            </div>
+
+            <!-- Key Decisions -->
+            <div class="bg-zinc-900 rounded-3xl p-6 text-sm">
+                <h3 class="font-semibold mb-3 flex items-center gap-x-2">
+                    <i class="fa-solid fa-check-double text-emerald-400"></i>
+                    <span>主要判断事項</span>
+                </h3>
+                <ul class="space-y-2 text-sm">
+                    <li class="flex gap-x-2"><span class="text-emerald-400">•</span> <span>manami-projectを初期データとして全件インポート（安全）</span></li>
+                    <li class="flex gap-x-2"><span class="text-emerald-400">•</span> <span>AniListは最新情報取得のみに限定（規約対策）</span></li>
+                    <li class="flex gap-x-2"><span class="text-emerald-400">•</span> <span>画像は一旦グレー運用（AniList/MAL URL）→ 後でTMDB検討</span></li>
+                    <li class="flex gap-x-2"><span class="text-emerald-400">•</span> <span>最初は画像なし or 最小限でリリース → ユーザー反応を見て画像戦略再検討</span></li>
+                    <li class="flex gap-x-2"><span class="text-emerald-400">•</span> <span>配信情報は最初は手動登録（人気作品50〜100件）</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Right Side: Screen Wireframes -->
+        <div class="lg:col-span-7">
+            <div class="flex items-center justify-between mb-4 px-1">
+                <h2 class="text-xl font-semibold flex items-center gap-x-2">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                    <span>画面ワイヤーフレーム</span>
+                </h2>
+                <div class="text-xs px-3 py-1 bg-zinc-800 rounded-2xl text-zinc-400">Annictインスパイア + Tier共有機能</div>
+            </div>
+
+            <!-- Wireframe Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- 1. App Shell + Bottom Nav -->
+                <div>
+                    <div class="wireframe-label mb-2 ml-1">01. アプリシェル + ボトムナビ</div>
+                    <div class="app-container phone-frame mx-auto">
+                        <!-- Status Bar -->
+                        <div class="h-11 bg-black flex items-center justify-between px-5 text-[10px]">
+                            <div>22:30</div>
+                            <div class="flex items-center gap-x-1">
+                                <i class="fa-solid fa-signal text-xs"></i>
+                                <i class="fa-solid fa-wifi text-xs"></i>
+                                <span>87</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Header -->
+                        <div class="px-5 pt-4 pb-2 flex items-center justify-between">
+                            <div class="font-semibold text-lg">ホーム</div>
+                            <div class="w-8 h-8 bg-zinc-700 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-user text-sm"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="px-5 text-xs text-zinc-400">フォローした人のアクティビティがここに表示されます</div>
+                        
+                        <div class="h-[280px] flex items-center justify-center text-center px-6">
+                            <div>
+                                <i class="fa-regular fa-face-meh text-4xl text-zinc-600 mb-3"></i>
+                                <div class="text-sm text-zinc-400">アクティビティはありません</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Bottom Navigation -->
+                        <div class="h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around text-xs">
+                            <div class="flex flex-col items-center text-zinc-400">
+                                <i class="fa-solid fa-bars text-base mb-0.5"></i>
+                                <span class="text-[9px]">メニュー</span>
+                            </div>
+                            <div class="flex flex-col items-center nav-active">
+                                <i class="fa-solid fa-home text-base mb-0.5"></i>
+                                <span class="text-[9px] font-medium">ホーム</span>
+                            </div>
+                            <div class="flex flex-col items-center text-zinc-400">
+                                <i class="fa-solid fa-check text-base mb-0.5"></i>
+                                <span class="text-[9px]">記録する</span>
+                            </div>
+                            <div class="flex flex-col items-center text-zinc-400">
+                                <i class="fa-solid fa-book text-base mb-0.5"></i>
+                                <span class="text-[9px]">ライブラリ</span>
+                            </div>
+                            <div class="flex flex-col items-center text-zinc-400">
+                                <i class="fa-solid fa-calendar text-base mb-0.5"></i>
+                                <span class="text-[9px]">今期アニメ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Library Screen -->
+                <div>
+                    <div class="wireframe-label mb-2 ml-1">02. ライブラリ画面（メイン機能）</div>
+                    <div class="app-container phone-frame mx-auto">
+                        <div class="h-11 bg-black flex items-center px-5 text-xs">22:30</div>
+                        
+                        <div class="px-5 pt-4">
+                            <div class="font-semibold text-lg mb-3">ライブラリ</div>
+                            
+                            <!-- Status Tabs -->
+                            <div class="flex gap-x-1.5 mb-4 overflow-x-auto pb-1">
+                                <div onclick="highlightStatus(this)" class="status-pill px-3 py-1 text-xs rounded-2xl bg-emerald-500 text-white flex-shrink-0 cursor-pointer">見てる <span class="font-mono text-[10px] opacity-75">12</span></div>
+                                <div onclick="highlightStatus(this)" class="status-pill px-3 py-1 text-xs rounded-2xl bg-zinc-700 flex-shrink-0 cursor-pointer">見たい <span class="font-mono text-[10px] opacity-75">34</span></div>
+                                <div onclick="highlightStatus(this)" class="status-pill px-3 py-1 text-xs rounded-2xl bg-zinc-700 flex-shrink-0 cursor-pointer">見た <span class="font-mono text-[10px] opacity-75">87</span></div>
+                                <div onclick="highlightStatus(this)" class="status-pill px-3 py-1 text-xs rounded-2xl bg-zinc-700 flex-shrink-0 cursor-pointer">中断 <span class="font-mono text-[10px] opacity-75">5</span></div>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="bg-zinc-800 rounded-2xl p-3 flex gap-x-3">
+                                    <div class="w-10 h-14 bg-zinc-700 rounded-xl flex-shrink-0"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-medium truncate">Re:ゼロから始める異世界生活 4th season</div>
+                                        <div class="text-[10px] text-zinc-400 mt-0.5">視聴中 • 第12話まで</div>
+                                    </div>
+                                    <div class="text-emerald-400"><i class="fa-solid fa-play"></i></div>
+                                </div>
+                                
+                                <div class="bg-zinc-800 rounded-2xl p-3 flex gap-x-3">
+                                    <div class="w-10 h-14 bg-zinc-700 rounded-xl flex-shrink-0"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-medium truncate">ようこそ実力至上主義の教室へ 4th Season</div>
+                                        <div class="text-[10px] text-zinc-400 mt-0.5">視聴中 • 第8話まで</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="h-16"></div>
+                        
+                        <!-- Bottom Nav -->
+                        <div class="h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around text-xs">
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-bars text-base mb-0.5"></i><span class="text-[9px]">メニュー</span></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-home text-base mb-0.5"></i><span class="text-[9px]">ホーム</span></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-check text-base mb-0.5"></i><span class="text-[9px]">記録する</span></div>
+                            <div class="flex flex-col items-center nav-active"><i class="fa-solid fa-book text-base mb-0.5"></i><span class="text-[9px] font-medium">ライブラリ</span></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-calendar text-base mb-0.5"></i><span class="text-[9px]">今期アニメ</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Anime Detail Screen (Most Important) -->
+                <div class="md:col-span-2">
+                    <div class="wireframe-label mb-2 ml-1">03. 作品詳細画面（最重要：アフィリエイト導線）</div>
+                    <div class="app-container phone-frame mx-auto max-w-[390px]">
+                        <div class="h-11 bg-black flex items-center px-5 text-xs">22:30</div>
+                        
+                        <!-- Key Visual -->
+                        <div class="relative">
+                            <div class="h-[210px] bg-zinc-800 flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="fa-solid fa-image text-4xl text-zinc-600"></i>
+                                    <div class="text-xs text-zinc-500 mt-2">Key Visual</div>
+                                </div>
+                            </div>
+                            <!-- Status Toggle -->
+                            <div class="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-zinc-900 rounded-3xl p-1 shadow-xl flex">
+                                <div onclick="changeStatus(this, 'watching')" class="status-pill px-4 py-1 text-xs rounded-3xl bg-emerald-500 text-white flex items-center gap-x-1 cursor-pointer">
+                                    <i class="fa-solid fa-play text-[10px]"></i>
+                                    <span>見てる</span>
+                                </div>
+                                <div onclick="changeStatus(this, 'want')" class="status-pill px-3 py-1 text-xs rounded-3xl flex items-center gap-x-1 text-zinc-300 cursor-pointer">
+                                    <i class="fa-solid fa-clock text-[10px]"></i>
+                                    <span>見たい</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="px-5 pt-6">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <div class="font-bold text-lg leading-tight">Re:ゼロから始める異世界生活<br>4th season 喪失編</div>
+                                    <div class="flex items-center gap-x-2 mt-2">
+                                        <span class="px-2 py-0.5 text-[10px] bg-blue-500/20 text-blue-400 rounded">TV</span>
+                                        <span class="px-2 py-0.5 text-[10px] bg-pink-500/20 text-pink-400 rounded">2026年春</span>
+                                    </div>
+                                </div>
+                                <div class="text-right text-xs">
+                                    <div>視聴者数 <span class="font-mono">2,852</span></div>
+                                    <div class="text-emerald-400">評価 4.8</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Affiliate Buttons -->
+                            <div class="mt-5">
+                                <div class="text-xs text-zinc-400 mb-2">今すぐ視聴する</div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button onclick="simulateAffiliateClick(this, 'U-NEXT')" class="affiliate-btn text-xs flex items-center gap-x-1.5 px-4 py-1.5">
+                                        <span>U-NEXT</span>
+                                        <i class="fa-solid fa-external-link-alt text-[10px]"></i>
+                                    </button>
+                                    <button onclick="simulateAffiliateClick(this, 'ABEMA')" class="affiliate-btn text-xs flex items-center gap-x-1.5 px-4 py-1.5">
+                                        <span>ABEMA</span>
+                                        <i class="fa-solid fa-external-link-alt text-[10px]"></i>
+                                    </button>
+                                    <button onclick="simulateAffiliateClick(this, 'Amazon Prime')" class="affiliate-btn text-xs flex items-center gap-x-1.5 px-4 py-1.5">
+                                        <span>Amazon Prime</span>
+                                    </button>
+                                    <button onclick="simulateAffiliateClick(this, 'Disney+')" class="affiliate-btn text-xs flex items-center gap-x-1.5 px-4 py-1.5">
+                                        <span>Disney+</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 border-t border-zinc-700 pt-4 text-xs">
+                                <div class="flex gap-x-4 text-emerald-400">
+                                    <div>公式サイト <i class="fa-solid fa-external-link-alt text-xs"></i></div>
+                                    <div>Wikipedia <i class="fa-solid fa-external-link-alt text-xs"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="h-20"></div>
+                        
+                        <!-- Bottom Nav -->
+                        <div class="h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around text-xs">
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-bars"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-home"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-check"></i></div>
+                            <div class="flex flex-col items-center nav-active"><i class="fa-solid fa-book"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-calendar"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Seasonal Anime List -->
+                <div>
+                    <div class="wireframe-label mb-2 ml-1">04. 今期アニメ一覧（グリッド）</div>
+                    <div class="app-container phone-frame mx-auto">
+                        <div class="h-11 bg-black px-5 flex items-center text-xs">22:30</div>
+                        
+                        <div class="px-4 pt-3">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="font-semibold">2026年春のアニメ</div>
+                                <div class="flex bg-zinc-800 rounded-2xl p-0.5 text-xs">
+                                    <div class="px-3 py-0.5">リスト</div>
+                                    <div class="px-3 py-0.5 bg-zinc-700 rounded-2xl">グリッド</div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <!-- Anime Card -->
+                                <div class="bg-zinc-800 rounded-2xl overflow-hidden">
+                                    <div class="h-28 bg-zinc-700 flex items-center justify-center">
+                                        <i class="fa-solid fa-image text-3xl text-zinc-500"></i>
+                                    </div>
+                                    <div class="p-2.5">
+                                        <div class="text-xs font-medium leading-tight line-clamp-2">Re:ゼロから始める異世界生活 4th season</div>
+                                        <div class="mt-1.5 flex items-center justify-between">
+                                            <div class="text-[10px] text-emerald-400">見てる 2852人</div>
+                                            <div class="text-emerald-400"><i class="fa-solid fa-ellipsis-h"></i></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-zinc-800 rounded-2xl overflow-hidden">
+                                    <div class="h-28 bg-zinc-700 flex items-center justify-center">
+                                        <i class="fa-solid fa-image text-3xl text-zinc-500"></i>
+                                    </div>
+                                    <div class="p-2.5">
+                                        <div class="text-xs font-medium leading-tight line-clamp-2">ようこそ実力至上主義の教室へ 4th Season</div>
+                                        <div class="mt-1.5 flex items-center justify-between">
+                                            <div class="text-[10px] text-emerald-400">見てる 1240人</div>
+                                            <div class="text-emerald-400"><i class="fa-solid fa-ellipsis-h"></i></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="h-8"></div>
+                        
+                        <div class="h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around text-xs">
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-bars"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-home"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-check"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-book"></i></div>
+                            <div class="flex flex-col items-center nav-active"><i class="fa-solid fa-calendar"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Record Screen -->
+                <div>
+                    <div class="wireframe-label mb-2 ml-1">05. 記録する画面</div>
+                    <div class="app-container phone-frame mx-auto">
+                        <div class="h-11 bg-black px-5 flex items-center text-xs">22:30</div>
+                        
+                        <div class="px-5 pt-4">
+                            <div class="font-semibold text-lg">記録する</div>
+                            <p class="text-xs text-zinc-400 mt-1">視聴ステータスを変更したり、感想を残せます</p>
+                            
+                            <div class="mt-6">
+                                <div class="text-xs mb-2 text-zinc-400">今日見たエピソード</div>
+                                <div class="bg-zinc-800 rounded-2xl p-4 text-sm">
+                                    <div>Re:ゼロ 4th season 第12話</div>
+                                    <div class="text-emerald-400 text-xs mt-1">視聴済みとして記録</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="h-40"></div>
+                        
+                        <div class="h-16 bg-zinc-900 border-t border-zinc-800 flex items-center justify-around text-xs">
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-bars"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-home"></i></div>
+                            <div class="flex flex-col items-center nav-active"><i class="fa-solid fa-check"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-book"></i></div>
+                            <div class="flex flex-col items-center text-zinc-400"><i class="fa-solid fa-calendar"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-[1100px] mx-auto px-6 mt-10">
+        <div class="text-xs text-zinc-500 flex items-center gap-x-2">
+            <i class="fa-solid fa-lightbulb"></i>
+            <span>このHTMLはエージェントにそのまま渡してOKです。Tailwind + インタラクティブなワイヤーフレームで、画面の意図が伝わりやすい構成にしています。</span>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script
+        function initializeTailwind() {
+            document.documentElement.style.setProperty('--accent', '#22c55e');
+        }
+        
+        // Status pill highlight
+        function highlightStatus(element) {
+            // Remove active from all siblings
+            const parent = element.parentElement;
+            Array.from(parent.children).forEach(child => {
+                child.classList.remove('bg-emerald-500', 'text-white');
+                child.classList.add('bg-zinc-700');
+            });
+            
+            element.classList.remove('bg-zinc-700');
+            element.classList.add('bg-emerald-500', 'text-white');
+        }
+        
+        // Status change in detail screen
+        function changeStatus(element, type) {
+            const container = element.parentElement;
+            const buttons = container.querySelectorAll('.status-pill');
+            
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-emerald-500', 'text-white');
+                btn.classList.add('text-zinc-300');
+            });
+            
+            if (type === 'watching') {
+                element.classList.add('bg-emerald-500', 'text-white');
+                element.classList.remove('text-zinc-300');
+            } else if (type === 'want') {
+                element.classList.add('bg-amber-500', 'text-white');
+                element.classList.remove('text-zinc-300');
+            }
+        }
+        
+        // Simulate affiliate click
+        function simulateAffiliateClick(element, service) {
+            const originalText = element.innerHTML;
+            element.style.transition = 'all 0.2s';
+            element.innerHTML = `<span>${service}へ移動中...</span>`;
+            element.style.background = '#166534';
+            
+            setTimeout(() => {
+                element.innerHTML = originalText;
+                element.style.background = '#be123c';
+                
+                // Show toast
+                showToast(`${service}のアフィリエイトリンクをタップしました（シミュレーション）`);
+            }, 1200);
+        }
+        
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-sm px-5 py-3 rounded-3xl shadow-xl flex items-center gap-x-2 z-50`;
+            toast.innerHTML = `
+                <i class="fa-solid fa-check-circle text-emerald-400"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transition = 'all 0.3s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 2200);
+        }
+        
+        // Keyboard support hint
+        function addKeyboardHint() {
+            console.log('%c[Spec] このHTMLはエージェント向けワイヤーフレームです。クリックでインタラクションを試せます。', 'color:#64748b');
+        }
+        
+        // Init
+        window.onload = function() {
+            initializeTailwind();
+            addKeyboardHint();
+            
+            // Demo: Auto highlight first status in library
+            setTimeout(() => {
+                const firstStatus = document.querySelector('.status-pill');
+                if (firstStatus) {
+                    firstStatus.classList.add('ring-1', 'ring-emerald-400/50');
+                }
+            }, 800);
+        }
+    </script>
+</body>
+</html>

@@ -117,6 +117,8 @@ Last updated: 2026-06-09
 - 複数シーズンの統計ダッシュボード
 - プロフィールページ・バッジ
 
+**決済導線の方針（2026-06-22 決定）**: **Web課金のみ**（Netflix方式）。ネイティブアプリ内に購入UIは置かず、Web上でログイン→購入したユーザーの解除状態をネイティブアプリ側で表示するだけにする。ストア手数料（15-30%）・IAP審査対応コストをpre-revenueの現段階で先行投資する理由がないため。実需が見えたら「両対応（IAP+Web, RevenueCat）」への移行を検討する。詳細: [`plans/native-web-monetization-brainstorm-20260622.md`](./plans/native-web-monetization-brainstorm-20260622.md)。
+
 #### E. ディスプレイ広告（当面見送り）
 - Web: 月 UU 1 万超で AdSense を検討（Tier 表画面には入れない）
 - ストア: Capacitor + AdMob は MAU 数千以上で検討

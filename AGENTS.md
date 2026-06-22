@@ -160,6 +160,10 @@ npm.cmd run dev:local
 | [worktrees/claude-review.md](./worktrees/claude-review.md) | claude-review worktree ミニガイド |
 | [docs/GITHUB_ISSUES.md](./docs/GITHUB_ISSUES.md) | タスク管理（GitHub Issues） |
 | [docs/reviews/](./docs/reviews/) | エージェントのレビュー結果アーカイブ（例: 方針③ Codexレビュー） |
+| [docs/research/](./docs/research/) | 市場・競合調査アーカイブ（例: Annict競合分析） |
+| [MONETIZATION_ROADMAP.md](./MONETIZATION_ROADMAP.md) | 収益化ロードマップ（アフィリエイト・IAP方針） |
+| [plans/native-web-monetization-brainstorm-20260622.md](./plans/native-web-monetization-brainstorm-20260622.md) | Web/ネイティブ決済導線の決定・ネイティブ差別化機能アイデア |
+| [plans/screen-composition-annict-comparison-20260622.md](./plans/screen-composition-annict-comparison-20260622.md) | Annict風ワイヤーフレームとの画面構成比較・改善提案 |
 | [SESSION_HANDOFF.md](./SESSION_HANDOFF.md) | セッション引き継ぎ |
 | [HERMES_GROK_HANDOFF.md](./HERMES_GROK_HANDOFF.md) | WIP 機能仕様 |
 | [DESIGN.md](./DESIGN.md) | UI デザイン方針 |
