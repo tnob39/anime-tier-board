@@ -17,7 +17,7 @@ type Props = {
 
 // ボトムタブにないページのみ
 const navItems = [
-  { href: "/subscriptions", label: "サブスク", icon: CreditCard },
+  { href: "/dashboard?section=subscriptions", label: "サブスク", icon: CreditCard },
   { href: "/voice-actors", label: "声優", icon: Mic2 },
   { href: "/settings", label: "設定", icon: Settings },
 ];

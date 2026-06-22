@@ -64,7 +64,7 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
       <section className="settings-panel">
         <h2>サブスク診断</h2>
         <p>ウォッチリストと照合して、見放題カバー率を確認できます。</p>
-        <Link className="command-button emphasis-button" href="/subscriptions">
+        <Link className="command-button emphasis-button" href="/dashboard?section=subscriptions">
           サブスク診断を見る
         </Link>
       </section>

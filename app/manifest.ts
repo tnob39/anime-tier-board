@@ -26,7 +26,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "サブスク診断",
         short_name: "サブスク",
-        url: "/subscriptions",
+        url: "/dashboard?section=subscriptions",
         description: "配信サービスのコスパを診断",
       },
     ],
