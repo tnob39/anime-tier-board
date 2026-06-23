@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getDashboard, listStatuses } from "@/lib/statuses";
 import { getSubscriptionState } from "@/lib/subscriptions";
-import { calcSubscriptionStats } from "@/lib/subscription-stats";
+import { calcSubscriptionStats, toPublicSubscriptionDiagnosis } from "@/lib/subscription-stats";
 import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
 import type { AnimeItem } from "@/lib/types";
 import { DashboardClient } from "./dashboard-client";
@@ -33,11 +33,12 @@ export default async function DashboardPage() {
   const enrichedWatchlist = enrichWithStreamingProviders(watchlist, providerMap);
 
   const subscriptionStats = calcSubscriptionStats(enrichedWatchlist, subscriptionState.subscriptions);
+  const subscriptionDiagnosis = toPublicSubscriptionDiagnosis(subscriptionStats);
 
   return (
     <DashboardClient
       dashboard={dashboard}
-      subscriptionCoverage={subscriptionStats.coveragePercentage}
+      subscriptionDiagnosis={subscriptionDiagnosis}
       hasSubscriptions={subscriptionState.subscriptions.length > 0}
     />
   );

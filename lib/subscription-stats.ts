@@ -24,11 +24,17 @@ export type AdditionalServiceEffect = {
   additionalAnime: AnimeItem[];
 };
 
+export type ExclusiveServiceCoverage = {
+  service: StreamingService;
+  exclusiveAnime: AnimeItem[];
+};
+
 export type SubscriptionStats = {
   watchlistCount: number;
   coveredCount: number;
   coveragePercentage: number;
   subscribedCoverage: ServiceCoverage[];
+  exclusiveByService: ExclusiveServiceCoverage[];
   additionalByService: AdditionalServiceEffect[];
   uncoveredAnime: AnimeItem[];
 };
@@ -53,6 +59,13 @@ export type PublicAdditionalServiceEffect = {
   additionalAnime: AnimeItem[];
 };
 
+export type PublicExclusiveServiceCoverage = {
+  serviceId: string;
+  serviceName: string;
+  logoUrl: string;
+  exclusiveAnime: AnimeItem[];
+};
+
 export type PublicSubscriptionDiagnosis = {
   watchlistCount: number;
   coveredCount: number;
@@ -60,6 +73,7 @@ export type PublicSubscriptionDiagnosis = {
   recommendedServiceId: string | null;
   outboundUrl: string | null;
   subscribedCoverage: PublicServiceCoverage[];
+  exclusiveByService: PublicExclusiveServiceCoverage[];
   additionalByService: PublicAdditionalServiceEffect[];
   uncoveredAnime: AnimeItem[];
 };
@@ -88,6 +102,15 @@ export function animeMatchesProvider(anime: AnimeItem, providerId: number): bool
   return getAnimeTmdbProviderIds(anime).includes(providerId);
 }
 
+/**
+ * TMDb JP flatrateデータのみで判定する厳格マッチャー。
+ * AniList streamingPlatforms/Episodes 由来のフォールバック一致は信頼度が低いため、
+ * 独占（このサービスでしか見られない）判定には含めない。
+ */
+function animeMatchesProviderStrict(anime: AnimeItem, providerId: number): boolean {
+  return (anime.streamingProvidersJp?.flatrate ?? []).some((provider) => provider.id === providerId);
+}
+
 export function calcSubscriptionStats(
   watchlist: AnimeItem[],
   userSubscriptions: UserSubscription[]
@@ -113,6 +136,22 @@ export function calcSubscriptionStats(
       percentage: watchlist.length ? Math.round((covered.length / watchlist.length) * 100) : 0,
       coveredAnime: covered
     };
+  });
+
+  // 独占判定: 加入中サービスの中でTMDb flatrateデータ上ちょうど1サービスのみ一致する作品を
+  // そのサービスの「ここだけ視聴可」とする。AniListフォールバック一致のみの作品は対象外。
+  const exclusiveByService: ExclusiveServiceCoverage[] = subscribedServices.map((service) => {
+    const exclusiveAnime = watchlist.filter((anime) => {
+      const strictMatchCount = subscribedServices.filter((candidate) =>
+        candidate.tmdbProviderIds.some((id) => animeMatchesProviderStrict(anime, id))
+      ).length;
+      const matchesThisService = service.tmdbProviderIds.some((id) =>
+        animeMatchesProviderStrict(anime, id)
+      );
+      return strictMatchCount === 1 && matchesThisService;
+    });
+
+    return { service, exclusiveAnime };
   });
 
   const unsubscribed = STREAMING_SERVICES.filter(
@@ -144,6 +183,7 @@ export function calcSubscriptionStats(
     coveredCount,
     coveragePercentage: watchlistCount ? Math.round((coveredCount / watchlistCount) * 100) : 0,
     subscribedCoverage,
+    exclusiveByService,
     additionalByService,
     uncoveredAnime
   };
@@ -164,6 +204,14 @@ export function toPublicSubscriptionDiagnosis(stats: SubscriptionStats): PublicS
       percentage: entry.percentage,
       coveredAnime: entry.coveredAnime
     })),
+    exclusiveByService: stats.exclusiveByService
+      .filter((entry) => entry.exclusiveAnime.length > 0)
+      .map((entry) => ({
+        serviceId: entry.service.id,
+        serviceName: entry.service.name,
+        logoUrl: entry.service.logoUrl,
+        exclusiveAnime: entry.exclusiveAnime
+      })),
     additionalByService: stats.additionalByService.map((entry) => ({
       ...toPublicStreamingServiceFields(entry.service),
       outboundUrl: entry.service.affiliateUrl,
