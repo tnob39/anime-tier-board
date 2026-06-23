@@ -158,29 +158,25 @@ export function TierBoardApp({
 
   const startYear = initialYear ?? currentSeason.year;
   const startSeason = initialSeason ?? currentSeason.season;
+  const hasValidSeed =
+    !!initialSeasonalAnime &&
+    initialSeasonalAnime.length > 0 &&
+    startYear === currentSeason.year &&
+    startSeason === currentSeason.season;
 
   const [seasonYear, setSeasonYear] = useState(startYear);
   const [season, setSeason] = useState<AnimeSeason>(startSeason);
 
   // Prefill items from SSR seed for the initial current season to avoid loading skeleton flash
   const [items, setItems] = useState<AnimeItem[]>(() =>
-    initialSeasonalAnime && initialSeasonalAnime.length > 0 &&
-      startYear === currentSeason.year && startSeason === currentSeason.season
-      ? initialSeasonalAnime
-      : []
+    hasValidSeed && initialSeasonalAnime ? initialSeasonalAnime : []
   );
   const [board, setBoard] = useState<BoardState | null>(null);
   const [source, setSource] = useState<AnimeSourceName | null>(null);
-  const [cached, setCached] = useState(() =>
-    !!(initialSeasonalAnime && initialSeasonalAnime.length > 0 &&
-      startYear === currentSeason.year && startSeason === currentSeason.season)
-  );
+  const [cached, setCached] = useState(() => hasValidSeed);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(() =>
-    !(initialSeasonalAnime && initialSeasonalAnime.length > 0 &&
-      startYear === currentSeason.year && startSeason === currentSeason.season)
-  );
+  const [loading, setLoading] = useState(() => !hasValidSeed);
   const [saveState, setSaveState] = useState<"local" | "saving" | "saved" | "error">(
     "local"
   );
@@ -295,15 +291,6 @@ export function TierBoardApp({
     if (authStatus === "loading") {
       return;
     }
-
-    // If cache already has data for this (seasonYear,season), avoid loading state flicker
-    // (SSR seed + sessionStorage restore will hit here for initial/current loads)
-    const hasCached = (() => {
-      // peek without triggering network: call the client fetch which resolves sync on hit
-      // but to avoid side effects use a cheap pre-check via the module read path by attempting
-      // We rely on the fact that fetchSeasonal will be near-instant; still gate the UI flag:
-      return false; // conservative: let the fast await decide; loading flash is micro
-    })();
 
     setLoading(true);
     setError(null);
