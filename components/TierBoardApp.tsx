@@ -44,7 +44,10 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
-import { fetchSeasonalAnimeClient } from "@/lib/seasonal-anime-client-cache";
+import {
+  fetchSeasonalAnimeClient,
+  seedSeasonalAnimeCache,
+} from "@/lib/seasonal-anime-client-cache";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
@@ -112,7 +115,17 @@ const nextTierColors = [
   "#2dd4bf"
 ];
 
-export function TierBoardApp() {
+type TierBoardAppProps = {
+  initialSeasonalAnime?: AnimeItem[];
+  initialYear?: number;
+  initialSeason?: AnimeSeason;
+};
+
+export function TierBoardApp({
+  initialSeasonalAnime,
+  initialYear,
+  initialSeason,
+}: TierBoardAppProps = {}) {
   const { status: authStatus } = useSession();
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
   const toolbarMoreButtonRef = useRef<HTMLButtonElement>(null);
@@ -129,15 +142,41 @@ export function TierBoardApp() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [toolbarMenuOpen]);
   const currentSeason = useMemo(() => getCurrentAnimeSeason(), []);
-  const [seasonYear, setSeasonYear] = useState(currentSeason.year);
-  const [season, setSeason] = useState<AnimeSeason>(currentSeason.season);
-  const [items, setItems] = useState<AnimeItem[]>([]);
+
+  // Seed from SSR-provided data for current season (enables instant cache hit on direct/reload)
+  const seededRef = useRef(false);
+  if (
+    !seededRef.current &&
+    initialSeasonalAnime &&
+    initialSeasonalAnime.length > 0
+  ) {
+    const seedYear = initialYear ?? currentSeason.year;
+    const seedSeason = initialSeason ?? currentSeason.season;
+    seedSeasonalAnimeCache(seedYear, seedSeason, initialSeasonalAnime);
+    seededRef.current = true;
+  }
+
+  const startYear = initialYear ?? currentSeason.year;
+  const startSeason = initialSeason ?? currentSeason.season;
+  const hasValidSeed =
+    !!initialSeasonalAnime &&
+    initialSeasonalAnime.length > 0 &&
+    startYear === currentSeason.year &&
+    startSeason === currentSeason.season;
+
+  const [seasonYear, setSeasonYear] = useState(startYear);
+  const [season, setSeason] = useState<AnimeSeason>(startSeason);
+
+  // Prefill items from SSR seed for the initial current season to avoid loading skeleton flash
+  const [items, setItems] = useState<AnimeItem[]>(() =>
+    hasValidSeed && initialSeasonalAnime ? initialSeasonalAnime : []
+  );
   const [board, setBoard] = useState<BoardState | null>(null);
   const [source, setSource] = useState<AnimeSourceName | null>(null);
-  const [cached, setCached] = useState(false);
+  const [cached, setCached] = useState(() => hasValidSeed);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => !hasValidSeed);
   const [saveState, setSaveState] = useState<"local" | "saving" | "saved" | "error">(
     "local"
   );
@@ -287,6 +326,8 @@ export function TierBoardApp() {
   }, [authStatus, isAuthenticated, season, seasonYear, storageKey]);
 
   useEffect(() => {
+    // For the very first load of the seeded current season, fetch will hit cache instantly.
+    // We still invoke loadAnime to populate source/cached/warning/board consistently.
     void loadAnime();
   }, [loadAnime]);
 

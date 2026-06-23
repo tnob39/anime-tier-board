@@ -30,6 +30,13 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
   useSeasonalPrefetch(initialSeasonalAnime);
 
+  // Prefetch targets from home broadcast-calendar card taps (and general nav)
+  // Ensures tapping cards has destination and /tier data paths warmed.
+  useEffect(() => {
+    router.prefetch("/watchlist");
+    router.prefetch("/tier");
+  }, [router]);
+
   useEffect(() => {
     setIsOnboardingDismissed(window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "true");
     setHasCheckedOnboarding(true);

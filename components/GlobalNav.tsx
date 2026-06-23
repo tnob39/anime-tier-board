@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { LogOut, Menu, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -37,9 +38,9 @@ export function GlobalNav() {
           >
             <Menu size={20} />
           </button>
-          <a href="/" className="global-nav-logo" aria-label="numanie トップへ">
+          <Link href="/" className="global-nav-logo" aria-label="numanie トップへ">
             numanie
-          </a>
+          </Link>
         </div>
 
         <div className="global-nav-right">

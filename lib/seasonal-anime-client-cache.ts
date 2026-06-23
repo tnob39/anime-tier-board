@@ -2,6 +2,8 @@ import { getCurrentAnimeSeason } from "@/lib/season";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
+const SS_TTL_MS = CACHE_TTL_MS;
+const STORAGE_PREFIX = "atb:seasonal";
 
 export type SeasonalAnimeClientResponse = {
   year: number;
@@ -18,8 +20,47 @@ type CacheEntry = {
   data: SeasonalAnimeClientResponse;
 };
 
+type StoredEntry = {
+  storedAt: number;
+  data: SeasonalAnimeClientResponse;
+};
+
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<SeasonalAnimeClientResponse>>();
+
+function storageKey(year: number, season: AnimeSeason): string {
+  return `${STORAGE_PREFIX}:${year}:${season}`;
+}
+
+function persistToSessionStorage(year: number, season: AnimeSeason, data: SeasonalAnimeClientResponse): void {
+  if (typeof window === "undefined" || !window.sessionStorage) return;
+  try {
+    const entry: StoredEntry = { storedAt: Date.now(), data };
+    window.sessionStorage.setItem(storageKey(year, season), JSON.stringify(entry));
+  } catch {
+    // quota or serialization error: ignore silently
+  }
+}
+
+function tryRestoreFromSessionStorage(year: number, season: AnimeSeason): SeasonalAnimeClientResponse | null {
+  if (typeof window === "undefined" || !window.sessionStorage) return null;
+  try {
+    const raw = window.sessionStorage.getItem(storageKey(year, season));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredEntry | null;
+    if (!parsed || typeof parsed.storedAt !== "number" || !parsed.data) return null;
+    if (Date.now() - parsed.storedAt > SS_TTL_MS) {
+      try {
+        window.sessionStorage.removeItem(storageKey(year, season));
+      } catch {}
+      return null;
+    }
+    return parsed.data;
+  } catch {
+    // parse failure or other: ignore and fall through to network
+    return null;
+  }
+}
 
 export function seasonalAnimeCacheKey(year: number, season: AnimeSeason): string {
   return `${year}:${season}`;
@@ -31,6 +72,21 @@ function readCache(key: string): SeasonalAnimeClientResponse | null {
     if (entry) {
       cache.delete(key);
     }
+    // Try to hydrate from sessionStorage on miss/expired (for direct / reload / new tab)
+    const parts = key.split(":");
+    if (parts.length === 2) {
+      const y = Number(parts[0]);
+      const s = parts[1] as AnimeSeason;
+      if (Number.isFinite(y) && s) {
+        const restored = tryRestoreFromSessionStorage(y, s);
+        if (restored) {
+          // Populate in-memory with fresh TTL window
+          writeCache(key, restored);
+          const newEntry = cache.get(key);
+          return newEntry ? newEntry.data : null;
+        }
+      }
+    }
     return null;
   }
   return entry.data;
@@ -41,6 +97,15 @@ function writeCache(key: string, data: SeasonalAnimeClientResponse): void {
     expiresAt: Date.now() + CACHE_TTL_MS,
     data,
   });
+  // Persist for cross-reload survival (best effort)
+  const parts = key.split(":");
+  if (parts.length === 2) {
+    const y = Number(parts[0]);
+    const s = parts[1] as AnimeSeason;
+    if (Number.isFinite(y) && s) {
+      persistToSessionStorage(y, s, data);
+    }
+  }
 }
 
 /** SSR やホーム取得済みデータをクライアントキャッシュへ投入（再取得を避ける）。 */

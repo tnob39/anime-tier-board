@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.19",
+    date: "2026-06-22",
+    label: "Tier表の初回読み込み高速化",
+    isLatest: true,
+    changes: [
+      {
+        icon: Zap,
+        iconColor: "#f59e0b",
+        title: "Tier の読み込みを高速化（リロード・直アクセス対応）",
+        description: "季節アニメを sessionStorage に永続化し、/tier ページでサーバーシード。カレンダーカードからの遷移も prefetch。ロゴクリックでフルリロードしなくなりました。",
+        href: "/tier",
+      },
+    ]
+  },
+  {
     version: "1.18",
     date: "2026-06-21",
     label: "ホームを今週の放映カレンダーに刷新",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: CalendarDays,
