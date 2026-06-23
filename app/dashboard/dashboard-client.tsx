@@ -2,8 +2,10 @@
 
 import { Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { DashboardData, ViewingStatus } from "@/lib/statuses";
+import type { PublicSubscriptionDiagnosis } from "@/lib/subscription-stats";
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -15,11 +17,11 @@ const statusLabels: Record<ViewingStatus, string> = {
 
 export function DashboardClient({
   dashboard,
-  subscriptionCoverage,
+  subscriptionDiagnosis,
   hasSubscriptions
 }: {
   dashboard: DashboardData;
-  subscriptionCoverage: number;
+  subscriptionDiagnosis: PublicSubscriptionDiagnosis;
   hasSubscriptions: boolean;
 }) {
   const maxStatus = Math.max(1, ...Object.values(dashboard.statusCounts));
@@ -27,6 +29,14 @@ export function DashboardClient({
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("section") !== "subscriptions") {
+      return;
+    }
+    document.getElementById("subscriptions")?.scrollIntoView({ block: "start" });
+  }, [searchParams]);
 
   async function createShare() {
     setSharing(true);
@@ -95,20 +105,7 @@ export function DashboardClient({
         </div>
       ) : null}
 
-      <section className="dashboard-subscription-card" aria-label="サブスク診断サマリー">
-        <div>
-          <p className="eyebrow">サブスク</p>
-          <h2>見放題カバー率 {hasSubscriptions ? `${subscriptionCoverage}%` : "未設定"}</h2>
-          <p>
-            {hasSubscriptions
-              ? "ウォッチリストと加入中サービスを照合した結果です。"
-              : "加入中のサブスクを登録するとカバー率を表示できます。"}
-          </p>
-        </div>
-        <Link className="command-button emphasis-button" href="/dashboard?section=subscriptions">
-          サブスク診断を見る →
-        </Link>
-      </section>
+      <SubscriptionAnalyticsSection diagnosis={subscriptionDiagnosis} hasSubscriptions={hasSubscriptions} />
 
       <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
     </main>
@@ -137,6 +134,92 @@ const GENRE_JA: Record<string, string> = {
   "Martial Arts": "武道",
   Military: "ミリタリー",
 };
+
+function SubscriptionAnalyticsSection({
+  diagnosis,
+  hasSubscriptions
+}: {
+  diagnosis: PublicSubscriptionDiagnosis;
+  hasSubscriptions: boolean;
+}) {
+  if (!hasSubscriptions) {
+    return (
+      <section id="subscriptions" className="dashboard-subscription-card" aria-label="サブスク診断サマリー">
+        <div>
+          <p className="eyebrow">サブスク</p>
+          <h2>見放題カバー率 未設定</h2>
+          <p>加入中のサブスクを登録するとカバー率を表示できます。</p>
+        </div>
+        <Link className="command-button emphasis-button" href="/settings">
+          サブスクを登録する →
+        </Link>
+      </section>
+    );
+  }
+
+  if (diagnosis.watchlistCount === 0) {
+    return (
+      <section id="subscriptions" className="dashboard-subscription-card" aria-label="サブスク診断サマリー">
+        <div>
+          <p className="eyebrow">サブスク</p>
+          <h2>サブスク診断</h2>
+          <p>作品にステータスを付けると、見放題カバー率を計算できます。</p>
+        </div>
+        <Link className="command-button emphasis-button" href="/watchlist">
+          視聴管理へ
+        </Link>
+      </section>
+    );
+  }
+
+  const uncoveredCount = diagnosis.watchlistCount - diagnosis.coveredCount;
+  const exclusiveByServiceId = new Map(
+    diagnosis.exclusiveByService.map((entry) => [entry.serviceId, entry])
+  );
+
+  return (
+    <section id="subscriptions" className="subscriptions-panel" aria-label="サブスク診断">
+      <p className="eyebrow">サブスク</p>
+      <h2>
+        {diagnosis.coveragePercentage}% を加入中サービスでカバー
+      </h2>
+      <p>
+        {diagnosis.watchlistCount}本中 <strong>{diagnosis.coveredCount}本</strong> が見放題
+        {uncoveredCount > 0 ? `・未カバー ${uncoveredCount}本` : ""}
+      </p>
+
+      <div className="subscription-diagnosis-list">
+        {diagnosis.subscribedCoverage.map((entry) => {
+          const exclusive = exclusiveByServiceId.get(entry.serviceId);
+          return (
+            <article key={entry.serviceId} className="subscription-diagnosis-row">
+              <div className="subscription-diagnosis-label">
+                <img src={entry.logoUrl} alt="" aria-hidden="true" />
+                <strong>{entry.serviceName}</strong>
+                {exclusive ? (
+                  <span className="subscription-exclusive-badge">ここだけ {exclusive.exclusiveAnime.length}本</span>
+                ) : null}
+              </div>
+              <div className="subscription-diagnosis-bar">
+                <i style={{ width: `${entry.percentage}%` }} />
+              </div>
+              <span className="subscription-diagnosis-meta">
+                {diagnosis.watchlistCount}本中{entry.count}本（{entry.percentage}%）
+              </span>
+            </article>
+          );
+        })}
+      </div>
+
+      {diagnosis.additionalByService.length > 0 ? (
+        <p className="subscription-additional-hint">
+          <strong>{diagnosis.additionalByService[0].serviceName}</strong>{" "}
+          を追加すると +{diagnosis.additionalByService[0].additionalCount}本カバーできます
+        </p>
+      ) : null}
+    </section>
+  );
+}
 
 export function DashboardSummary({
   dashboard,
