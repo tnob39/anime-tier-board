@@ -161,6 +161,7 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
 
   return (
     <main className="app-main home-main">
+      <h1 className="sr-only">ホーム</h1>
       {hasCalendar ? (
         <WeeklyBroadcastCalendar grouped={grouped} onItemClick={() => router.push("/watchlist")} />
       ) : (
@@ -186,6 +187,7 @@ type HomeEmptyGuideProps = {
 export function HomeEmptyGuide({ addSection, showOnboarding, onDismiss }: HomeEmptyGuideProps) {
   return (
     <main className="app-main home-main">
+      <h1 className="sr-only">ホーム</h1>
       {showOnboarding ? (
         <section className="home-guide" aria-labelledby="home-guide-title">
         <p className="home-guide-step-label">STEP 1 / 3</p>
