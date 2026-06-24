@@ -51,7 +51,10 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
     () =>
       selectUnregisteredSeasonalAnime(
         seasonScope === "current" ? initialSeasonalAnime : nextSeasonAnime ?? [],
-        items
+        items,
+        // ホームでは「もっと見る」で段階的に表示するため、ここでは絞り込まず
+        // 未登録の今期/来期作品をまとめて渡す（実際の表示件数はHomeAddSection側で制御）。
+        200
       ),
     [initialSeasonalAnime, nextSeasonAnime, seasonScope, items]
   );
@@ -77,8 +80,9 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
           setNextSeasonAnime(payload.items ?? []);
         })
         .catch((error: unknown) => {
+          // nextSeasonAnime は null のままにする。「来期」を再度選ぶとガード
+          // (nextSeasonAnime !== null) に引っかからず再フェッチできる。
           setNextSeasonError(error instanceof Error ? error.message : "来期アニメの取得に失敗しました。");
-          setNextSeasonAnime([]);
         })
         .finally(() => setNextSeasonLoading(false));
     },

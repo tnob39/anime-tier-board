@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import type { ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
@@ -18,6 +18,8 @@ type HomeAddSectionProps = {
   loading?: boolean;
   error?: string | null;
 };
+
+const PAGE_SIZE = 8;
 
 const SEASON_SCOPE_HEADING: Record<SeasonScope, string> = {
   current: "今期から追加",
@@ -34,6 +36,15 @@ export default function HomeAddSection({
 }: HomeAddSectionProps) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState<ViewingStatus | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // 今期/来期を切り替えたら表示件数をリセットする
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [seasonScope]);
+
+  const visibleItems = items.slice(0, visibleCount);
+  const hasMore = items.length > visibleCount;
 
   async function handleStatus(anime: AnimeItem, status: ViewingStatus) {
     setSavingId(anime.id);
@@ -82,7 +93,7 @@ export default function HomeAddSection({
         <p className="home-add-status-note">追加できる作品が見つかりませんでした。</p>
       ) : (
         <ul className="home-add-list" role="list">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const isSaving = savingId === item.id;
             const coverImage = item.proxiedImageUrl || item.imageUrl || null;
             const meta = item.streamingProvidersJp?.flatrate?.[0]?.name ?? null;
@@ -140,6 +151,16 @@ export default function HomeAddSection({
           })}
         </ul>
       )}
+
+      {hasMore ? (
+        <button
+          type="button"
+          className="home-add-load-more"
+          onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+        >
+          もっと見る（残り{items.length - visibleCount}件）
+        </button>
+      ) : null}
     </section>
   );
 }

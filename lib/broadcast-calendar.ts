@@ -4,6 +4,9 @@ import type { AnimeItem } from "@/lib/types";
 export const BROADCAST_WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"] as const;
 export type BroadcastWeekday = (typeof BROADCAST_WEEKDAYS)[number];
 
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 /**
  * broadcastDay の文字列（英語曜日など）を日本語1文字に正規化する。
  * 認識できない値はそのまま返す（カレンダー判定と表示用テキストで共有）。
@@ -34,19 +37,26 @@ export function normalizeBroadcastDay(value?: string | null): string | null {
   return days[normalized] ?? value;
 }
 
-/** ISO日時文字列から放映曜日（日本語1文字）を求める。 */
+/**
+ * ISO日時文字列から放映曜日（日本語1文字）をJST基準で求める。
+ * 実行環境のローカルタイムゾーンに依存しないよう、JSTへオフセットしてから
+ * `getUTCDay()` で曜日を取り出す（`getDay()` は環境依存のため使わない）。
+ */
 export function extractWeekdayLabel(value: string): BroadcastWeekday | null {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return null;
   }
 
+  const jstDate = new Date(date.getTime() + JST_OFFSET_MS);
   const labels: BroadcastWeekday[] = ["日", "月", "火", "水", "木", "金", "土"];
-  return labels[date.getDay()] ?? null;
+  return labels[jstDate.getUTCDay()] ?? null;
 }
 
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+/** `now`（JST基準）の曜日（日本語1文字）を求める。「今日」のハイライト等に使う。 */
+export function getTodayBroadcastWeekday(now: Date = new Date()): BroadcastWeekday {
+  return extractWeekdayLabel(now.toISOString()) as BroadcastWeekday;
+}
 
 /** `now`(JST)を含む週の月曜0:00(JST)〜次の月曜0:00(JST)の範囲を返す。 */
 function getCurrentBroadcastWeekRange(now: Date): { start: Date; end: Date } {
