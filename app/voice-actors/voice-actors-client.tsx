@@ -64,6 +64,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="声優名・作品名で検索"
+          aria-label="声優名・作品名で検索"
         />
       </section>
 
