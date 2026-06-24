@@ -1170,6 +1170,7 @@ function TierLane({
               type="button"
               onClick={() => onDelete(tier.id)}
               title="Tierを削除"
+              aria-label="Tierを削除"
             >
               <Trash2 size={16} />
             </button>
