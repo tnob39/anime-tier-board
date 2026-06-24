@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.21",
+    date: "2026-06-24",
+    label: "今期/来期から追加リストで8件以上見られるように",
+    isLatest: true,
+    changes: [
+      {
+        icon: ListChecks,
+        iconColor: "#0ea5e9",
+        title: "「今期/来期から追加」で8件しか見えなかった不具合を修正",
+        description: "リストが8件で打ち止めになっていた問題を修正。「もっと見る」で残りの作品も表示できるようになりました。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.20",
     date: "2026-06-24",
     label: "ホームの放映カレンダーをスマホ対応・来期アニメも追加できるように",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Smartphone,

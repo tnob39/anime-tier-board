@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import CardLane, { type LaneCardData } from "@/components/CardLane";
-import { BROADCAST_WEEKDAYS, type BroadcastWeekday } from "@/lib/broadcast-calendar";
+import { BROADCAST_WEEKDAYS, getTodayBroadcastWeekday, type BroadcastWeekday } from "@/lib/broadcast-calendar";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
@@ -16,9 +16,6 @@ const DAY_LABELS: Record<BroadcastWeekday, string> = {
   土: "土曜",
   日: "日曜"
 };
-
-// Date#getDay()（0=日）→ 日本語1文字
-const WEEKDAY_BY_INDEX = ["日", "月", "火", "水", "木", "金", "土"] as const;
 
 type WeeklyBroadcastCalendarProps = {
   /** 曜日ごとにグルーピング済みの視聴記録 */
@@ -43,7 +40,7 @@ export function WeeklyBroadcastCalendar({
   className,
   heading = "今週の放映カレンダー"
 }: WeeklyBroadcastCalendarProps) {
-  const today = WEEKDAY_BY_INDEX[new Date().getDay()] as BroadcastWeekday;
+  const today = getTodayBroadcastWeekday();
   const todayLaneRef = useRef<HTMLDivElement>(null);
 
   // アイテムがある曜日だけ表示（アイテムゼロの日は非表示）

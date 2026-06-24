@@ -4861,3 +4861,17 @@ a.cl-history-title:hover {
   color: #0f766e;
   border-color: #b8e8df;
 }
+
+.home-add-load-more {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
