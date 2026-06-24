@@ -265,6 +265,7 @@ export function SharePageClient({
               value={commentBody}
               onChange={(event) => setCommentBody(event.target.value)}
               placeholder="Write a comment..."
+              aria-label="コメントを書く"
               maxLength={1000}
             />
             <button

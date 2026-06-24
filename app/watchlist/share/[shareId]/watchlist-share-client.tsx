@@ -253,6 +253,7 @@ export function WatchlistShareClient({
               value={commentBody}
               onChange={(event) => setCommentBody(event.target.value)}
               placeholder="コメントを書く..."
+              aria-label="コメントを書く"
               maxLength={1000}
             />
             <button
