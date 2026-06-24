@@ -2,7 +2,7 @@
 
 import { Loader2, PlayCircle, Plus, Search, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
@@ -18,6 +18,8 @@ type SeasonalApiResponse = {
 };
 
 type SortMode = "fit" | "popularity" | "score";
+
+const PAGE_SIZE = 50;
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -76,6 +78,14 @@ export function ExploreClient({
     () => rankItems(filteredItems, preferences, statusMap, sortMode),
     [filteredItems, preferences, statusMap, sortMode]
   );
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const visibleItems = rankedItems.slice(0, visibleCount);
+  const hasMoreItems = rankedItems.length > visibleCount;
+
+  // 新しい年代を取得した時・並び替えを変えた時は表示件数をリセットする
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [items, sortMode]);
 
   async function loadYear() {
     setLoading(true);
@@ -215,7 +225,7 @@ export function ExploreClient({
 
       {rankedItems.length ? (
         <section className="explore-grid" aria-label="作品候補">
-          {rankedItems.map((entry, index) => (
+          {visibleItems.map((entry, index) => (
             <article key={entry.item.id} className="explore-card">
               {entry.item.proxiedImageUrl ? (
                 <img src={entry.item.proxiedImageUrl} alt={entry.item.title} />
@@ -269,6 +279,16 @@ export function ExploreClient({
           <p>年代を選んで「探す」を押すと、作品が表示されます。</p>
         </section>
       )}
+
+      {hasMoreItems ? (
+        <button
+          type="button"
+          className="explore-load-more"
+          onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+        >
+          もっと見る（残り{rankedItems.length - visibleCount}件）
+        </button>
+      ) : null}
     </main>
   );
 }
@@ -389,8 +409,7 @@ function rankItems(
         return getScore(b.item) - getScore(a.item) || getPopularity(b.item) - getPopularity(a.item);
       }
       return getPopularity(b.item) - getPopularity(a.item) || getScore(b.item) - getScore(a.item);
-    })
-    .slice(0, 50);
+    });
 }
 
 function getFitScore(
