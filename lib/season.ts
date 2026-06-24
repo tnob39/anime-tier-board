@@ -23,6 +23,21 @@ export function getCurrentAnimeSeason(date = new Date()): {
   return { season: "FALL", year };
 }
 
+const SEASON_ORDER: AnimeSeason[] = ["WINTER", "SPRING", "SUMMER", "FALL"];
+
+/** 現在シーズンの次のシーズン（年越し含む）を返す。 */
+export function getNextAnimeSeason(date = new Date()): {
+  season: AnimeSeason;
+  year: number;
+} {
+  const current = getCurrentAnimeSeason(date);
+  const currentIndex = SEASON_ORDER.indexOf(current.season);
+  const nextIndex = (currentIndex + 1) % SEASON_ORDER.length;
+  const nextYear = nextIndex === 0 ? current.year + 1 : current.year;
+
+  return { season: SEASON_ORDER[nextIndex], year: nextYear };
+}
+
 export function normalizeSeason(value: string | null): AnimeSeason | null {
   const upper = value?.toUpperCase();
 

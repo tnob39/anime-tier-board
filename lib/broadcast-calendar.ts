@@ -45,13 +45,47 @@ export function extractWeekdayLabel(value: string): BroadcastWeekday | null {
   return labels[date.getDay()] ?? null;
 }
 
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** `now`(JST)を含む週の月曜0:00(JST)〜次の月曜0:00(JST)の範囲を返す。 */
+function getCurrentBroadcastWeekRange(now: Date): { start: Date; end: Date } {
+  const jstNow = new Date(now.getTime() + JST_OFFSET_MS);
+  const daysSinceMonday = (jstNow.getUTCDay() + 6) % 7; // 月=0, 火=1, ..., 日=6
+  const jstMidnight = Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate());
+  const mondayJstMidnight = jstMidnight - daysSinceMonday * 24 * 60 * 60 * 1000;
+  const start = new Date(mondayJstMidnight - JST_OFFSET_MS);
+  return { start, end: new Date(start.getTime() + WEEK_MS) };
+}
+
+/**
+ * `airingAt` が `now` を含む放映週（月曜始まり、JST基準）に収まっているかを判定する。
+ * 来期作品の初回放送日のように数週先の日付を、曜日が一致するだけで「今週」に
+ * 混在させないために使う。
+ */
+export function isWithinCurrentBroadcastWeek(airingAtISO: string, now: Date = new Date()): boolean {
+  const date = new Date(airingAtISO);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  const { start, end } = getCurrentBroadcastWeekRange(now);
+  return date >= start && date < end;
+}
+
 /**
  * 放映曜日を決定する。`nextEpisode.airingAt` を最優先し、
  * 無ければ `broadcastDay` を正規化して fallback する。
+ * `nextEpisode.airingAt` が今週の範囲外（来期作品の初回放送日など）の場合は
+ * 「今週の放映」としては扱わない（`null` を返す）。
  */
-export function getBroadcastDayLabel(item: AnimeItem): BroadcastWeekday | null {
+export function getBroadcastDayLabel(item: AnimeItem, now: Date = new Date()): BroadcastWeekday | null {
   const nextAiring = item.airing?.nextEpisode?.airingAt;
   if (nextAiring) {
+    if (!isWithinCurrentBroadcastWeek(nextAiring, now)) {
+      return null;
+    }
+
     const weekday = extractWeekdayLabel(nextAiring);
     if (weekday) {
       return weekday;
@@ -71,7 +105,8 @@ export function getBroadcastDayLabel(item: AnimeItem): BroadcastWeekday | null {
  * `anime` を持たない記録・曜日不明の記録は除外する。
  */
 export function groupItemsByBroadcastDay(
-  items: AnimeStatusRecord[]
+  items: AnimeStatusRecord[],
+  now: Date = new Date()
 ): Record<BroadcastWeekday, AnimeStatusRecord[]> {
   const grouped = Object.fromEntries(
     BROADCAST_WEEKDAYS.map((day) => [day, [] as AnimeStatusRecord[]])
@@ -82,7 +117,7 @@ export function groupItemsByBroadcastDay(
       continue;
     }
 
-    const day = getBroadcastDayLabel(record.anime);
+    const day = getBroadcastDayLabel(record.anime, now);
     if (day && grouped[day]) {
       grouped[day].push(record);
     }

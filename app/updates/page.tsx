@@ -27,10 +27,39 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.20",
+    date: "2026-06-24",
+    label: "ホームの放映カレンダーをスマホ対応・来期アニメも追加できるように",
+    isLatest: true,
+    changes: [
+      {
+        icon: Smartphone,
+        iconColor: "#0ea5e9",
+        title: "放映カレンダーのスマホ表示崩れを修正",
+        description: "曜日ごとのカードレーンが画面幅を超えて横にずれる不具合を修正しました。",
+        href: "/",
+      },
+      {
+        icon: CalendarDays,
+        iconColor: "#16a34a",
+        title: "今週の放映カレンダーに来期作品が混ざらないように",
+        description: "曜日が一致するだけで来期作品の初回放送日が今週の枠に表示されていた不具合を修正しました。",
+        href: "/",
+      },
+      {
+        icon: Bookmark,
+        iconColor: "#7c3aed",
+        title: "ホームから来期アニメを「見たい」に追加できるように",
+        description: "「今期から追加」セクションに今期/来期の切り替えを追加。来期作品はまだ放送前のため「見たい」のみ選べます。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.19",
     date: "2026-06-22",
     label: "Tier表の初回読み込み高速化",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Zap,
