@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.22",
+    date: "2026-06-24",
+    label: "さがすページで上位50件しか見られなかった不具合を修正",
+    isLatest: true,
+    changes: [
+      {
+        icon: Search,
+        iconColor: "#0ea5e9",
+        title: "さがすページが上位50件で打ち止めになっていた不具合を修正",
+        description: "年代を選んで探した結果が上位50件しか表示されない問題を修正。「もっと見る」で残りの作品も表示できるようになりました。",
+        href: "/explore",
+      },
+    ]
+  },
+  {
     version: "1.21",
     date: "2026-06-24",
     label: "今期/来期から追加リストで8件以上見られるように",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: ListChecks,
