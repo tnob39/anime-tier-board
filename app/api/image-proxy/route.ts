@@ -130,7 +130,12 @@ function isBlockedHost(hostname: string): boolean {
     return true;
   }
 
-  if (/^127\./.test(lower) || /^10\./.test(lower) || /^192\.168\./.test(lower)) {
+  if (
+    /^127\./.test(lower) ||
+    /^10\./.test(lower) ||
+    /^192\.168\./.test(lower) ||
+    /^169\.254\./.test(lower)
+  ) {
     return true;
   }
 
