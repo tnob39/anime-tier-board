@@ -81,3 +81,37 @@ Annict調査（60,000人・12年運営）と並べて議論する前に、numani
 - [ ] `MONETIZATION_ROADMAP.md` Phase 2「IAP」セクションに本決定（Web課金のみ／ネイティブは解除状態表示のみ）を反映
 - [ ] Issue化候補: ホーム画面ウィジェット「今夜の放送」／通知ワンタップ視聴済み更新（EPIC #94 配下）
 - [ ] numanie自身のユーザー数計測の仕組み（簡易`users`テーブル or 集計スクリプト）は現時点で未整備。Phase 1（ソフトローンチ）のKPI計測前には最低限の仕組みが必要になる（別途検討）
+
+---
+
+## 6. 決済プロバイダ検討: Stripe（2026-06-23、issue化）
+
+オーナーから「決済はStripeを入れたい」という方向性が出たため、§3で確定した「A: Web課金のみ」方針を
+**具体的にどう実装するか**の壁打ちを開始。検討issue: #160。**本セクション時点では未決定・実装着手前の
+論点整理**であり、下記が固まってから実装issueに分割する。
+
+### 論点
+1. **課金対象**: `MONETIZATION_ROADMAP.md` Phase3-D（カスタムTierラベル・色テーマ／高解像度PNG出力／
+   複数シーズン統計／プロフィール・バッジ）のどれを最初に有料化するか。あるいはC案（Patreon/Ko-fi型
+   サポーター、機能制限なしの感謝バッジ）を先に出すか
+2. **課金モデル**: 月額サブスク／買い切り／金額自由の投げ銭。Stripe Checkoutの`mode`
+   （`subscription` / `payment`）が変わる
+3. **技術スコープ**（モデル確定後）:
+   - Stripe Checkout Session（redirect）か Embedded Checkout か
+   - Customer Portalでのセルフ解約導線
+   - DB: §1で指摘済みの通り`users`マスターテーブルが存在せず、NextAuth(JWT戦略)の`token.sub`を
+     `userId`として各機能テーブルに直接使う構成。Stripe連携には`userId`→`stripeCustomerId`を
+     永続化する新テーブル（例: `user_billing`）が必要
+   - Webhook: `checkout.session.completed`/`customer.subscription.updated`/
+     `customer.subscription.deleted`/`invoice.payment_failed`を最低限処理。署名検証は
+     `request.text()`で生ボディを取得してから`constructEvent()`（`request.json()`では失敗する）。
+     イベントID冪等性チェック必須（再送対策）
+4. **法的対応**: Web上で有料サービスを販売する場合、特定商取引法に基づく表記ページが必要
+   （事業者名・所在地・連絡先・返金条件等）。#87（Privacy Policy/Terms整備）と合わせて整備が必要
+5. **税務/Stripe側手続き**: Stripe Japanアカウントの本人確認（KYC）、JPY対応、少額でも個人の
+   確定申告対象になりうる点をオーナーが認識しておく
+
+### 優先度に関する注記
+2026-06-23決定の#157（Web優先・アフィリエイト/広告の小規模先行導入）により、直近の収益化優先順位は
+**アフィリエイトASP審査・広告小規模導入が先**。Stripe決済基盤（Phase3-D系プレミアム機能）は
+依然将来フェーズであり、本セクションは実装着手の合図ではなく検討の起点として記録する。
