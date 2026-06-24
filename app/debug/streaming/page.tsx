@@ -1,5 +1,7 @@
+import { notFound } from "next/navigation";
 import { getTursoClient } from "@/lib/turso";
 import { fetchSeasonalAnime } from "@/lib/anime-sources";
+import { isDevOnlyEnvironment } from "@/lib/dev-only";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import { CacheControls } from "./cache-controls";
 
@@ -7,6 +9,10 @@ export const dynamic = "force-dynamic";
 
 
 export default async function StreamingDebugPage() {
+  if (!isDevOnlyEnvironment()) {
+    notFound();
+  }
+
   const { year, season } = getCurrentAnimeSeason();
 
   const client = getTursoClient();
