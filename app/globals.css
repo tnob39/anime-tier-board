@@ -1423,6 +1423,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
+  margin-top: 14px;
 }
 
 .dashboard-panel {
@@ -1460,28 +1461,6 @@ button:disabled {
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
-}
-
-.rank-panel ol {
-  display: grid;
-  gap: 9px;
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.rank-panel li {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 13px;
-}
-
-.rank-panel span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .recent-grid {
@@ -2750,6 +2729,7 @@ button:disabled {
   }
 }
 
+.anime-analytics-panel,
 .dashboard-subscription-card,
 .onboarding-panel,
 .settings-panel,
@@ -2777,6 +2757,7 @@ button:disabled {
   font-size: 22px;
 }
 
+.anime-analytics-panel p,
 .dashboard-subscription-card p,
 .onboarding-lead,
 .settings-header p {
@@ -3426,6 +3407,7 @@ a.cl-history-title:hover {
   padding: 24px 0 96px;
 }
 
+.anime-analytics-panel,
 .onboarding-panel,
 .settings-panel,
 .subscriptions-panel {
@@ -3433,6 +3415,7 @@ a.cl-history-title:hover {
   padding: 20px;
 }
 
+.anime-analytics-panel h2,
 .settings-panel h2,
 .subscriptions-panel h2 {
   margin: 0 0 8px;

@@ -24,7 +24,6 @@ export type DashboardData = {
   totalStatuses: number;
   statusCounts: Record<ViewingStatus, number>;
   topGenres: Array<{ name: string; count: number }>;
-  topStudios: Array<{ name: string; count: number }>;
   topVoiceActors: Array<{ name: string; count: number }>;
   recent: AnimeStatusRecord[];
 };
@@ -171,7 +170,6 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
   const records = await listStatuses(userId);
   const statusCounts = createEmptyStatusCounts();
   const genreCounts = new Map<string, number>();
-  const studioCounts = new Map<string, number>();
   const voiceActorCounts = new Map<string, number>();
 
   for (const record of records) {
@@ -179,10 +177,6 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
 
     for (const genre of record.anime?.genres ?? []) {
       addCount(genreCounts, genre);
-    }
-
-    for (const studio of record.anime?.studios ?? []) {
-      addCount(studioCounts, studio.name);
     }
 
     for (const actor of record.anime?.voiceActors ?? []) {
@@ -194,7 +188,6 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
     totalStatuses: records.length,
     statusCounts,
     topGenres: topCounts(genreCounts),
-    topStudios: topCounts(studioCounts),
     topVoiceActors: topCounts(voiceActorCounts),
     recent: records.slice(0, 12)
   };

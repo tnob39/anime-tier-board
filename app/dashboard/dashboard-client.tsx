@@ -231,27 +231,33 @@ export function DashboardSummary({
   const safeMaxStatus = maxStatus ?? Math.max(1, ...Object.values(dashboard.statusCounts));
 
   return (
-    <section className="dashboard-grid">
-      <article className="dashboard-panel status-panel">
-        <h2>視聴ステータス</h2>
-        <div className="status-bars">
-          {(Object.keys(statusLabels) as ViewingStatus[]).map((status) => (
-            <div key={status} className="status-bar-row">
-              <span>{statusLabels[status]}</span>
-              <div>
-                <i style={{ width: `${(dashboard.statusCounts[status] / safeMaxStatus) * 100}%` }} />
-              </div>
-              <strong>{dashboard.statusCounts[status]}</strong>
-            </div>
-          ))}
-        </div>
-      </article>
+    <section id="anime-analytics" className="anime-analytics-panel" aria-label="アニメタイプ分析">
+      <p className="eyebrow">分析</p>
+      <h2>アニメタイプ傾向</h2>
+      <p>ジャンル・声優・視聴ステータスの傾向です。</p>
 
-      <RankBarPanel
-        title="ジャンル傾向"
-        items={dashboard.topGenres.map((g) => ({ name: GENRE_JA[g.name] ?? g.name, count: g.count }))}
-      />
-      <RankBarPanel title="声優" items={dashboard.topVoiceActors} />
+      <div className="dashboard-grid">
+        <article className="dashboard-panel status-panel">
+          <h2>視聴ステータス</h2>
+          <div className="status-bars">
+            {(Object.keys(statusLabels) as ViewingStatus[]).map((status) => (
+              <div key={status} className="status-bar-row">
+                <span>{statusLabels[status]}</span>
+                <div>
+                  <i style={{ width: `${(dashboard.statusCounts[status] / safeMaxStatus) * 100}%` }} />
+                </div>
+                <strong>{dashboard.statusCounts[status]}</strong>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <RankBarPanel
+          title="ジャンル傾向"
+          items={dashboard.topGenres.map((g) => ({ name: GENRE_JA[g.name] ?? g.name, count: g.count }))}
+        />
+        <RankBarPanel title="声優" items={dashboard.topVoiceActors} />
+      </div>
     </section>
   );
 }
