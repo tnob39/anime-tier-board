@@ -1668,7 +1668,9 @@ button:disabled {
 
 .watchlist-broadcast-lanes-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
+  min-width: 0;
 }
 
 /* 今日の曜日レーンをわずかに強調 */
@@ -4274,7 +4276,9 @@ a.cl-history-title:hover {
 
 .card-lane {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+  min-width: 0;
 }
 
 .card-lane-header {
@@ -4719,6 +4723,43 @@ a.cl-history-title:hover {
 
 .home-add-more-link:hover {
   text-decoration: underline;
+}
+
+.home-add-season-toggle {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.home-add-season-toggle-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-add-season-toggle-btn.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.home-add-status-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 10px 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.home-add-status-note--error {
+  color: #b91c1c;
 }
 
 .home-add-list {

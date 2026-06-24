@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import HomeAddSection from "@/components/HomeAddSection";
+import HomeAddSection, { type SeasonScope } from "@/components/HomeAddSection";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay } from "@/lib/broadcast-calendar";
 import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
+import { getNextAnimeSeason } from "@/lib/season";
 import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
@@ -28,6 +29,10 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   const [items, setItems] = useState(initialItems);
   const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
+  const [seasonScope, setSeasonScope] = useState<SeasonScope>("current");
+  const [nextSeasonAnime, setNextSeasonAnime] = useState<AnimeItem[] | null>(null);
+  const [nextSeasonLoading, setNextSeasonLoading] = useState(false);
+  const [nextSeasonError, setNextSeasonError] = useState<string | null>(null);
   useSeasonalPrefetch(initialSeasonalAnime);
 
   // Prefetch targets from home broadcast-calendar card taps (and general nav)
@@ -43,8 +48,41 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   }, []);
 
   const addSectionItems = useMemo(
-    () => selectUnregisteredSeasonalAnime(initialSeasonalAnime, items),
-    [initialSeasonalAnime, items]
+    () =>
+      selectUnregisteredSeasonalAnime(
+        seasonScope === "current" ? initialSeasonalAnime : nextSeasonAnime ?? [],
+        items
+      ),
+    [initialSeasonalAnime, nextSeasonAnime, seasonScope, items]
+  );
+
+  const handleSelectSeasonScope = useCallback(
+    (scope: SeasonScope) => {
+      setSeasonScope(scope);
+
+      if (scope !== "next" || nextSeasonAnime !== null || nextSeasonLoading) {
+        return;
+      }
+
+      setNextSeasonLoading(true);
+      setNextSeasonError(null);
+
+      const { year, season } = getNextAnimeSeason();
+      fetch(`/api/anime/seasonal?year=${year}&season=${season}`, { cache: "no-store" })
+        .then(async (response) => {
+          const payload = (await response.json()) as { items?: AnimeItem[]; error?: string };
+          if (!response.ok) {
+            throw new Error(payload.error ?? "来期アニメの取得に失敗しました。");
+          }
+          setNextSeasonAnime(payload.items ?? []);
+        })
+        .catch((error: unknown) => {
+          setNextSeasonError(error instanceof Error ? error.message : "来期アニメの取得に失敗しました。");
+          setNextSeasonAnime([]);
+        })
+        .finally(() => setNextSeasonLoading(false));
+    },
+    [nextSeasonAnime, nextSeasonLoading]
   );
 
   const handleQuickStatus = useCallback(
@@ -85,7 +123,14 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   );
 
   const addSection = (
-    <HomeAddSection items={addSectionItems} onQuickStatus={handleQuickStatus} />
+    <HomeAddSection
+      items={addSectionItems}
+      onQuickStatus={handleQuickStatus}
+      seasonScope={seasonScope}
+      onSelectSeasonScope={handleSelectSeasonScope}
+      loading={seasonScope === "next" && nextSeasonLoading}
+      error={seasonScope === "next" ? nextSeasonError : null}
+    />
   );
   const handleDismissOnboarding = useCallback(() => {
     setIsOnboardingDismissed(true);
