@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { devOnlyRouteGuard } from "@/lib/dev-only";
 import { getTursoClient } from "@/lib/turso";
 
 export const dynamic = "force-dynamic";
 
 // DELETE: empty-flatrate エントリを削除して再取得を促す
 export async function DELETE() {
+  const blocked = devOnlyRouteGuard();
+  if (blocked) return blocked;
+
   const client = getTursoClient();
 
   const result = await client.execute(
@@ -19,6 +23,9 @@ export async function DELETE() {
 
 // GET: 現在のキャッシュ統計
 export async function GET() {
+  const blocked = devOnlyRouteGuard();
+  if (blocked) return blocked;
+
   const client = getTursoClient();
 
   const total = await client.execute(

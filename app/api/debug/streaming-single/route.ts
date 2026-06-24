@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { devOnlyRouteGuard } from "@/lib/dev-only";
 import { getTursoClient } from "@/lib/turso";
 import { fetchAndSaveStreamingProviders, stripSeasonQualifierForDebug } from "@/lib/streaming-providers";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const blocked = devOnlyRouteGuard();
+  if (blocked) return blocked;
+
   const { searchParams } = new URL(request.url);
   const title = searchParams.get("title");
   const romaji = searchParams.get("romaji") ?? undefined;

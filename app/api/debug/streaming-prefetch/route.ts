@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchSeasonalAnime } from "@/lib/anime-sources";
+import { devOnlyRouteGuard } from "@/lib/dev-only";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import { buildProviderMapForItems } from "@/lib/streaming-providers";
 
@@ -7,6 +8,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST() {
+  const blocked = devOnlyRouteGuard();
+  if (blocked) return blocked;
+
   const { year, season } = getCurrentAnimeSeason();
 
   const seasonal = await fetchSeasonalAnime(year, season).catch(() => ({ items: [] }));
