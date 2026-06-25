@@ -64,7 +64,13 @@ export async function POST(request: Request) {
   const authHeader = request.headers.get("Authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // CRON_SECRET が未設定だとガードが丸ごとスキップされ誰でも呼べてしまうため、
+  // 未設定時は常に拒否する(フェイルクローズ)。
+  if (!cronSecret) {
+    return NextResponse.json({ error: "CRON_SECRET is not configured" }, { status: 500 });
+  }
+
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
