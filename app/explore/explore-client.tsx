@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
+import { getAnimePopularity as getPopularity } from "@/lib/home-seasonal-add";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import { STREAMING_SERVICES } from "@/lib/streaming-services";
 import type { UserSubscription } from "@/lib/subscriptions";
@@ -467,10 +468,6 @@ function addWeight(map: Map<string, number>, key: string, weight: number) {
   const normalized = key.trim();
   if (!normalized) return;
   map.set(normalized, (map.get(normalized) ?? 0) + weight);
-}
-
-function getPopularity(item: AnimeItem) {
-  return item.popularity ?? item.reputation?.members ?? item.reputation?.popularity ?? 0;
 }
 
 function getScore(item: AnimeItem) {
