@@ -19,7 +19,7 @@ type HomeAddSectionProps = {
   error?: string | null;
 };
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 20;
 
 const SEASON_SCOPE_HEADING: Record<SeasonScope, string> = {
   current: "今期から追加",
