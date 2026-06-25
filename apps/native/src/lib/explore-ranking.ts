@@ -120,6 +120,14 @@ function addWeight(map: Map<string, number>, key: string, weight: number) {
 }
 
 export function getPopularity(item: AnimeItem) {
+  // Jikan(MAL)の popularity は「人気順位」(値が小さいほど人気)で、
+  // AniList の popularity(会員数、値が大きいほど人気)と方向が逆。
+  // members は両ソースとも「会員数=値が大きいほど人気」で意味が揃っているため、
+  // Jikan ソースの場合は popularity を使わず members を優先する。
+  if (item.source === 'jikan') {
+    return item.reputation?.members ?? 0;
+  }
+
   return item.popularity ?? item.reputation?.members ?? item.reputation?.popularity ?? 0;
 }
 
