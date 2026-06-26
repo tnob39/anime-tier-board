@@ -166,9 +166,30 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   }, []);
 
   const visibleItems = items.filter((item) => item.anime);
+  // 取得済みの今期データから最新の放送スケジュール(airing)を引けるようにする。
+  // 保存時スナップショットの airing は陳腐化する(次回放送日が過去になる)ため、
+  // カレンダー判定の前に最新へ差し替える。追加のネットワーク取得は不要。
+  const seasonalAiringById = useMemo(() => {
+    const map = new Map<string, NonNullable<AnimeItem["airing"]>>();
+    for (const seasonal of initialSeasonalAnime) {
+      if (seasonal.airing) {
+        map.set(seasonal.id, seasonal.airing);
+      }
+    }
+    return map;
+  }, [initialSeasonalAnime]);
   const calendarItems = useMemo(
-    () => visibleItems.filter((item) => item.status === "watching" || item.status === "planned"),
-    [visibleItems]
+    () =>
+      visibleItems
+        .filter((item) => item.status === "watching" || item.status === "planned")
+        .map((item) => {
+          const freshAiring = seasonalAiringById.get(item.animeId);
+          if (!freshAiring || !item.anime) {
+            return item;
+          }
+          return { ...item, anime: { ...item.anime, airing: freshAiring } };
+        }),
+    [visibleItems, seasonalAiringById]
   );
   const plannedItems = useMemo(
     () => visibleItems.filter((item) => item.status === "planned"),
