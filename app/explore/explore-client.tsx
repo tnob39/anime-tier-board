@@ -26,7 +26,7 @@ const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
   watching: "視聴中",
   completed: "完了",
-  paused: "保留",
+  paused: "一時停止",
   dropped: "中止"
 };
 
@@ -142,7 +142,7 @@ export function ExploreClient({
       <header className="explore-header">
         <div>
           <p className="eyebrow">過去作品探索</p>
-          <h1>年代を選んで作品を探す</h1>
+          <h1>年代を選んで作品をさがす</h1>
           <p>選んだ年の作品を、人気・評価・あなたの好みで並べます。</p>
         </div>
       </header>
@@ -218,7 +218,7 @@ export function ExploreClient({
           disabled={loading}
         >
           {loading ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
-          <span>探す</span>
+          <span>さがす</span>
         </button>
       </section>
 
@@ -277,7 +277,7 @@ export function ExploreClient({
         </section>
       ) : (
         <section className="watchlist-empty">
-          <p>年代を選んで「探す」を押すと、作品が表示されます。</p>
+          <p>年代を選んで「さがす」を押すと、作品が表示されます。</p>
         </section>
       )}
 

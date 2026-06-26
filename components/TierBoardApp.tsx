@@ -93,7 +93,7 @@ const viewingStatusOptions: Array<{ value: ViewingStatus; label: string }> = [
   { value: "planned", label: "見たい" },
   { value: "watching", label: "視聴中" },
   { value: "completed", label: "完了" },
-  { value: "paused", label: "保留" },
+  { value: "paused", label: "一時停止" },
   { value: "dropped", label: "中止" }
 ];
 
