@@ -111,6 +111,35 @@ export function getBroadcastDayLabel(item: AnimeItem, now: Date = new Date()): B
 }
 
 /**
+ * 保存済み status の `airing` スナップショットは陳腐化する（次回放送日が過去になる）ため、
+ * 取得済みの今期データ（seasonalItems）から最新 `airing` を引いて差し替える。
+ * カレンダー判定（groupItemsByBroadcastDay）の前に適用することで、放送中の作品が
+ * 「次回放送が過去」と誤判定されてレーンから消えるのを防ぐ。追加のネットワーク取得は不要。
+ *
+ * ホーム（app/home-client.tsx）と視聴管理リスト（app/watchlist/watchlist-client.tsx）の
+ * 両方が同じカレンダーを描画するため、上書きロジックはここに一本化する。
+ */
+export function withFreshAiring(
+  records: AnimeStatusRecord[],
+  seasonalItems: AnimeItem[]
+): AnimeStatusRecord[] {
+  const airingById = new Map<string, NonNullable<AnimeItem["airing"]>>();
+  for (const seasonal of seasonalItems) {
+    if (seasonal.airing) {
+      airingById.set(seasonal.id, seasonal.airing);
+    }
+  }
+
+  return records.map((record) => {
+    const freshAiring = airingById.get(record.animeId);
+    if (!freshAiring || !record.anime) {
+      return record;
+    }
+    return { ...record, anime: { ...record.anime, airing: freshAiring } };
+  });
+}
+
+/**
  * 視聴記録を曜日（月→日）ごとにグルーピングする。
  * `anime` を持たない記録・曜日不明の記録は除外する。
  */

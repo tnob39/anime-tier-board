@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import HomeAddSection, { type SeasonScope } from "@/components/HomeAddSection";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
-import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay } from "@/lib/broadcast-calendar";
+import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
 import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
 import { getNextAnimeSeason } from "@/lib/season";
 import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
@@ -166,30 +166,17 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   }, []);
 
   const visibleItems = items.filter((item) => item.anime);
-  // 取得済みの今期データから最新の放送スケジュール(airing)を引けるようにする。
   // 保存時スナップショットの airing は陳腐化する(次回放送日が過去になる)ため、
-  // カレンダー判定の前に最新へ差し替える。追加のネットワーク取得は不要。
-  const seasonalAiringById = useMemo(() => {
-    const map = new Map<string, NonNullable<AnimeItem["airing"]>>();
-    for (const seasonal of initialSeasonalAnime) {
-      if (seasonal.airing) {
-        map.set(seasonal.id, seasonal.airing);
-      }
-    }
-    return map;
-  }, [initialSeasonalAnime]);
+  // 取得済みの今期データから最新へ差し替えてからカレンダー判定する。
   const calendarItems = useMemo(
     () =>
-      visibleItems
-        .filter((item) => item.status === "watching" || item.status === "planned")
-        .map((item) => {
-          const freshAiring = seasonalAiringById.get(item.animeId);
-          if (!freshAiring || !item.anime) {
-            return item;
-          }
-          return { ...item, anime: { ...item.anime, airing: freshAiring } };
-        }),
-    [visibleItems, seasonalAiringById]
+      withFreshAiring(
+        visibleItems.filter(
+          (item) => item.status === "watching" || item.status === "planned"
+        ),
+        initialSeasonalAnime
+      ),
+    [visibleItems, initialSeasonalAnime]
   );
   const plannedItems = useMemo(
     () => visibleItems.filter((item) => item.status === "planned"),
