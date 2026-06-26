@@ -3,7 +3,12 @@
 import { Info } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import CardLane, { type LaneCardData } from "@/components/CardLane";
-import { BROADCAST_WEEKDAYS, getTodayBroadcastWeekday, type BroadcastWeekday } from "@/lib/broadcast-calendar";
+import {
+  BROADCAST_WEEKDAYS,
+  getTodayBroadcastWeekday,
+  type BroadcastEntry,
+  type BroadcastWeekday
+} from "@/lib/broadcast-calendar";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
@@ -19,8 +24,8 @@ const DAY_LABELS: Record<BroadcastWeekday, string> = {
 };
 
 type WeeklyBroadcastCalendarProps = {
-  /** 曜日ごとにグルーピング済みの視聴記録 */
-  grouped: Record<BroadcastWeekday, AnimeStatusRecord[]>;
+  /** 曜日ごとにグルーピング済みの視聴記録（放送中/これから放送のエントリ） */
+  grouped: Record<BroadcastWeekday, BroadcastEntry[]>;
   /** カードタップ時のコールバック（省略時はカードは非遷移） */
   onItemClick?: (record: AnimeStatusRecord) => void;
   /** ルートセクションへの追加 className */
@@ -52,13 +57,16 @@ export function WeeklyBroadcastCalendar({
     todayLaneRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, []);
 
-  function toCardData(record: AnimeStatusRecord): LaneCardData {
+  function toCardData(entry: BroadcastEntry): LaneCardData {
+    const { record } = entry;
     const anime = record.anime as AnimeItem;
     return {
       id: record.animeId,
       title: anime.title,
       coverImage: anime.proxiedImageUrl ?? anime.imageUrl ?? null,
-      statusVariant: record.status === "watching" ? "watching" : "planned"
+      statusVariant: record.status === "watching" ? "watching" : "planned",
+      dimmed: entry.state === "upcoming",
+      noteLabel: entry.state === "upcoming" && entry.startLabel ? `${entry.startLabel}〜` : null
     };
   }
 
@@ -83,7 +91,7 @@ export function WeeklyBroadcastCalendar({
       </div>
       {showInfo ? (
         <p className="broadcast-lanes-info-text" role="note">
-          「視聴中」「見たい」に登録した作品のうち、放送中（次回放送が約1週間以内）のものを放送曜日ごとに表示しています。放送がまだ先の来期作品は表示されません。放送スケジュールは最新の情報に自動更新され、今日の曜日は🔴で示しています。
+          「視聴中」「見たい」に登録した作品を放送曜日ごとに表示しています。放送中（次回放送が約1週間以内）の作品が先頭、まだ放送が先の作品は薄め＋放送開始日（例: 4/10〜）でその後に並びます。放送スケジュールは最新の情報に自動更新され、今日の曜日は🔴で示しています。
         </p>
       ) : null}
       <div className="watchlist-broadcast-lanes-list">
@@ -97,8 +105,8 @@ export function WeeklyBroadcastCalendar({
               onCardClick={
                 onItemClick
                   ? (card) => {
-                      const record = grouped[day].find((r) => r.animeId === card.id);
-                      if (record) onItemClick(record);
+                      const entry = grouped[day].find((e) => e.record.animeId === card.id);
+                      if (entry) onItemClick(entry.record);
                     }
                   : undefined
               }

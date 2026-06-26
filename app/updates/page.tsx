@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.25",
+    date: "2026-06-26",
+    label: "放映カレンダーに「これから放送」の作品を放送開始日つきで表示",
+    isLatest: true,
+    changes: [
+      {
+        icon: CalendarDays,
+        iconColor: "#0f766e",
+        title: "まだ放送が先の作品も薄め表示＋放送開始日でわかるように",
+        description: "登録した作品のうち放送開始がまだ先のものを、これまでは非表示にしていました。今後は同じ曜日レーンに薄め表示し、放送開始日（例: 4/10〜）を添えて「これから放送」だとわかるようにしました。表示ルールは見出しの ⓘ から確認できます。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.24",
     date: "2026-06-26",
     label: "視聴管理リストの放映カレンダーから放送中の作品が消える不具合を修正",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: CalendarDays,
