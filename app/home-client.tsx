@@ -200,6 +200,7 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
           </p>
         </section>
       )}
+      {addSection}
       {plannedItems.length > 0 ? (
         <HomePlannedManager
           items={plannedItems}
@@ -207,7 +208,6 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
           onRemove={handleRemovePlanned}
         />
       ) : null}
-      {addSection}
     </main>
   );
 }
