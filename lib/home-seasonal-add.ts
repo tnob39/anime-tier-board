@@ -8,18 +8,24 @@ import {
 import type { AnimeItem } from "@/lib/types";
 
 export function getAnimePopularity(item: AnimeItem): number {
-  // Jikan(MAL)の popularity は「人気順位」(値が小さいほど人気)で、
-  // AniList の popularity(会員数、値が大きいほど人気)と方向が逆。
-  // members は両ソースとも「会員数=値が大きいほど人気」で意味が揃っているため、
-  // Jikan ソースの場合は popularity を使わず members を優先する。
-  if (item.source === "jikan") {
-    return item.reputation?.members ?? 0;
+  const reputation = item.reputation;
+
+  if (!reputation) {
+    return item.popularity ?? 0;
   }
 
-  return item.popularity ?? item.reputation?.members ?? item.reputation?.popularity ?? 0;
+  if (typeof reputation.members === "number") {
+    return reputation.members;
+  }
+
+  if (item.source === "jikan" && typeof reputation.popularity === "number") {
+    return 1_000_000 / Math.max(1, reputation.popularity);
+  }
+
+  return reputation.popularity ?? item.popularity ?? 0;
 }
 
-/** 未登録の今期アニメを人気順で上位 limit 件返す。 */
+/** 未登録の今季アニメをTierの「人気順」と同じ基準で上位 limit 件返す。 */
 export function selectUnregisteredSeasonalAnime(
   seasonalItems: AnimeItem[],
   statuses: AnimeStatusRecord[],
