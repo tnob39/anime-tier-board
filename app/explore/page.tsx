@@ -2,7 +2,12 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { listStatuses } from "@/lib/statuses";
 import { getSubscriptionState } from "@/lib/subscriptions";
+import type { Metadata } from "next";
 import { ExploreClient } from "./explore-client";
+
+export const metadata: Metadata = {
+  title: "さがす — numanie"
+};
 
 export default async function ExplorePage() {
   const session = await auth();

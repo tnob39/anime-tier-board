@@ -2,6 +2,11 @@ import { fetchCurrentSeasonAnimeForHome } from "@/lib/home-seasonal-add";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import { TierBoardApp } from "@/components/TierBoardApp";
 import type { AnimeItem } from "@/lib/types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Tier — numanie"
+};
 
 export default async function TierPage() {
   const current = getCurrentAnimeSeason();

@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getSubscriptionState } from "@/lib/subscriptions";
+import type { Metadata } from "next";
 import { SettingsClient } from "./settings-client";
+
+export const metadata: Metadata = {
+  title: "設定 — numanie"
+};
 
 export default async function SettingsPage() {
   const session = await auth();
