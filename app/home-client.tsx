@@ -33,6 +33,7 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   const [nextSeasonAnime, setNextSeasonAnime] = useState<AnimeItem[] | null>(null);
   const [nextSeasonLoading, setNextSeasonLoading] = useState(false);
   const [nextSeasonError, setNextSeasonError] = useState<string | null>(null);
+  const [removingPlannedId, setRemovingPlannedId] = useState<string | null>(null);
   useSeasonalPrefetch(initialSeasonalAnime);
 
   // Prefetch targets from home broadcast-calendar card taps (and general nav)
@@ -126,6 +127,29 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
     [items]
   );
 
+  const handleRemovePlanned = useCallback(
+    async (record: AnimeStatusRecord) => {
+      const previousItems = items;
+      setRemovingPlannedId(record.animeId);
+      setItems((current) => current.filter((item) => item.animeId !== record.animeId));
+
+      try {
+        const response = await fetch(`/api/statuses?animeId=${encodeURIComponent(record.animeId)}`, {
+          method: "DELETE"
+        });
+
+        if (!response.ok) {
+          throw new Error("見たいの解除に失敗しました。");
+        }
+      } catch {
+        setItems(previousItems);
+      } finally {
+        setRemovingPlannedId(null);
+      }
+    },
+    [items]
+  );
+
   const addSection = (
     <HomeAddSection
       items={addSectionItems}
@@ -144,6 +168,10 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   const visibleItems = items.filter((item) => item.anime);
   const calendarItems = useMemo(
     () => visibleItems.filter((item) => item.status === "watching" || item.status === "planned"),
+    [visibleItems]
+  );
+  const plannedItems = useMemo(
+    () => visibleItems.filter((item) => item.status === "planned"),
     [visibleItems]
   );
   const grouped = useMemo(() => groupItemsByBroadcastDay(calendarItems), [calendarItems]);
@@ -172,8 +200,55 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
           </p>
         </section>
       )}
+      {plannedItems.length > 0 ? (
+        <HomePlannedManager
+          items={plannedItems}
+          removingId={removingPlannedId}
+          onRemove={handleRemovePlanned}
+        />
+      ) : null}
       {addSection}
     </main>
+  );
+}
+
+type HomePlannedManagerProps = {
+  items: AnimeStatusRecord[];
+  removingId: string | null;
+  onRemove: (record: AnimeStatusRecord) => void;
+};
+
+function HomePlannedManager({ items, removingId, onRemove }: HomePlannedManagerProps) {
+  return (
+    <section className="home-planned-manager" aria-labelledby="home-planned-manager-title">
+      <div className="home-planned-manager-header">
+        <h2 className="watchlist-broadcast-lanes-heading" id="home-planned-manager-title">
+          見たい
+        </h2>
+        <p className="home-planned-manager-note">追加した作品はここから解除できます。</p>
+      </div>
+      <ul className="home-planned-manager-list" role="list">
+        {items.map((record) => {
+          const title = record.anime?.title ?? record.animeId;
+          const isRemoving = removingId === record.animeId;
+
+          return (
+            <li key={record.animeId} className="home-planned-manager-row">
+              <span className="home-planned-manager-title">{title}</span>
+              <button
+                type="button"
+                className="home-planned-manager-remove"
+                onClick={() => onRemove(record)}
+                disabled={isRemoving}
+                aria-label={`${title}を見たいから解除`}
+              >
+                {isRemoving ? "解除中" : "解除"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
