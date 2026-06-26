@@ -7,9 +7,10 @@ import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { groupItemsByBroadcastDay, normalizeBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
+import { getCurrentAnimeSeason, getNextAnimeSeason, normalizeSeason } from "@/lib/season";
 import { searchUrlFromProviderId } from "@/lib/service-search";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
-import type { AnimeItem } from "@/lib/types";
+import { SEASON_LABELS, type AnimeItem } from "@/lib/types";
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -18,6 +19,65 @@ const statusLabels: Record<ViewingStatus, string> = {
   paused: "一時停止",
   dropped: "中止"
 };
+
+type SeasonBucketKey = "current" | "next" | "other";
+
+type SeasonBucket = {
+  key: SeasonBucketKey;
+  label: string;
+  hint: string | null;
+  items: AnimeStatusRecord[];
+};
+
+/**
+ * 視聴リストを「今期 / 来期 / その他」に振り分ける。
+ * 今期=放送中シーズン、来期=次シーズンで、変わり目に向けて貯めた作品を別管理できるようにする。
+ */
+function bucketBySeason(records: AnimeStatusRecord[]): SeasonBucket[] {
+  const current = getCurrentAnimeSeason();
+  const next = getNextAnimeSeason();
+  const seasonText = (year: number, season: keyof typeof SEASON_LABELS) =>
+    `${year}年${SEASON_LABELS[season]}`;
+
+  const buckets: Record<SeasonBucketKey, AnimeStatusRecord[]> = {
+    current: [],
+    next: [],
+    other: []
+  };
+
+  for (const record of records) {
+    const season = normalizeSeason(record.anime?.season ?? null);
+    const year = record.anime?.seasonYear ?? null;
+    if (season === current.season && year === current.year) {
+      buckets.current.push(record);
+    } else if (season === next.season && year === next.year) {
+      buckets.next.push(record);
+    } else {
+      buckets.other.push(record);
+    }
+  }
+
+  return [
+    {
+      key: "current" as const,
+      label: `今期（${seasonText(current.year, current.season)}）`,
+      hint: null,
+      items: buckets.current
+    },
+    {
+      key: "next" as const,
+      label: `来期（${seasonText(next.year, next.season)}）`,
+      hint: "これから視聴予定",
+      items: buckets.next
+    },
+    {
+      key: "other" as const,
+      label: "その他",
+      hint: "継続クール・過去作など",
+      items: buckets.other
+    }
+  ].filter((bucket) => bucket.items.length > 0);
+}
 
 const watchSlotOptions = [
   "",
@@ -66,6 +126,7 @@ export function WatchlistClient({
     [visibleItems, initialSeasonalAnime]
   );
   const broadcastCalendar = useMemo(() => groupItemsByBroadcastDay(calendarItems), [calendarItems]);
+  const seasonBuckets = useMemo(() => bucketBySeason(visibleItems), [visibleItems]);
 
   async function updateItem(
     animeId: string,
@@ -322,22 +383,37 @@ export function WatchlistClient({
       ) : null}
 
       {visibleItems.length ? (
-        <section className="watchlist-grid" aria-label="追ってる作品リスト">
-          {visibleItems.map((record) =>
-            record.anime ? (
-              <WatchlistCard
-                key={record.animeId}
-                record={record}
-                saving={savingId === record.animeId}
-                onUpdate={(patch) => void updateItem(record.animeId, patch)}
-                onStatusChange={(status) => void updateStatus(record, status)}
-                onSave={(draft) => saveTrackingDraft(record, draft)}
-                onCreateEvangelistCard={() => setEvangelistAnime(record.anime as AnimeItem)}
-                onRemove={() => void removeItem(record)}
-              />
-            ) : null
-          )}
-        </section>
+        seasonBuckets.map((bucket) => (
+          <section
+            key={bucket.key}
+            className={`watchlist-season-section watchlist-season-${bucket.key}`}
+            aria-label={bucket.label}
+          >
+            <header className="watchlist-season-header">
+              <h2>{bucket.label}</h2>
+              <span className="watchlist-season-count">{bucket.items.length}件</span>
+              {bucket.hint ? (
+                <span className="watchlist-season-hint">{bucket.hint}</span>
+              ) : null}
+            </header>
+            <div className="watchlist-grid">
+              {bucket.items.map((record) =>
+                record.anime ? (
+                  <WatchlistCard
+                    key={record.animeId}
+                    record={record}
+                    saving={savingId === record.animeId}
+                    onUpdate={(patch) => void updateItem(record.animeId, patch)}
+                    onStatusChange={(status) => void updateStatus(record, status)}
+                    onSave={(draft) => saveTrackingDraft(record, draft)}
+                    onCreateEvangelistCard={() => setEvangelistAnime(record.anime as AnimeItem)}
+                    onRemove={() => void removeItem(record)}
+                  />
+                ) : null
+              )}
+            </div>
+          </section>
+        ))
       ) : (
         <section className="watchlist-empty">
           <h2>まだ視聴中のアニメがありません</h2>
@@ -471,6 +547,15 @@ function WatchlistCard({
             <span>{statusLabels[draftStatus]}</span>
           </div>
           <div className="watchlist-card-actions">
+            <button
+              type="button"
+              className="watchlist-card-share-btn"
+              aria-label="布教カードを作ってシェア"
+              title="布教カードを作ってシェア"
+              onClick={onCreateEvangelistCard}
+            >
+              <Share2 size={16} />
+            </button>
             <a href={anime.siteUrl} target="_blank" rel="noreferrer" aria-label="作品ページを開く">
               <ExternalLink size={16} />
             </a>
@@ -494,7 +579,8 @@ function WatchlistCard({
                       onCreateEvangelistCard();
                     }}
                   >
-                    布教カードを作る
+                    <Share2 size={14} />
+                    <span>布教カードを作る</span>
                   </button>
                   <button
                     type="button"

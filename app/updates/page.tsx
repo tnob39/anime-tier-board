@@ -27,10 +27,32 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.26",
+    date: "2026-06-26",
+    label: "視聴管理リストを今期/来期で分けて表示＋作品ごとに1タップでシェア",
+    isLatest: true,
+    changes: [
+      {
+        icon: Layers,
+        iconColor: "#6366f1",
+        title: "視聴管理リストを「今期 / 来期 / その他」に分けて表示",
+        description: "今期と来期の変わり目に向けて、視聴中の今期作品とこれから見たい来期作品を別々のセクションで管理できるようにしました。各セクションには年・シーズン・件数を表示します。",
+        href: "/watchlist",
+      },
+      {
+        icon: Share2,
+        iconColor: "#0ea5e9",
+        title: "各作品から1タップで布教カードをシェア",
+        description: "これまでメニューの中に隠れていた布教カード作成を、各作品のシェアアイコンから直接呼び出せるようにしました。気に入った作品をよりライトに共有できます。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.25",
     date: "2026-06-26",
     label: "放映カレンダーに「これから放送」の作品を放送開始日つきで表示",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: CalendarDays,
