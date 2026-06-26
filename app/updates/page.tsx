@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.27",
+    date: "2026-06-26",
+    label: "共有ボタンがスマホのシェアシートに対応してよりライトに",
+    isLatest: true,
+    changes: [
+      {
+        icon: Share2,
+        iconColor: "#0ea5e9",
+        title: "視聴リスト・Tier表・分析の共有がOSのシェアシートに対応",
+        description: "これまで共有ボタンはURLをコピーするだけでしたが、スマホではタップするとそのままLINEやXなどのシェアシートが開くようにしました。共有先をすぐ選べてよりライトに共有できます（非対応の環境では従来どおりURLをコピーします）。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.26",
     date: "2026-06-26",
     label: "視聴管理リストを今期/来期で分けて表示＋作品ごとに1タップでシェア",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Layers,

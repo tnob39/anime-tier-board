@@ -9,6 +9,7 @@ import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { groupItemsByBroadcastDay, normalizeBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
 import { getCurrentAnimeSeason, getNextAnimeSeason, normalizeSeason } from "@/lib/season";
 import { searchUrlFromProviderId } from "@/lib/service-search";
+import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import { SEASON_LABELS, type AnimeItem } from "@/lib/types";
 
@@ -108,6 +109,7 @@ export function WatchlistClient({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
   const [message, setMessage] = useState<string | null>(null);
   const [messageKind, setMessageKind] = useState<"success" | "error">("error");
   const [evangelistAnime, setEvangelistAnime] = useState<AnimeItem | null>(null);
@@ -328,7 +330,12 @@ export function WatchlistClient({
 
       const nextShareUrl = `${window.location.origin}/watchlist/share/${payload.shareId}`;
       setShareUrl(nextShareUrl);
-      await navigator.clipboard?.writeText(nextShareUrl);
+      const outcome = await shareOrCopyUrl({
+        url: nextShareUrl,
+        title: "私の視聴管理リスト",
+        text: "今追ってるアニメをまとめました"
+      });
+      setShareOutcome(outcome);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "共有URLの作成に失敗しました。");
     } finally {
@@ -367,7 +374,7 @@ export function WatchlistClient({
       {message ? <div className={`notice ${messageKind}`}>{message}</div> : null}
       {shareUrl ? (
         <div className="notice success">
-          共有URLをコピーしました:{" "}
+          {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
           <a href={shareUrl} target="_blank" rel="noreferrer">
             {shareUrl}
           </a>

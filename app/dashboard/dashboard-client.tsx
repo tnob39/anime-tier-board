@@ -4,6 +4,7 @@ import { Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 import type { PublicSubscriptionDiagnosis } from "@/lib/subscription-stats";
 
@@ -28,6 +29,7 @@ export function DashboardClient({
   const hasData = dashboard.totalStatuses > 0;
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
   const [message, setMessage] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
@@ -52,7 +54,12 @@ export function DashboardClient({
 
       const nextShareUrl = `${window.location.origin}/dashboard/share/${payload.shareId}`;
       setShareUrl(nextShareUrl);
-      await navigator.clipboard?.writeText(nextShareUrl);
+      const outcome = await shareOrCopyUrl({
+        url: nextShareUrl,
+        title: "私の好み分析",
+        text: "アニメの好み分析をシェアします"
+      });
+      setShareOutcome(outcome);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "共有URLの作成に失敗しました。");
     } finally {
@@ -88,7 +95,7 @@ export function DashboardClient({
       {message ? <div className="notice error">{message}</div> : null}
       {shareUrl ? (
         <div className="notice success">
-          共有URLをコピーしました:{" "}
+          {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
           <a href={shareUrl} target="_blank" rel="noreferrer">
             {shareUrl}
           </a>
