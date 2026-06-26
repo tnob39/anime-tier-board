@@ -6,6 +6,11 @@ import { calcSubscriptionStats, toPublicSubscriptionDiagnosis } from "@/lib/subs
 import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
 import type { AnimeItem } from "@/lib/types";
 import { DashboardClient } from "./dashboard-client";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "分析 — numanie"
+};
 
 export default async function DashboardPage() {
   const session = await auth();
