@@ -26,7 +26,7 @@ const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
   watching: "視聴中",
   completed: "完了",
-  paused: "保留",
+  paused: "一時停止",
   dropped: "中止"
 };
 
