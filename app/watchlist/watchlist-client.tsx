@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
-import { groupItemsByBroadcastDay, normalizeBroadcastDay } from "@/lib/broadcast-calendar";
+import { groupItemsByBroadcastDay, normalizeBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
 import { searchUrlFromProviderId } from "@/lib/service-search";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
@@ -37,7 +37,13 @@ type SaveResult = {
   message: string;
 };
 
-export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRecord[] }) {
+export function WatchlistClient({
+  initialItems,
+  initialSeasonalAnime
+}: {
+  initialItems: AnimeStatusRecord[];
+  initialSeasonalAnime: AnimeItem[];
+}) {
   const [items, setItems] = useState(initialItems);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -47,9 +53,17 @@ export function WatchlistClient({ initialItems }: { initialItems: AnimeStatusRec
   const [evangelistAnime, setEvangelistAnime] = useState<AnimeItem | null>(null);
   const [evangelistShareUrl, setEvangelistShareUrl] = useState<string | null>(null);
   const visibleItems = useMemo(() => items.filter((item) => item.anime), [items]);
+  // 保存時スナップショットの airing は陳腐化する(次回放送日が過去になる)ため、
+  // 取得済みの今期データから最新へ差し替えてからカレンダー判定する（ホームと共通）。
   const calendarItems = useMemo(
-    () => visibleItems.filter((item) => item.status === "watching" || item.status === "planned"),
-    [visibleItems]
+    () =>
+      withFreshAiring(
+        visibleItems.filter(
+          (item) => item.status === "watching" || item.status === "planned"
+        ),
+        initialSeasonalAnime
+      ),
+    [visibleItems, initialSeasonalAnime]
   );
   const broadcastCalendar = useMemo(() => groupItemsByBroadcastDay(calendarItems), [calendarItems]);
 
