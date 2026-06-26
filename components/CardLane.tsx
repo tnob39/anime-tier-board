@@ -15,6 +15,10 @@ export type LaneCardData = {
   status?: string | null;
   /** ステータスバッジの配色 variant */
   statusVariant?: "watching" | "completed" | "planned" | "dropped" | "default";
+  /** これから放送（8日以降）= 薄め表示にする */
+  dimmed?: boolean;
+  /** タイトル下に出す補助ラベル（例: 放送開始日 "4/10〜"）*/
+  noteLabel?: string | null;
 };
 
 export type CardLaneProps = {
@@ -64,9 +68,9 @@ function LaneCard({
 }) {
   return (
     <button
-      className="lane-card"
+      className={["lane-card", item.dimmed ? "lane-card--dimmed" : ""].filter(Boolean).join(" ")}
       onClick={() => onClick?.(item)}
-      aria-label={item.title}
+      aria-label={item.noteLabel ? `${item.title}（${item.noteLabel}）` : item.title}
       type="button"
     >
       <div className="lane-card-poster">
@@ -85,6 +89,7 @@ function LaneCard({
       </div>
       <div className="lane-card-body">
         <p className="lane-card-title">{item.title}</p>
+        {item.noteLabel ? <span className="lane-card-note">{item.noteLabel}</span> : null}
         <StatusBadge status={item.status} variant={item.statusVariant} />
       </div>
     </button>

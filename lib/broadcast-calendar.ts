@@ -81,30 +81,58 @@ export function isAiringSoon(airingAtISO: string, now: Date = new Date()): boole
   return ms >= -DAY_MS && ms < UPCOMING_AIRING_WINDOW_MS;
 }
 
+export type BroadcastAiringState = "airing" | "upcoming";
+
+export type BroadcastEntry = {
+  record: AnimeStatusRecord;
+  /** airing=放送中（次回が約1週間以内） / upcoming=これから放送（8日以降） */
+  state: BroadcastAiringState;
+  /** upcoming のときの放送開始日ラベル（JST, 例 "4/10"）。不明なら null */
+  startLabel: string | null;
+};
+
+/** ISO日時を JST の "M/D" に整形する（放送開始日の表示用）。 */
+export function formatBroadcastStartLabel(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const jst = new Date(date.getTime() + JST_OFFSET_MS);
+  return `${jst.getUTCMonth() + 1}/${jst.getUTCDate()}`;
+}
+
 /**
- * 放映曜日を決定する。`nextEpisode.airingAt` を最優先し、無ければ `broadcastDay` に
- * フォールバックする。次回放送が「今後ほぼ1週間以内」(=放送中)の作品のみを、その回の
- * 曜日に配置する。来期作品の初回放送（数週間先）は `null` を返して除外する。
+ * 作品の放映曜日と放送状態（airing/upcoming）を判定する。
+ * `nextEpisode.airingAt` を最優先し、無ければ `broadcastDay` にフォールバックする。
+ * - 次回放送が「今後ほぼ1週間以内」 → airing（放送中）
+ * - 次回放送が8日以降（来期作品の初回放送など） → upcoming（これから放送、薄め表示用）
+ * - 曜日が判定できない / 次回放送が過去に取り残された陳腐データ → null（非表示）
  *
  * 注: 週内の特定日ではなく「放送中か」で判定するため、水曜放送の作品が木〜日にも
  * 同じ曜日（水）に表示され続ける（次回が来週水曜でも放送中なら表示）。
  */
-export function getBroadcastDayLabel(item: AnimeItem, now: Date = new Date()): BroadcastWeekday | null {
+function classifyBroadcast(
+  item: AnimeItem,
+  now: Date
+): { weekday: BroadcastWeekday; state: BroadcastAiringState; startLabel: string | null } | null {
   const nextAiring = item.airing?.nextEpisode?.airingAt;
   if (nextAiring) {
-    if (!isAiringSoon(nextAiring, now)) {
-      return null;
-    }
-
     const weekday = extractWeekdayLabel(nextAiring);
     if (weekday) {
-      return weekday;
+      if (isAiringSoon(nextAiring, now)) {
+        return { weekday, state: "airing", startLabel: null };
+      }
+      const ms = new Date(nextAiring).getTime() - now.getTime();
+      if (ms >= UPCOMING_AIRING_WINDOW_MS) {
+        return { weekday, state: "upcoming", startLabel: formatBroadcastStartLabel(nextAiring) };
+      }
+      return null;
     }
   }
 
   const broadcastDay = normalizeBroadcastDay(item.airing?.broadcastDay);
   if (broadcastDay && BROADCAST_WEEKDAYS.includes(broadcastDay as BroadcastWeekday)) {
-    return broadcastDay as BroadcastWeekday;
+    return { weekday: broadcastDay as BroadcastWeekday, state: "airing", startLabel: null };
   }
 
   return null;
@@ -142,24 +170,41 @@ export function withFreshAiring(
 /**
  * 視聴記録を曜日（月→日）ごとにグルーピングする。
  * `anime` を持たない記録・曜日不明の記録は除外する。
+ * 各曜日レーン内は「放送中（airing）→ これから放送（upcoming）」の順に並べ、
+ * upcoming 同士は放送開始が早い順にする。
  */
 export function groupItemsByBroadcastDay(
   items: AnimeStatusRecord[],
   now: Date = new Date()
-): Record<BroadcastWeekday, AnimeStatusRecord[]> {
+): Record<BroadcastWeekday, BroadcastEntry[]> {
   const grouped = Object.fromEntries(
-    BROADCAST_WEEKDAYS.map((day) => [day, [] as AnimeStatusRecord[]])
-  ) as Record<BroadcastWeekday, AnimeStatusRecord[]>;
+    BROADCAST_WEEKDAYS.map((day) => [day, [] as BroadcastEntry[]])
+  ) as Record<BroadcastWeekday, BroadcastEntry[]>;
 
   for (const record of items) {
     if (!record.anime) {
       continue;
     }
 
-    const day = getBroadcastDayLabel(record.anime, now);
-    if (day && grouped[day]) {
-      grouped[day].push(record);
+    const classified = classifyBroadcast(record.anime, now);
+    if (classified && grouped[classified.weekday]) {
+      grouped[classified.weekday].push({
+        record,
+        state: classified.state,
+        startLabel: classified.startLabel
+      });
     }
+  }
+
+  for (const day of BROADCAST_WEEKDAYS) {
+    grouped[day].sort((a, b) => {
+      if (a.state !== b.state) {
+        return a.state === "airing" ? -1 : 1;
+      }
+      const aAt = a.record.anime?.airing?.nextEpisode?.airingAt ?? "";
+      const bAt = b.record.anime?.airing?.nextEpisode?.airingAt ?? "";
+      return aAt.localeCompare(bAt);
+    });
   }
 
   return grouped;
