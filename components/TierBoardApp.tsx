@@ -50,6 +50,7 @@ import {
   seedSeasonalAnimeCache,
 } from "@/lib/seasonal-anime-client-cache";
 import { getCurrentAnimeSeason } from "@/lib/season";
+import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
 import { SEASON_LABELS, SEASONS } from "@/lib/types";
@@ -184,6 +185,7 @@ export function TierBoardApp({
   const [statusMap, setStatusMap] = useState<Record<string, ViewingStatus>>({});
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
@@ -691,7 +693,12 @@ export function TierBoardApp({
 
       const nextShareUrl = `${window.location.origin}/share/${payload.shareId}`;
       setShareUrl(nextShareUrl);
-      await navigator.clipboard?.writeText(nextShareUrl);
+      const outcome = await shareOrCopyUrl({
+        url: nextShareUrl,
+        title: "今期アニメTier表",
+        text: "私の今期アニメTier表をシェアします"
+      });
+      setShareOutcome(outcome);
     } catch (shareError) {
       setError(shareError instanceof Error ? shareError.message : String(shareError));
     } finally {
@@ -846,7 +853,7 @@ export function TierBoardApp({
         {error ? <div className="notice error">{error}</div> : null}
         {shareUrl ? (
           <div className="notice success">
-            共有URLをコピーしました:{" "}
+            {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
             <a href={shareUrl} target="_blank" rel="noreferrer">
               {shareUrl}
             </a>
