@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Info } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import CardLane, { type LaneCardData } from "@/components/CardLane";
 import { BROADCAST_WEEKDAYS, getTodayBroadcastWeekday, type BroadcastWeekday } from "@/lib/broadcast-calendar";
 import type { AnimeStatusRecord } from "@/lib/statuses";
@@ -42,6 +43,7 @@ export function WeeklyBroadcastCalendar({
 }: WeeklyBroadcastCalendarProps) {
   const today = getTodayBroadcastWeekday();
   const todayLaneRef = useRef<HTMLDivElement>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   // アイテムがある曜日だけ表示（アイテムゼロの日は非表示）
   const activeDays = BROADCAST_WEEKDAYS.filter((day) => grouped[day].length > 0);
@@ -67,7 +69,23 @@ export function WeeklyBroadcastCalendar({
       className={["watchlist-broadcast-lanes", className].filter(Boolean).join(" ")}
       aria-label={heading}
     >
-      <h2 className="watchlist-broadcast-lanes-heading">{heading}</h2>
+      <div className="broadcast-lanes-heading-row">
+        <h2 className="watchlist-broadcast-lanes-heading">{heading}</h2>
+        <button
+          type="button"
+          className="broadcast-lanes-info-toggle"
+          aria-label="放映カレンダーの表示ルール"
+          aria-expanded={showInfo}
+          onClick={() => setShowInfo((value) => !value)}
+        >
+          <Info size={16} aria-hidden="true" />
+        </button>
+      </div>
+      {showInfo ? (
+        <p className="broadcast-lanes-info-text" role="note">
+          「視聴中」「見たい」に登録した作品のうち、放送中（次回放送が約1週間以内）のものを放送曜日ごとに表示しています。放送がまだ先の来期作品は表示されません。放送スケジュールは最新の情報に自動更新され、今日の曜日は🔴で示しています。
+        </p>
+      ) : null}
       <div className="watchlist-broadcast-lanes-list">
         {activeDays.map((day) => (
           <div key={day} ref={day === today ? todayLaneRef : undefined}>

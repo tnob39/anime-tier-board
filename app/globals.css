@@ -1674,9 +1674,39 @@ button:disabled {
 }
 
 .watchlist-broadcast-lanes-heading {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 18px;
   font-weight: 700;
+}
+
+.broadcast-lanes-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.broadcast-lanes-info-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  line-height: 0;
+  cursor: pointer;
+}
+
+.broadcast-lanes-info-toggle:hover {
+  color: var(--accent);
+}
+
+.broadcast-lanes-info-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
 }
 
 .watchlist-broadcast-lanes-list {
