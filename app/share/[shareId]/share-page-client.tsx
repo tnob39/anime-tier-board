@@ -16,10 +16,10 @@ const reactionOptions: Array<{
   label: string;
   icon: typeof Heart;
 }> = [
-  { kind: "like", label: "Like", icon: Heart },
-  { kind: "agree", label: "Agree", icon: ThumbsUp },
-  { kind: "surprised", label: "Surprised", icon: Zap },
-  { kind: "want_to_watch", label: "Want", icon: Sparkles }
+  { kind: "like", label: "いいね", icon: Heart },
+  { kind: "agree", label: "わかる", icon: ThumbsUp },
+  { kind: "surprised", label: "気になる", icon: Zap },
+  { kind: "want_to_watch", label: "見たい", icon: Sparkles }
 ];
 
 export function SharePageClient({

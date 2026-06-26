@@ -20,7 +20,7 @@ const reactionOptions: Array<{
 }> = [
   { kind: "like", label: "いいね", icon: Heart },
   { kind: "agree", label: "わかる", icon: ThumbsUp },
-  { kind: "surprised", label: "意外", icon: Zap },
+  { kind: "surprised", label: "気になる", icon: Zap },
   { kind: "want_to_watch", label: "見たい", icon: Sparkles }
 ];
 
