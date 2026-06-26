@@ -81,6 +81,17 @@
 - 5タブのマイページが「その他導線の受け皿」になるため、ドロワーは不要になる見込み。
 - ただし PC 幅のヘッダー導線（`GlobalNav`）との整合は別途確認（PC ではマイページ相当をヘッダーのアバターメニューに出すか要検討 → §7 未決事項）。
 
+### 3.5 現状維持＋切替（フィーチャーフラグ方針）
+
+大改修だが**現状UIを残したまま新UIへ切替可能**にする（オーナー要望 2026-06-26）。
+
+- **既存 `WatchlistClient` は無変更**（フォールバック）。新規 `WatchlistClientV2` を別ファイルで作る。
+- 切替は **設定ページの可視トグル**（`app/settings/settings-client.tsx` に「新しいマイリストを試す」）。状態は **`localStorage`** に保持（端末ごと）。
+- 共有フラグヘルパー `lib/watchlist-flag.ts`（localStorage キー read/write + `useWatchlistV2()` フック）を新設し、設定トグルと表示切替で共用。
+- `app/watchlist/page.tsx`（server）は `initialItems` を取得し、クライアントの切替ラッパー `WatchlistSwitch` に渡す。ラッパーがフラグを読んで V1/V2 を選択（初回SSRは V1 既定→マウント後にフラグ反映。ちらつきは許容、必要なら後で inline script 化）。
+- **方針③で撤去した simple/pro モードとは別物**。これは恒久モードではなく**一時的なロールアウトフラグ**で、新UI定着後に削除する。
+- ナビ5タブ・マイページ（A2/A3）は影響範囲が広いので **別フラグ**で段階導入（watchlist 単体の S1 とは分離）。
+
 ### 3.4 ルーティング変更の波及（必ず追従）
 
 - `components/MobileNav.tsx`（4→5タブ、active 判定、`/` の exact 特例）
@@ -160,19 +171,37 @@ ABEMA のマイページを参照。**アイコン左揃えのクリーンなリ
 
 ---
 
-## 6. データモデル拡張（段階導入）
+## 6. バックエンド使い回し（重要：再設計はほぼ純フロント）
 
-現 `AnimeStatusRecord`（`lib/statuses.ts`）: `status` / `favoriteLevel` / `watchSlot` / `notes`。
-Abema 型の進捗表現に必要な追加候補:
+**2026-06-26 コード確認の結論: バックエンドはほぼ100%再利用でき、スキーマ変更（マイグレーション）は不要。**
 
-| フィールド | 用途 | 優先 |
-|------------|------|------|
-| `episodesWatched` | 「12/24話」進捗バー | High（進捗表示の前提） |
-| `totalEpisodes` | 進捗分母（AniList `episodes` で代替可な場合あり） | High |
-| `lastWatchedAt` | 「最終視聴日」ソート / 視聴履歴 | Medium |
-| `tier` / `personalScore` | カード上の Tier バッジ・個人ランク | Medium（Tier機能と連携） |
+現 `AnimeStatusRecord`（`lib/statuses.ts`）は再設計に必要なフィールドを既に持つ:
 
-> 段階導入。まずビジュアル刷新（カード/セクション/バッジのうち既存データで出せるもの）を先行し、進捗系はデータモデル拡張 Issue 完了後に有効化する。
+| 再設計で使うもの | データ source | 状態 |
+|------------------|---------------|------|
+| セクション分け / ステータスバッジ | `status`（planned/watching/completed/paused/dropped） | ✅ 既存 |
+| **進捗バー「6/12話」** | **`watchedEpisodes`** ÷ `anime.episodes`（`lib/types.ts`） | ✅ **既にバックエンド対応済み**（`watched_episodes` カラム・`PUT /api/watchlist` 対応。現UI未露出だが `home-client.tsx` で利用実績あり） |
+| ★お気に入り / いつ見る / メモ | `favoriteLevel` / `watchSlot` / `notes` | ✅ 既存 |
+| 最終更新ソート | `updatedAt` | ✅ 既存 |
+| 共有 | `POST /api/watchlist/shares` | ✅ 既存 |
+| おすすめ行 | seasonal/explore API | ✅ 既存 |
+
+**API 契約（変更不要・そのまま使う）**:
+- `GET /api/watchlist` → `{ items: AnimeStatusRecord[] }`
+- `PUT /api/watchlist` → `{ animeId, favoriteLevel?, watchSlot?, notes?, watchedEpisodes? }`（または `{ animeId, watchRhythm }`）
+- `PUT /api/statuses` → `{ animeId, status, anime }`（ステータス変更）
+- `DELETE /api/statuses?animeId=...`（視聴解除）
+- `POST /api/watchlist/shares` → `{ shareId }`
+
+**唯一の新規読み取り（任意・後回し可）**:
+
+| 項目 | 必要なもの | 優先 |
+|------|------------|------|
+| Tier バッジ（カード上の S/A/B） | 「作品→Tier」結合（`/api/boards` を読む） | Low（コア再設計には不要・S3で対応） |
+| `personalScore` | 既存 `favoriteLevel`（★1-5）で代替 | 不要 |
+| 「最終視聴日」厳密値 | 当面 `updatedAt` で代替（厳密化は将来） | Low |
+
+> 結論: **進捗表示を含め B1/B2 はバックエンド無変更で実装可能**。Tier バッジのみ読み取り結合が要るため S3 に分離。
 
 ---
 
@@ -194,12 +223,14 @@ Abema 型の進捗表現に必要な追加候補:
 | **A1** | ドキュメント反映: 方針④確定・`UX_DIRECTION.md` 切替告知（本コミット） | EPIC 親 |
 | **A2** | ボトムナビ 5タブ化 + マイリスト昇格 + マイページ枠新規（`/mypage` 雛形）+ ハンバーガー集約 | 子: ナビ/IA |
 | **A3** | マイページ実装（アカウント/サマリー/サブスク/声優/更新/設定の集約） | 子: マイページ |
-| **B1** | watchlist カードのビジュアル刷新（ポスターカード/バッジ/オーバーレイ） | 子: カード |
-| **B2** | watchlist セクション分け（視聴中/予定/完了/保留）+ フィルタ/ソート + Empty State 強化 | 子: レイアウト |
-| **B3** | データモデル拡張（`episodesWatched`/`totalEpisodes`/`lastWatchedAt` 等）+ 進捗バー/達成バッジ | 子: データ&進捗 |
+| **S1** | `WatchlistClientV2`（設定トグル切替）: ポスターカード + セクション + バッジ + **進捗バー（既存 `watchedEpisodes`）** + 検索/フィルタ + 編集シート。**バックエンド無変更・旧UI無変更** | **最優先 / Codex 委任 S1** |
+| **B2'** | （S1に内包）セクション分け / フィルタ / Empty State 強化 | S1 と一体 |
 | **C1** | 発見導線レーン（おすすめ横スクロール）+ マイクロインタラクション/パフォーマンス最適化 | 子: 発見&polish |
+| **S3** | Tier バッジ結合（`/api/boards` 読み）+ おすすめ行 + polish | 後続 |
 
-**推奨着手順**: `A1 → A2 → A3 / B1 → B2 → B3 → C1`。検証必須（§2 レーン/§7 未決事項）の項目は本番直書きせず、必要なら `/lab` サンドボックスで先行検証（方針②の検証ルール継承）。
+> **B1/B2/B3 の再編**: §6 のとおり進捗系は既存 `watchedEpisodes` で実現できるため、**B1+B2+B3 を「S1」に統合**（バックエンド変更なし）。Tier バッジのみ S3 に分離。
+
+**推奨着手順**: `A1（本書） → S1（watchlistV2・トグル切替） → A2/A3（ナビ5タブ・マイページ別フラグ） → S3（Tier/おすすめ/polish）`。検証必須（§2 レーン/§7 未決事項）の項目は本番直書きせず、必要なら `/lab` サンドボックスで先行検証（方針②の検証ルール継承）。
 
 ---
 
@@ -214,3 +245,4 @@ Abema 型の進捗表現に必要な追加候補:
 ## 10. 変更履歴
 
 - 2026-06-26: 初版。オーナー決定で **方針④（Abema 型 IA 全体再設計）** を確定。方針③のボトムナビ4タブ/「watchlist タブにしない」/「マイページ不採用」を撤回。参照デザイン言語を ABEMA に。`UX_DIRECTION.md` に切替告知を追記。
+- 2026-06-26 (追補): コード確認に基づき訂正。(1) §6 旧「データモデル拡張」は過大表現だったため修正 — 進捗 `watchedEpisodes` は**既にバックエンド対応済み**で再設計はほぼ純フロント・マイグレーション不要。(2) §3.5「現状維持＋切替（設定トグル + localStorage フラグ）」を追加。(3) §8 ロードマップを再編し B1+B2+B3 を **S1（バックエンド/旧UI 無変更）** に統合、Tier バッジを S3 に分離。Codex 委任は S1 から。

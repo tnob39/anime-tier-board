@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>numanie /watchlist — Before / After (ABEMA型)</title>
+<style>
+  :root{
+    --bg:#0f0f0f; --card:#1a1a1a; --card2:#222; --line:#2c2c2c;
+    --text:#f5f5f5; --muted:#9a9a9a; --accent:#22d3ee; --accent2:#a78bfa;
+    --s:#ff5d73; --a:#ffb020; --b:#46c98b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Noto Sans JP",system-ui,-apple-system,"Segoe UI",sans-serif;background:#070708;color:#e8e8e8;padding:28px 18px 60px;}
+  h1.page{font-size:20px;text-align:center;margin-bottom:6px;}
+  p.sub{text-align:center;color:#8a8a8a;font-size:13px;margin-bottom:24px;}
+  .stage{display:flex;gap:40px;justify-content:center;align-items:flex-start;flex-wrap:wrap;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .tag{font-size:13px;font-weight:700;letter-spacing:.04em;padding:5px 14px;border-radius:999px;}
+  .tag.before{background:#3a2326;color:#ff9aa6;border:1px solid #5a2f34;}
+  .tag.after{background:#13313a;color:#7fe9f7;border:1px solid #1d5666;}
+  .note{font-size:11px;color:#7d7d7d;max-width:330px;text-align:center;line-height:1.5;}
+
+  /* phone frame */
+  .phone{width:340px;height:720px;border-radius:34px;background:#000;padding:10px;box-shadow:0 18px 50px rgba(0,0,0,.6);border:1px solid #2a2a2a;}
+  .screen{width:100%;height:100%;border-radius:26px;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+  .screen .scroll{flex:1;overflow:hidden;}
+  .screen .scroll .pad{padding:14px 13px 14px;}
+
+  /* ===== BEFORE (current) ===== */
+  .before-screen{background:#101216;color:#e6e6e6;}
+  .b-head{padding:16px 14px 10px;border-bottom:1px solid #20242b;}
+  .b-eyebrow{font-size:10px;color:#7f8794;letter-spacing:.08em;}
+  .b-h1{font-size:18px;font-weight:800;margin:2px 0;}
+  .b-count{font-size:11px;color:#8b93a0;}
+  .b-actions{display:flex;gap:8px;margin-top:10px;}
+  .b-btn{flex:1;font-size:11px;text-align:center;padding:7px;border-radius:8px;border:1px solid #2c313a;background:#171a20;color:#cfd4dc;}
+  .b-btn.em{background:#2563eb;border-color:#2563eb;color:#fff;}
+  .b-cal{margin:12px 14px;padding:10px;border:1px solid #20242b;border-radius:10px;background:#14171c;}
+  .b-cal h4{font-size:11px;color:#9aa2af;margin-bottom:8px;}
+  .b-cal .days{display:flex;gap:5px;}
+  .b-cal .day{flex:1;font-size:9px;text-align:center;color:#7f8794;}
+  .b-cal .dot{height:26px;border-radius:5px;background:#1d2129;margin-top:4px;}
+  .b-cal .dot.has{background:#26415f;}
+  .b-card{margin:0 14px 12px;border:1px solid #20242b;border-radius:12px;background:#14171c;overflow:hidden;}
+  .b-card .img{height:96px;background:linear-gradient(135deg,#3b4b6b,#243049);position:relative;}
+  .b-card .img span{position:absolute;left:8px;bottom:6px;font-size:11px;font-weight:700;text-shadow:0 1px 3px #000;}
+  .b-body{padding:9px 10px 11px;}
+  .b-titlerow{display:flex;justify-content:space-between;align-items:flex-start;}
+  .b-title{font-size:12px;font-weight:700;}
+  .b-st{font-size:9px;color:#8b93a0;}
+  .b-dots{color:#6b7280;font-size:12px;}
+  .b-chips{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0;}
+  .b-chip{font-size:9px;padding:3px 7px;border-radius:999px;border:1px solid #2c313a;color:#aab1bd;}
+  .b-chip.on{background:#2563eb;border-color:#2563eb;color:#fff;}
+  .b-stars{color:#f5b400;font-size:13px;letter-spacing:1px;margin:4px 0;}
+  .b-pills{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0;}
+  .b-pill{font-size:8px;padding:2px 6px;border-radius:5px;background:#1d2129;color:#9aa2af;}
+  .b-field{margin-top:7px;}
+  .b-field label{font-size:9px;color:#8b93a0;display:block;margin-bottom:3px;}
+  .b-select,.b-textarea{width:100%;font-size:10px;background:#0e1116;border:1px solid #2c313a;border-radius:6px;padding:5px 7px;color:#cfd4dc;}
+  .b-textarea{height:30px;}
+  .b-save{width:100%;margin-top:8px;font-size:11px;padding:7px;border-radius:8px;background:#2563eb;color:#fff;border:none;}
+
+  /* ===== AFTER (ABEMA) ===== */
+  .after-screen{background:var(--bg);color:var(--text);}
+  .a-head{position:sticky;top:0;padding:14px 14px 10px;background:linear-gradient(180deg,#0f0f0f 70%,rgba(15,15,15,0));z-index:5;}
+  .a-toprow{display:flex;align-items:center;justify-content:space-between;}
+  .a-h1{font-size:19px;font-weight:800;}
+  .a-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));}
+  .a-search{margin-top:10px;display:flex;align-items:center;gap:7px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:7px 11px;color:var(--muted);font-size:11px;}
+  .a-filters{display:flex;gap:7px;margin-top:11px;overflow:hidden;}
+  .a-fchip{font-size:10px;white-space:nowrap;padding:5px 11px;border-radius:999px;background:#1a1a1a;border:1px solid #2a2a2a;color:#bdbdbd;}
+  .a-fchip.on{background:var(--accent);border-color:var(--accent);color:#06222a;font-weight:700;}
+  .a-sec{margin:16px 13px 4px;display:flex;align-items:center;justify-content:space-between;}
+  .a-sec h3{font-size:13px;font-weight:800;}
+  .a-sec a{font-size:10px;color:var(--muted);}
+  .a-lane{display:flex;gap:11px;overflow:hidden;padding:8px 13px 4px;}
+  .a-poster{width:118px;flex:0 0 auto;border-radius:14px;overflow:hidden;position:relative;box-shadow:0 6px 16px rgba(0,0,0,.5);}
+  .a-poster .pic{height:160px;position:relative;}
+  .a-poster .pic::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,.85));}
+  .p1{background:linear-gradient(140deg,#5b6cff,#2a1a4a);}
+  .p2{background:linear-gradient(140deg,#ff7a59,#7a1f3d);}
+  .p3{background:linear-gradient(140deg,#22d3ee,#0b3a52);}
+  .p4{background:linear-gradient(140deg,#34d399,#0c3b2e);}
+  .p5{background:linear-gradient(140deg,#f472b6,#4a1133);}
+  .p6{background:linear-gradient(140deg,#fbbf24,#5a3a06);}
+  .a-badge{position:absolute;top:7px;right:7px;font-size:8px;font-weight:800;padding:3px 7px;border-radius:999px;backdrop-filter:blur(4px);z-index:2;}
+  .badge-watch{background:rgba(34,211,238,.92);color:#06222a;}
+  .badge-done{background:rgba(70,201,139,.92);color:#053522;}
+  .badge-new{background:rgba(255,93,115,.92);color:#fff;}
+  .a-tier{position:absolute;top:7px;left:7px;width:20px;height:20px;border-radius:6px;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;z-index:2;color:#1a1a1a;}
+  .tier-s{background:var(--s);color:#fff;} .tier-a{background:var(--a);} .tier-b{background:var(--b);color:#063;}
+  .a-meta{position:absolute;left:8px;right:8px;bottom:7px;z-index:2;}
+  .a-ptitle{font-size:10px;font-weight:700;line-height:1.25;text-shadow:0 1px 3px #000;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .a-prog{margin-top:5px;}
+  .a-bar{height:4px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden;}
+  .a-bar i{display:block;height:100%;background:var(--accent);}
+  .a-pnum{font-size:8px;color:#dcdcdc;margin-top:2px;}
+  .a-reco .pic::after{background:linear-gradient(180deg,rgba(0,0,0,0) 55%,rgba(0,0,0,.7));}
+  .a-recobadge{position:absolute;top:7px;left:7px;font-size:8px;font-weight:800;padding:3px 7px;border-radius:999px;background:rgba(167,139,250,.92);color:#1a0e3a;z-index:2;}
+
+  /* bottom nav */
+  .nav{display:flex;border-top:1px solid var(--line);background:#0c0c0c;}
+  .nav.before-nav{background:#0d0f13;border-top-color:#20242b;}
+  .nav a{flex:1;text-align:center;padding:8px 0 9px;font-size:9px;color:#7d7d7d;text-decoration:none;}
+  .nav a .ic{display:block;font-size:16px;margin-bottom:2px;}
+  .nav a.on{color:var(--accent);}
+  .before-nav a.on{color:#3b82f6;}
+  .legend{max-width:760px;margin:34px auto 0;background:#101013;border:1px solid #23232a;border-radius:12px;padding:16px 20px;}
+  .legend h2{font-size:14px;margin-bottom:10px;}
+  .legend table{width:100%;border-collapse:collapse;font-size:12px;}
+  .legend td,.legend th{border-bottom:1px solid #23232a;padding:7px 8px;text-align:left;vertical-align:top;}
+  .legend th{color:#9a9a9a;font-weight:600;}
+  .legend td:first-child{color:#ff9aa6;width:34%;}
+  .legend td:last-child{color:#7fe9f7;}
+</style>
+</head>
+<body>
+  <h1 class="page">numanie — <code>/watchlist</code> リデザイン Before / After</h1>
+  <p class="sub">参照デザイン言語: ABEMA ／ 方針④ (docs/UX_ABEMA_IA_REDESIGN_20260626.md)</p>
+
+  <div class="stage">
+    <!-- BEFORE -->
+    <div class="col">
+      <span class="tag before">BEFORE — 現状</span>
+      <div class="phone"><div class="screen before-screen">
+        <div class="scroll">
+          <div class="b-head">
+            <div class="b-eyebrow">追ってる作品</div>
+            <div class="b-h1">視聴管理リスト</div>
+            <div class="b-count">8件を管理中</div>
+            <div class="b-actions">
+              <div class="b-btn">Tier表へ</div>
+              <div class="b-btn em">共有</div>
+            </div>
+          </div>
+          <div class="b-cal">
+            <h4>今週の放映カレンダー</h4>
+            <div class="days">
+              <div class="day">月<div class="dot"></div></div>
+              <div class="day">火<div class="dot has"></div></div>
+              <div class="day">水<div class="dot"></div></div>
+              <div class="day">木<div class="dot has"></div></div>
+              <div class="day">金<div class="dot has"></div></div>
+              <div class="day">土<div class="dot"></div></div>
+              <div class="day">日<div class="dot has"></div></div>
+            </div>
+          </div>
+          <div class="b-card">
+            <div class="img"><span>ある惑星の片隅で</span></div>
+            <div class="b-body">
+              <div class="b-titlerow">
+                <div><div class="b-title">ある惑星の片隅で</div><div class="b-st">視聴中</div></div>
+                <div class="b-dots">⋮</div>
+              </div>
+              <div class="b-chips">
+                <span class="b-chip">見たい</span><span class="b-chip on">視聴中</span>
+                <span class="b-chip">完了</span><span class="b-chip">一時停止</span><span class="b-chip">中止</span>
+              </div>
+              <div class="b-stars">★★★★☆</div>
+              <div class="b-pills"><span class="b-pill">放送 毎週金 23:00</span><span class="b-pill">次回 #7</span><span class="b-pill">1クール</span></div>
+              <div class="b-field"><label>いつ見る？</label><select class="b-select"><option>放送日に見る</option></select></div>
+              <div class="b-field"><label>メモ</label><div class="b-textarea"></div></div>
+              <button class="b-save">保存する</button>
+            </div>
+          </div>
+          <div class="b-card">
+            <div class="img" style="background:linear-gradient(135deg,#6b3b4b,#492430)"><span>螺旋のフラグメント</span></div>
+            <div class="b-body">
+              <div class="b-titlerow"><div><div class="b-title">螺旋のフラグメント</div><div class="b-st">見たい</div></div><div class="b-dots">⋮</div></div>
+              <div class="b-chips"><span class="b-chip on">見たい</span><span class="b-chip">視聴中</span><span class="b-chip">完了</span></div>
+              <div class="b-stars">★★★☆☆</div>
+            </div>
+          </div>
+        </div>
+        <nav class="nav before-nav">
+          <a><span class="ic">🏠</span>ホーム</a>
+          <a><span class="ic">▦</span>Tier</a>
+          <a class="on"><span class="ic">📊</span>分析</a>
+          <a><span class="ic">🔍</span>さがす</a>
+        </nav>
+      </div></div>
+      <p class="note">フォーム的な縦長カード（ステータスチップ＋★＋select＋メモ＋保存）が各作品に展開。1本の長いリスト。ナビは4タブで「マイリスト」は独立タブ無し。</p>
+    </div>
+
+    <!-- AFTER -->
+    <div class="col">
+      <span class="tag after">AFTER — ABEMA型 (方針④)</span>
+      <div class="phone"><div class="screen after-screen">
+        <div class="scroll">
+          <div class="a-head">
+            <div class="a-toprow"><div class="a-h1">マイリスト</div><div class="a-avatar"></div></div>
+            <div class="a-search">🔍 作品を検索</div>
+            <div class="a-filters">
+              <span class="a-fchip on">すべて</span><span class="a-fchip">視聴中</span>
+              <span class="a-fchip">予定</span><span class="a-fchip">完了</span><span class="a-fchip">未視聴話あり</span>
+            </div>
+          </div>
+
+          <div class="a-sec"><h3>▶ 現在視聴中</h3><a>すべて</a></div>
+          <div class="a-lane">
+            <div class="a-poster"><div class="pic p1">
+              <span class="a-tier tier-s">S</span><span class="a-badge badge-watch">視聴中</span>
+              <div class="a-meta"><div class="a-ptitle">ある惑星の片隅で</div>
+                <div class="a-prog"><div class="a-bar"><i style="width:50%"></i></div><div class="a-pnum">6 / 12話</div></div></div>
+            </div></div>
+            <div class="a-poster"><div class="pic p2">
+              <span class="a-tier tier-a">A</span><span class="a-badge badge-watch">視聴中</span>
+              <div class="a-meta"><div class="a-ptitle">紅蓮のカルテット</div>
+                <div class="a-prog"><div class="a-bar"><i style="width:75%"></i></div><div class="a-pnum">9 / 12話</div></div></div>
+            </div></div>
+            <div class="a-poster"><div class="pic p3">
+              <span class="a-tier tier-b">B</span><span class="a-badge badge-watch">視聴中</span>
+              <div class="a-meta"><div class="a-ptitle">星巡りのエコー</div>
+                <div class="a-prog"><div class="a-bar"><i style="width:20%"></i></div><div class="a-pnum">5 / 24話</div></div></div>
+            </div></div>
+          </div>
+
+          <div class="a-sec"><h3>☆ 気になっている</h3><a>すべて</a></div>
+          <div class="a-lane">
+            <div class="a-poster"><div class="pic p5">
+              <span class="a-badge badge-new">NEW</span>
+              <div class="a-meta"><div class="a-ptitle">螺旋のフラグメント</div></div>
+            </div></div>
+            <div class="a-poster"><div class="pic p6">
+              <div class="a-meta"><div class="a-ptitle">真昼の天文台</div></div>
+            </div></div>
+            <div class="a-poster"><div class="pic p4">
+              <div class="a-meta"><div class="a-ptitle">深海ノクターン</div></div>
+            </div></div>
+          </div>
+
+          <div class="a-sec"><h3>✓ 視聴完了</h3><a>すべて</a></div>
+          <div class="a-lane">
+            <div class="a-poster"><div class="pic p4">
+              <span class="a-tier tier-s">S</span><span class="a-badge badge-done">完了</span>
+              <div class="a-meta"><div class="a-ptitle">夜明けのリフレイン</div>
+                <div class="a-prog"><div class="a-bar"><i style="width:100%"></i></div><div class="a-pnum">全12話 視聴済</div></div></div>
+            </div></div>
+            <div class="a-poster"><div class="pic p1">
+              <span class="a-tier tier-a">A</span><span class="a-badge badge-done">完了</span>
+              <div class="a-meta"><div class="a-ptitle">機械仕掛けの庭園</div>
+                <div class="a-prog"><div class="a-bar"><i style="width:100%"></i></div><div class="a-pnum">全24話 視聴済</div></div></div>
+            </div></div>
+          </div>
+
+          <div class="a-sec"><h3>✨ あなたへのおすすめ</h3><a>探す</a></div>
+          <div class="a-lane">
+            <div class="a-poster a-reco"><div class="pic p2"><span class="a-recobadge">同ジャンル</span>
+              <div class="a-meta"><div class="a-ptitle">灰色都市のアリア</div></div></div></div>
+            <div class="a-poster a-reco"><div class="pic p3"><span class="a-recobadge">新着</span>
+              <div class="a-meta"><div class="a-ptitle">量子レクイエム</div></div></div></div>
+          </div>
+          <div style="height:12px"></div>
+        </div>
+        <nav class="nav">
+          <a><span class="ic">🏠</span>ホーム</a>
+          <a><span class="ic">▦</span>Tier</a>
+          <a><span class="ic">🔍</span>さがす</a>
+          <a class="on"><span class="ic">≣</span>マイリスト</a>
+          <a><span class="ic">👤</span>マイページ</a>
+        </nav>
+      </div></div>
+      <p class="note">大型ポスターカード＋ステータスバッジ（右上）＋Tierバッジ（左上）＋下部グラデに進捗バー「6/12話」。視聴中/気になる/完了でセクション分け＋横スクロール。おすすめ行で発見導線。ナビは5タブ（マイリスト昇格・マイページ新規）。</p>
+    </div>
+  </div>
+
+  <div class="legend">
+    <h2>主な変更点</h2>
+    <table>
+      <tr><th>Before（現状）</th><th>After（ABEMA型 / 方針④）</th></tr>
+      <tr><td>フォーム的な縦長カード（チップ＋★＋select＋メモ＋保存ボタンを常時展開）</td><td>大型ポスターカード。編集はタップ/⋯のクイックアクションに格納し一覧は「眺めて楽しむ」</td></tr>
+      <tr><td>1本の長いリスト</td><td>視聴中 / 気になっている / 視聴完了 のセクション分け＋横スクロールレーン</td></tr>
+      <tr><td>ステータスは小さなテキスト</td><td>右上ステータスバッジ＋左上Tierバッジ＋進捗バー「6/12話」で一目把握</td></tr>
+      <tr><td>発見導線なし</td><td>「あなたへのおすすめ」横スクロール行で /explore へ送客</td></tr>
+      <tr><td>ボトムナビ4タブ（ホーム/Tier/分析/さがす）・マイリストはタブ無し</td><td>5タブ（ホーム/Tier/さがす/マイリスト/マイページ）・マイリスト昇格＋マイページ新設</td></tr>
+      <tr><td>検索/フィルタなし</td><td>sticky ヘッダー＋検索＋フィルタチップ（すべて/視聴中/予定/完了/未視聴話あり）</td></tr>
+    </table>
+    <p style="font-size:11px;color:#777;margin-top:12px">※ ポスター画像はグラデーションのダミー、作品名・話数はモック値。進捗「6/12話」は方針④ B3（データモデル拡張: episodesWatched/totalEpisodes）が前提。</p>
+  </div>
+</body>
+</html>
