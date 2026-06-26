@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.23",
+    date: "2026-06-26",
+    label: "ホームの放映カレンダーに今期の視聴中作品が表示されない不具合を修正",
+    isLatest: true,
+    changes: [
+      {
+        icon: CalendarDays,
+        iconColor: "#16a34a",
+        title: "今週の放映カレンダーに視聴中・見たい作品が出ない不具合を修正",
+        description: "追加した時点の放送予定を使い続けていたため、放送中の今期作品でもカレンダーに表示されないことがありました。最新の放送スケジュールで曜日別に表示されるようになりました。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.22",
     date: "2026-06-24",
     label: "さがすページで上位50件しか見られなかった不具合を修正",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Search,
