@@ -52,9 +52,22 @@ PR の base を docs ブランチにすることで、**各 PR の diff = その
 3. **無断 main マージはしない**（`[[feedback_self_merge_without_permission]]`）。比較レビュー後にオーナーが選択。
 4. 採用しなかった方のブランチ/PR は記録として残すか close する（このdocに結果を残す）。
 
-## 6. 結果（記入欄）
+## 6. 結果
 
-- Codex PR: #___ / 所感:
-- Grok PR: #___ / 所感:
+### Codex（#218 / PR #221）— 完了
+- 実行: `codex exec --sandbox workspace-write`（codex-cli 0.142.0）。トークン約 **106,616**。
+- 成果: 新規5ファイル + 編集2ファイル（計 +1106 行）。ハンドオフのファイル構成に忠実。
+- 制約遵守: ✅ V1 `watchlist-client.tsx` / `lib/statuses.ts` / `app/api/**` 無変更（保護ファイル diff 空）。
+- 品質: `npx tsc --noEmit` ✅ / `npx next build --webpack` ✅ / mojibake ✅ なし。
+- 注意点: サンドボックスのため **git commit 不可**（index.lock 権限）→ Claude が検証して commit/push/PR を代行。
+- 所感: 仕様忠実・文字化けゼロ・制約遵守。自己verifyで `--webpack` 回避まで自力到達。コミットだけ sandbox 制約で外出し。
+
+### Grok（#219 / PR #___）— 実行待ち（オーナーが `!` で起動）
+
+### 環境知見（重要・今後に反映）
+- **worktree の `node_modules` をジャンクション（symlink）にすると Next 16 の既定 Turbopack ビルドが `Symlink ... failed` で落ちる**。回避: `npx next build --webpack`（または実体 node_modules を `npm ci`）。`tsc` は影響なし。
+- Codex `workspace-write` サンドボックスは **git metadata 書き込み不可** → 実装は可だが commit は親（Claude）が行う運用が確実。
+
+### 採用判断・学び（両者完了後に記入）
 - 採用: ___ / 理由:
-- 学び（今後の委任ルールへ反映）:
+- 今後の委任ルールへの反映:
