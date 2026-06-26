@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { PushToggle } from "@/components/PushToggle";
 import { SubscriptionPicker } from "@/components/SubscriptionPicker";
+import { WatchlistV2Toggle } from "@/components/WatchlistV2Toggle";
 
 export function SettingsClient({ initialServiceIds }: { initialServiceIds: string[] }) {
   const [serviceIds, setServiceIds] = useState(initialServiceIds);
@@ -67,6 +68,11 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
         <Link className="command-button emphasis-button" href="/dashboard?section=subscriptions">
           サブスク診断を見る
         </Link>
+      </section>
+      <section className="settings-panel">
+        <h2>新しいマイリスト（ベータ）</h2>
+        <p>ABEMA風の新しい視聴管理画面を試せます。いつでも元に戻せます。</p>
+        <WatchlistV2Toggle />
       </section>
     </main>
   );
