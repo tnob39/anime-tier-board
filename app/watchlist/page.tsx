@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { fetchCurrentSeasonAnimeForHome } from "@/lib/home-seasonal-add";
 import { listStatuses } from "@/lib/statuses";
 import type { Metadata } from "next";
-import { WatchlistClient } from "./watchlist-client";
+import { WatchlistSwitch } from "./watchlist-switch";
 
 export const metadata: Metadata = {
   title: "視聴管理リスト — numanie"
@@ -24,5 +24,5 @@ export default async function WatchlistPage() {
     fetchCurrentSeasonAnimeForHome().catch(() => [])
   ]);
 
-  return <WatchlistClient initialItems={items} initialSeasonalAnime={seasonalAnime} />;
+  return <WatchlistSwitch initialItems={items} initialSeasonalAnime={seasonalAnime} />;
 }

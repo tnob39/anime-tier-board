@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { PushToggle } from "@/components/PushToggle";
 import { SubscriptionPicker } from "@/components/SubscriptionPicker";
+import { useWatchlistV2 } from "@/lib/watchlist-flag";
 
 export function SettingsClient({ initialServiceIds }: { initialServiceIds: string[] }) {
   const [serviceIds, setServiceIds] = useState(initialServiceIds);
@@ -68,6 +69,27 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
           サブスク診断を見る
         </Link>
       </section>
+
+      <section className="settings-panel">
+        <h2>新しいマイリスト（ベータ）</h2>
+        <p>ABEMA 風の新しい視聴管理画面を試せます。いつでも元に戻せます。</p>
+        <WatchlistV2Toggle />
+      </section>
     </main>
+  );
+}
+
+function WatchlistV2Toggle() {
+  const [on, setOn] = useWatchlistV2();
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+      <input
+        type="checkbox"
+        checked={on}
+        onChange={(e) => setOn(e.target.checked)}
+        style={{ width: 18, height: 18 }}
+      />
+      <span>新しいマイリストUIを有効にする</span>
+    </label>
   );
 }

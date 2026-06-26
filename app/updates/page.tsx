@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.28",
+    date: "2026-06-26",
+    label: "新しいマイリスト（ベータ）を設定から試せます",
+    isLatest: true,
+    changes: [
+      {
+        icon: ListChecks,
+        iconColor: "#22d3ee",
+        title: "ABEMA風の新しい視聴管理画面（ベータ）を追加",
+        description: "設定から「新しいマイリスト（ベータ）」を有効にすると、ポスターカード＋横スクロールレーン＋進捗表示の新しいUIが使えます。いつでも元の画面に戻せます。ステータス変更・話数・お気に入り・メモ・削除・共有が使えます。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.27",
     date: "2026-06-26",
     label: "共有ボタンがスマホのシェアシートに対応してよりライトに",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Share2,
