@@ -44,6 +44,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { filterAnimeItems } from "@/lib/anime-filters";
+import { getAnimePopularity } from "@/lib/anime-popularity";
 import {
   fetchSeasonalAnimeClient,
   seedSeasonalAnimeCache,
@@ -1830,30 +1831,12 @@ function moveItemBetweenTiers(
 
 function compareByPublicReputation(a: AnimeItem, b: AnimeItem): number {
   return (
-    getAudienceValue(b) - getAudienceValue(a) ||
+    getAnimePopularity(b) - getAnimePopularity(a) ||
     (b.reputation?.favourites ?? 0) - (a.reputation?.favourites ?? 0) ||
     (b.reputation?.trending ?? 0) - (a.reputation?.trending ?? 0) ||
     getNormalizedScore(b) - getNormalizedScore(a) ||
     a.title.localeCompare(b.title, "ja")
   );
-}
-
-function getAudienceValue(item: AnimeItem): number {
-  const reputation = item.reputation;
-
-  if (!reputation) {
-    return 0;
-  }
-
-  if (typeof reputation.members === "number") {
-    return reputation.members;
-  }
-
-  if (item.source === "jikan" && typeof reputation.popularity === "number") {
-    return 1_000_000 / Math.max(1, reputation.popularity);
-  }
-
-  return reputation.popularity ?? 0;
 }
 
 function getNormalizedScore(item: AnimeItem): number {

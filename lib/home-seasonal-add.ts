@@ -1,4 +1,5 @@
 import { fetchSeasonalAnime } from "@/lib/anime-sources";
+import { getAnimePopularity } from "@/lib/anime-popularity";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import {
@@ -7,23 +8,9 @@ import {
 } from "@/lib/streaming-providers";
 import type { AnimeItem } from "@/lib/types";
 
-export function getAnimePopularity(item: AnimeItem): number {
-  const reputation = item.reputation;
-
-  if (!reputation) {
-    return item.popularity ?? 0;
-  }
-
-  if (typeof reputation.members === "number") {
-    return reputation.members;
-  }
-
-  if (item.source === "jikan" && typeof reputation.popularity === "number") {
-    return 1_000_000 / Math.max(1, reputation.popularity);
-  }
-
-  return reputation.popularity ?? item.popularity ?? 0;
-}
+// 人気度の正準実装は lib/anime-popularity.ts に一本化。既存 import（explore 等）の
+// 互換のためここから re-export する。
+export { getAnimePopularity };
 
 /** 未登録の今季アニメをTierの「人気順」と同じ基準で上位 limit 件返す。 */
 export function selectUnregisteredSeasonalAnime(
