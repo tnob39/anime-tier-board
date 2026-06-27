@@ -39,6 +39,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
+      <head>
+        {/* 初回ペイント前にテーマを適用してFOUC（ライト→ダークのちらつき）を防ぐ。 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=localStorage.getItem("numanie:theme")||"light";var d=p==="dark"||(p==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";}catch(e){}})();`
+          }}
+        />
+      </head>
       <body>
         <Providers>
           <AppShell>{children}</AppShell>
