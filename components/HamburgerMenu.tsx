@@ -13,22 +13,13 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import { useEffect } from "react";
-import { isOwnerEmail } from "@/lib/owner";
 import { useTheme, type ThemePref } from "@/lib/theme";
-import { useWatchlistMode, type WatchlistMode } from "@/lib/watchlist-flag";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
 };
-
-const modeOptions: { mode: WatchlistMode; label: string; dot: string }[] = [
-  { mode: "off", label: "通常版", dot: "wl2-modeswitch-dot--off" },
-  { mode: "codex", label: "Codex版", dot: "wl2-modeswitch-dot--codex" },
-  { mode: "grok", label: "Grok版", dot: "wl2-modeswitch-dot--grok" }
-];
 
 const themeOptions: { pref: ThemePref; label: string; icon: LucideIcon }[] = [
   { pref: "light", label: "ライト", icon: Sun },
@@ -44,17 +35,7 @@ const navItems = [
 ];
 
 export function HamburgerMenu({ isOpen, onClose }: Props) {
-  const { data: session } = useSession();
-  const canPreview = isOwnerEmail(session?.user?.email);
-  const [mode, setMode] = useWatchlistMode();
   const [themePref, setThemePref] = useTheme();
-
-  function selectMode(next: WatchlistMode) {
-    setMode(next);
-    onClose();
-    // mode は localStorage 駆動で /watchlist 側は mount 時に読むため、確実に反映させるべく遷移する。
-    window.location.assign("/watchlist");
-  }
 
   useEffect(() => {
     if (isOpen) {
@@ -126,37 +107,6 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
             })}
           </nav>
         </section>
-
-        {canPreview && (
-          <>
-            <div className="hamburger-divider" />
-            <section className="hamburger-section">
-              <p className="hamburger-section-label hamburger-owner-label">
-                視聴管理リスト
-                <span className="hamburger-owner-tag">オーナー限定</span>
-              </p>
-              <div className="wl2-modeswitch" role="radiogroup" aria-label="視聴管理リストの実装版">
-                {modeOptions.map((opt) => {
-                  const active = mode === opt.mode;
-                  return (
-                    <button
-                      key={opt.mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      className={active ? "wl2-modeswitch-btn is-active" : "wl2-modeswitch-btn"}
-                      onClick={() => selectMode(opt.mode)}
-                    >
-                      <span className={`wl2-modeswitch-dot ${opt.dot}`} aria-hidden="true" />
-                      <span>{opt.label}</span>
-                      {active && <Check size={16} className="wl2-modeswitch-check" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          </>
-        )}
 
         <div className="hamburger-divider" />
 
