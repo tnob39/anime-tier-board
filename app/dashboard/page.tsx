@@ -5,6 +5,7 @@ import { getSubscriptionState } from "@/lib/subscriptions";
 import { calcSubscriptionStats, toPublicSubscriptionDiagnosis } from "@/lib/subscription-stats";
 import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
 import type { AnimeItem } from "@/lib/types";
+import { isOwnerEmail } from "@/lib/owner";
 import { DashboardClient } from "./dashboard-client";
 import type { Metadata } from "next";
 
@@ -19,6 +20,8 @@ export default async function DashboardPage() {
   if (!userId) {
     redirect("/");
   }
+
+  const isOwner = isOwnerEmail(session?.user?.email);
 
   const [dashboard, subscriptionState, statuses] = await Promise.all([
     getDashboard(userId),
@@ -45,6 +48,7 @@ export default async function DashboardPage() {
       dashboard={dashboard}
       subscriptionDiagnosis={subscriptionDiagnosis}
       hasSubscriptions={subscriptionState.subscriptions.length > 0}
+      isOwner={isOwner}
     />
   );
 }

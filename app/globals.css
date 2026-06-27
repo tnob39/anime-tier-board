@@ -5216,3 +5216,44 @@ a.cl-history-title:hover {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Pref analysis accordion (owner-only dashboard split). Reuses dashboard vars. */
+.pref-analysis-accordion {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.pref-analysis-accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.pref-analysis-accordion-header:hover {
+  background: var(--surface-soft);
+}
+
+.pref-analysis-accordion-body {
+  border-top: 1px solid var(--line);
+  padding: 0;
+}
+
+.pref-analysis-accordion-body > .anime-analytics-panel {
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  margin: 0;
+}
