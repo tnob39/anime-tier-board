@@ -5257,3 +5257,11 @@ a.cl-history-title:hover {
   border-radius: 0;
   margin: 0;
 }
+
+/* S6 home rails: tiny spacing so wl2g lanes sit nicely inside .app-main (no redef of wl2g-*) */
+.home-main .wl2g-sec {
+  margin: 12px 12px 2px;
+}
+.home-main .wl2g-lane {
+  padding: 6px 12px 8px;
+}
