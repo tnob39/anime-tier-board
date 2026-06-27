@@ -296,7 +296,6 @@ export function WatchlistClientV2Grok({
 
   return (
     <div className="wl2g-root">
-      <div className="wl2-vbadge wl2-vbadge--grok" role="status">Grok版</div>
       <header className="wl2g-header">
         <div className="wl2g-top">
           <div className="wl2g-title">マイリスト</div>
@@ -371,12 +370,12 @@ export function WatchlistClientV2Grok({
               <h3>
                 {bucket.label}
                 {bucket.hint ? (
-                  <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--wl2g-muted)" }}>
+                  <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--muted)" }}>
                     {bucket.hint}
                   </span>
                 ) : null}
               </h3>
-              <span style={{ fontSize: 11, color: "var(--wl2g-muted)" }}>
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>
                 {bucket.items.length}件
               </span>
             </div>
@@ -469,7 +468,7 @@ function PosterCard({
           )}
         </div>
       ) : (
-        <div className="pic" style={{ background: "linear-gradient(135deg,#444,#222)" }}>
+        <div className="pic" style={{ background: "var(--surface-soft)" }}>
           <AnimeCardPlaceholder title={anime.title} />
           <span className={`wl2g-badge ${badge}`} style={{ zIndex: 3 }}>{label}</span>
           <div className="wl2g-meta">
