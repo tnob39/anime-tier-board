@@ -23,6 +23,149 @@ body {
   min-height: 100%;
 }
 
+.season-share-page,
+.promote-page {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+.season-share-header,
+.promote-panel,
+.season-share-empty,
+.season-share-footer {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.season-share-header h1,
+.promote-panel h1 {
+  margin: 4px 0 8px;
+  font-size: clamp(24px, 7vw, 36px);
+}
+
+.season-share-header p,
+.promote-panel p,
+.season-share-footer p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.season-share-kicker {
+  color: var(--accent) !important;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.season-share-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.season-share-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.season-share-card > a,
+.season-share-card > a > img,
+.season-share-card > a > .anime-card-placeholder {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+}
+
+.season-share-card > a > img {
+  object-fit: cover;
+  background: var(--surface-soft);
+}
+
+.season-share-card-body {
+  padding: 10px;
+}
+
+.season-share-card h2 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.season-share-providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.season-share-providers a {
+  min-height: 32px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.season-share-empty,
+.season-share-footer {
+  margin-top: 16px;
+}
+
+.season-share-footer {
+  display: grid;
+  gap: 12px;
+  text-align: center;
+}
+
+.promote-page {
+  max-width: 560px;
+}
+
+.promote-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.promote-panel label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.promote-panel select,
+.promote-panel button {
+  min-height: 44px;
+}
+
+.promote-panel select {
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.promote-url {
+  overflow-wrap: anywhere;
+  color: var(--accent);
+}
+
+@media (min-width: 640px) {
+  .season-share-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
 html {
   -webkit-text-size-adjust: 100%;
 }
