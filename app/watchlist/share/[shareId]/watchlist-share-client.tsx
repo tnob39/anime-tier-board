@@ -54,7 +54,7 @@ export function WatchlistShareClient({
   const [message, setMessage] = useState<string | null>(null);
   const isAuthenticated = authStatus === "authenticated";
   const seasonBuckets = useMemo(
-    () => bucketBySeason(initialShare.items),
+    () => bucketBySeason(initialShare.items.filter((record) => record.anime)),
     [initialShare.items]
   );
 
@@ -206,7 +206,12 @@ export function WatchlistShareClient({
               <span className="watchlist-season-hint">{bucket.hint}</span>
             ) : null}
           </header>
-          <div className="shared-watchlist-lane">
+          <div
+            className="shared-watchlist-lane"
+            role="group"
+            aria-label={`${bucket.label}の作品一覧（横スクロール）`}
+            tabIndex={0}
+          >
             {bucket.items.map((record) =>
               record.anime ? (
                 <article key={record.animeId} className="shared-watchlist-card">

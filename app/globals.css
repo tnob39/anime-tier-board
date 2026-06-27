@@ -1820,8 +1820,7 @@ button:disabled {
   color: var(--accent, #6366f1);
 }
 
-.watchlist-grid,
-.shared-watchlist-grid {
+.watchlist-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
@@ -1835,6 +1834,12 @@ button:disabled {
   padding-bottom: 8px;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
+}
+
+.shared-watchlist-lane:focus-visible {
+  outline: 2px solid var(--accent, #6366f1);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 .shared-watchlist-lane .shared-watchlist-card {
@@ -2801,8 +2806,7 @@ button:disabled {
     width: 100%;
   }
 
-  .watchlist-grid,
-  .shared-watchlist-grid {
+  .watchlist-grid {
     grid-template-columns: 1fr;
   }
 
