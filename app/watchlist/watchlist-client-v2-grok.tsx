@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { bucketBySeason } from "@/lib/season-bucket";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 
@@ -41,17 +42,6 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "planned", label: "予定" },
   { key: "completed", label: "完了" },
   { key: "unwatched", label: "未視聴話あり" },
-];
-
-const SECTION_DEFS: Array<{
-  status: ViewingStatus | "paused-dropped";
-  icon: string;
-  title: string;
-}> = [
-  { status: "watching", icon: "▶", title: "現在視聴中" },
-  { status: "planned", icon: "☆", title: "気になっている" },
-  { status: "completed", icon: "✓", title: "視聴完了" },
-  { status: "paused-dropped", icon: "⏸", title: "保留中" },
 ];
 
 function getStatusBadgeClass(status: ViewingStatus): string {
@@ -116,25 +106,9 @@ export function WatchlistClientV2Grok({
     return list;
   }, [visibleItems, filter, search]);
 
-  const sections = useMemo(() => {
-    if (filter !== "all") return null;
-    const buckets: Record<string, AnimeStatusRecord[]> = {
-      watching: [],
-      planned: [],
-      completed: [],
-      "paused-dropped": [],
-    };
-    for (const r of filteredItems) {
-      if (r.status === "watching") buckets.watching.push(r);
-      else if (r.status === "planned") buckets.planned.push(r);
-      else if (r.status === "completed") buckets.completed.push(r);
-      else buckets["paused-dropped"].push(r);
-    }
-    return SECTION_DEFS.map((def) => ({
-      ...def,
-      items: buckets[def.status],
-    })).filter((s) => s.items.length > 0);
-  }, [filteredItems, filter]);
+  // 期セクション（今期 / 来期 / その他）。通常版と共通の bucketBySeason を使用。
+  // 上部フィルタチップで絞った filteredItems を期で分割する。
+  const seasonBuckets = useMemo(() => bucketBySeason(filteredItems), [filteredItems]);
 
   function openSheet(record: AnimeStatusRecord) {
     if (!record.anime) return;
@@ -390,19 +364,24 @@ export function WatchlistClientV2Grok({
             </Link>
           </div>
         </div>
-      ) : sections ? (
-        sections.map((sec) => (
-          <div key={sec.status}>
+      ) : seasonBuckets.length ? (
+        seasonBuckets.map((bucket) => (
+          <div key={bucket.key}>
             <div className="wl2g-sec">
               <h3>
-                {sec.icon} {sec.title}
+                {bucket.label}
+                {bucket.hint ? (
+                  <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--wl2g-muted)" }}>
+                    {bucket.hint}
+                  </span>
+                ) : null}
               </h3>
               <span style={{ fontSize: 11, color: "var(--wl2g-muted)" }}>
-                {sec.items.length}件
+                {bucket.items.length}件
               </span>
             </div>
             <div className="wl2g-lane">
-              {sec.items.map((record) => (
+              {bucket.items.map((record) => (
                 <PosterCard
                   key={record.animeId}
                   record={record}
@@ -413,14 +392,8 @@ export function WatchlistClientV2Grok({
           </div>
         ))
       ) : (
-        <div className="wl2g-grid">
-          {filteredItems.map((record) => (
-            <PosterCard
-              key={record.animeId}
-              record={record}
-              onOpen={() => openSheet(record)}
-            />
-          ))}
+        <div className="wl2g-empty">
+          <p>条件に合う作品がありません。フィルタを変えてみてください。</p>
         </div>
       )}
 
