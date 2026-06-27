@@ -2,8 +2,9 @@
 
 import { Heart, MessageCircle, Sparkles, Star, ThumbsUp, Zap } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { bucketBySeason } from "@/lib/season-bucket";
 import type {
   ReactionCounts,
   ReactionKind,
@@ -52,6 +53,10 @@ export function WatchlistShareClient({
   const [commenting, setCommenting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const isAuthenticated = authStatus === "authenticated";
+  const seasonBuckets = useMemo(
+    () => bucketBySeason(initialShare.items.filter((record) => record.anime)),
+    [initialShare.items]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -188,37 +193,57 @@ export function WatchlistShareClient({
 
       {message ? <div className="notice error">{message}</div> : null}
 
-      <section className="shared-watchlist-grid" aria-label="共有された追ってる作品">
-        {initialShare.items.map((record) =>
-          record.anime ? (
-            <article key={record.animeId} className="shared-watchlist-card">
-              {record.anime.proxiedImageUrl ? (
-                <img src={record.anime.proxiedImageUrl} alt={record.anime.title} />
-              ) : (
-                <AnimeCardPlaceholder title={record.anime.title} />
-              )}
-              <div>
-                <strong>{record.anime.title}</strong>
-                <span>{statusLabels[record.status]}</span>
-                <div className="shared-watchlist-meta">
-                  <span>
-                    <Star size={13} fill="currentColor" />
-                    {record.favoriteLevel ?? "-"}
-                  </span>
-                  <span>{record.watchSlot ?? "見るタイミング未設定"}</span>
-                  {getShareSchedule(record.anime) ? (
-                    <span>{getShareSchedule(record.anime)}</span>
-                  ) : null}
-                  {getShareCour(record.anime) ? (
-                    <span>{getShareCour(record.anime)}</span>
-                  ) : null}
-                </div>
-                {record.notes ? <p>{record.notes}</p> : null}
-              </div>
-            </article>
-          ) : null
-        )}
-      </section>
+      {seasonBuckets.map((bucket) => (
+        <section
+          key={bucket.key}
+          className={`watchlist-season-section watchlist-season-${bucket.key}`}
+          aria-label={`共有された追ってる作品（${bucket.label}）`}
+        >
+          <header className="watchlist-season-header">
+            <h2>{bucket.label}</h2>
+            <span className="watchlist-season-count">{bucket.items.length}件</span>
+            {bucket.hint ? (
+              <span className="watchlist-season-hint">{bucket.hint}</span>
+            ) : null}
+          </header>
+          <div
+            className="shared-watchlist-lane"
+            role="group"
+            aria-label={`${bucket.label}の作品一覧（横スクロール）`}
+            tabIndex={0}
+          >
+            {bucket.items.map((record) =>
+              record.anime ? (
+                <article key={record.animeId} className="shared-watchlist-card">
+                  {record.anime.proxiedImageUrl ? (
+                    <img src={record.anime.proxiedImageUrl} alt={record.anime.title} />
+                  ) : (
+                    <AnimeCardPlaceholder title={record.anime.title} />
+                  )}
+                  <div>
+                    <strong>{record.anime.title}</strong>
+                    <span>{statusLabels[record.status]}</span>
+                    <div className="shared-watchlist-meta">
+                      <span>
+                        <Star size={13} fill="currentColor" />
+                        {record.favoriteLevel ?? "-"}
+                      </span>
+                      <span>{record.watchSlot ?? "見るタイミング未設定"}</span>
+                      {getShareSchedule(record.anime) ? (
+                        <span>{getShareSchedule(record.anime)}</span>
+                      ) : null}
+                      {getShareCour(record.anime) ? (
+                        <span>{getShareCour(record.anime)}</span>
+                      ) : null}
+                    </div>
+                    {record.notes ? <p>{record.notes}</p> : null}
+                  </div>
+                </article>
+              ) : null
+            )}
+          </div>
+        </section>
+      ))}
 
       <section className="comment-panel" aria-label="コメント">
         <div className="comment-heading">

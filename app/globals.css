@@ -1820,11 +1820,31 @@ button:disabled {
   color: var(--accent, #6366f1);
 }
 
-.watchlist-grid,
-.shared-watchlist-grid {
+.watchlist-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 14px;
+}
+
+/* 共有ビューは期別セクションごとに横スライダー（オーナーの視聴管理リストと挙動を揃える） */
+.shared-watchlist-lane {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shared-watchlist-lane:focus-visible {
+  outline: 2px solid var(--accent, #6366f1);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.shared-watchlist-lane .shared-watchlist-card {
+  flex: 0 0 min(300px, 82vw);
+  scroll-snap-align: start;
 }
 
 .watchlist-card,
@@ -2786,8 +2806,7 @@ button:disabled {
     width: 100%;
   }
 
-  .watchlist-grid,
-  .shared-watchlist-grid {
+  .watchlist-grid {
     grid-template-columns: 1fr;
   }
 
