@@ -1827,6 +1827,21 @@ button:disabled {
   gap: 14px;
 }
 
+/* 共有ビューは期別セクションごとに横スライダー（オーナーの視聴管理リストと挙動を揃える） */
+.shared-watchlist-lane {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shared-watchlist-lane .shared-watchlist-card {
+  flex: 0 0 min(300px, 82vw);
+  scroll-snap-align: start;
+}
+
 .watchlist-card,
 .shared-watchlist-card {
   display: grid;

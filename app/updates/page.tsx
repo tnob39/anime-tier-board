@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.28",
+    date: "2026-06-27",
+    label: "共有された視聴リストも今期/来期セクションごとに横スライドで見やすく",
+    isLatest: true,
+    changes: [
+      {
+        icon: Layers,
+        iconColor: "#6366f1",
+        title: "共有リストを「今期 / 来期 / その他」に分けて横スライダー表示",
+        description: "視聴管理リストを共有したとき、相手の画面でも今期・来期・その他のセクションに分かれ、それぞれ横スワイプで作品を見られるようにしました。自分の視聴管理リストと同じ並びで共有相手にも伝わります。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.27",
     date: "2026-06-26",
     label: "共有ボタンがスマホのシェアシートに対応してよりライトに",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Share2,
