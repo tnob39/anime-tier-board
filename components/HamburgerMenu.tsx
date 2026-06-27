@@ -82,28 +82,6 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
         </div>
 
         <section className="hamburger-section">
-          <p className="hamburger-section-label">その他</p>
-          <nav>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="hamburger-nav-item"
-                  onClick={onClose}
-                >
-                  <Icon size={18} className="hamburger-nav-icon" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </section>
-
-        <div className="hamburger-divider" />
-
-        <section className="hamburger-section">
           <p className="hamburger-section-label">テーマ</p>
           <div className="theme-switch" role="radiogroup" aria-label="テーマ">
             {themeOptions.map((opt) => {
@@ -125,6 +103,28 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
               );
             })}
           </div>
+        </section>
+
+        <div className="hamburger-divider" />
+
+        <section className="hamburger-section">
+          <p className="hamburger-section-label">その他</p>
+          <nav>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="hamburger-nav-item"
+                  onClick={onClose}
+                >
+                  <Icon size={18} className="hamburger-nav-icon" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
         </section>
 
         {canPreview && (
