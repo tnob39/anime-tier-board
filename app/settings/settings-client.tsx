@@ -82,7 +82,7 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
 function WatchlistV2Toggle() {
   const [on, setOn] = useWatchlistV2();
   return (
-    <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+    <label style={{ display: "flex", alignItems: "center", gap:10, cursor: "pointer" }}>
       <input
         type="checkbox"
         checked={on}

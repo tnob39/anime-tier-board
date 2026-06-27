@@ -8,10 +8,10 @@ import { WatchlistClientV2 } from "./watchlist-client-v2";
 
 export function WatchlistSwitch({
   initialItems,
-  initialSeasonalAnime,
+  initialSeasonalAnime = [],
 }: {
   initialItems: AnimeStatusRecord[];
-  initialSeasonalAnime: AnimeItem[];
+  initialSeasonalAnime?: AnimeItem[];
 }) {
   const [v2] = useWatchlistV2();
 
@@ -22,7 +22,7 @@ export function WatchlistSwitch({
   return (
     <WatchlistClient
       initialItems={initialItems}
-      initialSeasonalAnime={initialSeasonalAnime}
+      initialSeasonalAnime={initialSeasonalAnime ?? []}
     />
   );
 }

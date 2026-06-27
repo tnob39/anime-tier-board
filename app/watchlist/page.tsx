@@ -17,8 +17,6 @@ export default async function WatchlistPage() {
     redirect("/");
   }
 
-  // 放映カレンダーの airing 鮮度化に今期データを使う（ホームと共通の withFreshAiring）。
-  // 取得失敗時は空配列にフォールバックし、保存済みスナップショットのまま描画する。
   const [items, seasonalAnime] = await Promise.all([
     listStatuses(userId),
     fetchCurrentSeasonAnimeForHome().catch(() => [])
