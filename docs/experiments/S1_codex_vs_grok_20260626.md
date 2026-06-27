@@ -62,7 +62,34 @@ PR の base を docs ブランチにすることで、**各 PR の diff = その
 - 注意点: サンドボックスのため **git commit 不可**（index.lock 権限）→ Claude が検証して commit/push/PR を代行。
 - 所感: 仕様忠実・文字化けゼロ・制約遵守。自己verifyで `--webpack` 回避まで自力到達。コミットだけ sandbox 制約で外出し。
 
-### Grok（#219 / PR #___）— 実行待ち（オーナーが `!` で起動）
+### Grok（#219 / PR #224）— 完了
+- 実行: ローカル grok `--permission-mode bypassPermissions -m grok-build`（headless `-p`, max-turns 150）。
+- 成果: 新規4 + 編集3（V2=671行 / CSS412行）。`EditSheet` を独立コンポーネント化。`app/updates` の RELEASES も更新。
+- 制約遵守: ✅ V1 / `lib/statuses.ts` / `app/api/**` 無変更。
+- 品質: `npx tsc --noEmit` ✅ / `npx next build --webpack` ✅ / mojibake ✅ なし。
+- 自己コミット: ✅ 可（2コミット）。途中 `search_replace` ツールエラーあり・最終ツリーはクリーン。
+- 所感: 編集UXが優位（話数 ＋/− ステッパー / ★ / 詳細リンク / ステータス即時保存）。ただしスタイルが wl2 CSS＋inline＋既存globalクラス混在で規約からやや逸脱。a11y はモーダルの dialog ロールなし。
+
+### 比較サマリー（S1）
+| 観点 | Codex (PR #221) | Grok (PR #224) |
+|------|-----------------|----------------|
+| コードの綺麗さ・保守性 | ◎ 純関数・専用CSSのみ | ○ コンポーネント分割は良いがinline/global混在 |
+| スタイル規約遵守（専用wl2 CSS/衝突回避） | ◎ | △ |
+| アクセシビリティ | ◎ role=dialog/aria-modal | ○ overlayのみ |
+| 編集UX作り込み | ○ slider/number | ◎ ステッパー/★/詳細/即時保存 |
+| 受入条件 /updates 追記 | ✗ 取りこぼし | ◎ 対応 |
+| 自己コミット | ✗ sandbox制約 | ◎ |
+| 実行の安定性 | ◎ 一発完了 | ○ 2commit+途中エラー |
+| 制約遵守(保護ファイル) | ◎ | ◎ |
+| tsc / webpack build / mojibake | ✅/✅/なし | ✅/✅/なし |
+
+**結論**: コード品質・規約遵守・a11y は **Codex**、UX作り込み・チョア完遂(/updates)・自己完結性は **Grok**。
+**推奨**: **Codex をベース**に採用し、Grok の良UX（話数ステッパー / ★ / 詳細リンク / ステータス即時保存）を別PRで取り込む。
+
+### 委任運用の学び
+- **Codex(workspace-write)** は安定・規約遵守だが **git commit 不可**（親が commit）／受入チェックの一部（/updates等）を取りこぼすことがある→チェックリスト明示が有効。
+- **Grok(bypassPermissions)** は自己コミット・UX積極的だが **スタイル規約から逸脱**しがち＆途中ツールエラーで履歴が乱れる→「専用CSSのみ・inline禁止・既存globalクラス流用禁止」を強めに明記すると改善見込み。
+- 共通: handoff にファイル構成・契約・受入条件を自己完結で書く方式は両者で有効。mojibake は両者とも UTF-8 明記で発生せず。
 
 ### 環境知見（重要・今後に反映）
 - **worktree の `node_modules` をジャンクション（symlink）にすると Next 16 の既定 Turbopack ビルドが `Symlink ... failed` で落ちる**。回避: `npx next build --webpack`（または実体 node_modules を `npm ci`）。`tsc` は影響なし。
