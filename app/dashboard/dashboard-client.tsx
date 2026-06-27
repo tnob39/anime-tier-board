@@ -19,11 +19,13 @@ const statusLabels: Record<ViewingStatus, string> = {
 export function DashboardClient({
   dashboard,
   subscriptionDiagnosis,
-  hasSubscriptions
+  hasSubscriptions,
+  isOwner
 }: {
   dashboard: DashboardData;
   subscriptionDiagnosis: PublicSubscriptionDiagnosis;
   hasSubscriptions: boolean;
+  isOwner: boolean;
 }) {
   const maxStatus = Math.max(1, ...Object.values(dashboard.statusCounts));
   const hasData = dashboard.totalStatuses > 0;
@@ -31,6 +33,7 @@ export function DashboardClient({
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
   const [message, setMessage] = useState<string | null>(null);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -69,31 +72,30 @@ export function DashboardClient({
 
   return (
     <main className="app-main dashboard-main">
-      <header className="dashboard-header">
-        <div>
-          <p className="eyebrow">集計</p>
-          <h1>好み分析ダッシュボード</h1>
-          <p>{dashboard.totalStatuses}件の視聴ステータスを保存中</p>
-        </div>
-        <div className="dashboard-actions">
-          <Link className="command-button" href="/voice-actors">
-            声優
-          </Link>
-          <button
-            className="icon-button nav-icon-link"
-            type="button"
-            onClick={() => void createShare()}
-            disabled={sharing || !hasData}
-            title="分析を共有"
-            aria-label="分析を共有"
-          >
-            {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
-          </button>
-        </div>
-      </header>
+      {isOwner ? (
+        <header className="dashboard-header">
+          <div>
+            <p className="eyebrow">集計</p>
+            <h1>好み分析ダッシュボード</h1>
+            <p>{dashboard.totalStatuses}件の視聴ステータスを保存中</p>
+          </div>
+          <div className="dashboard-actions">
+            <button
+              className="icon-button nav-icon-link"
+              type="button"
+              onClick={() => void createShare()}
+              disabled={sharing || !hasData}
+              title="分析を共有"
+              aria-label="分析を共有"
+            >
+              {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
+            </button>
+          </div>
+        </header>
+      ) : null}
 
-      {message ? <div className="notice error">{message}</div> : null}
-      {shareUrl ? (
+      {isOwner && message ? <div className="notice error">{message}</div> : null}
+      {isOwner && shareUrl ? (
         <div className="notice success">
           {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
           <a href={shareUrl} target="_blank" rel="noreferrer">
@@ -102,7 +104,7 @@ export function DashboardClient({
         </div>
       ) : null}
 
-      {!hasData ? (
+      {isOwner && !hasData ? (
         <div className="tutorial-empty-callout">
           <strong>まだ集計データがありません</strong>
           <span>作品にステータスを付けると、ジャンル・声優の傾向が見えます。</span>
@@ -114,7 +116,24 @@ export function DashboardClient({
 
       <SubscriptionAnalyticsSection diagnosis={subscriptionDiagnosis} hasSubscriptions={hasSubscriptions} />
 
-      <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
+      {isOwner ? (
+        <div className="pref-analysis-accordion">
+          <button
+            type="button"
+            className="pref-analysis-accordion-header"
+            onClick={() => setAnalysisOpen(!analysisOpen)}
+            aria-expanded={analysisOpen}
+          >
+            好み分析ダッシュボード
+            <span aria-hidden="true">{analysisOpen ? "−" : "+"}</span>
+          </button>
+          {analysisOpen ? (
+            <div className="pref-analysis-accordion-body">
+              <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </main>
   );
 }
