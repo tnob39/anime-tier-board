@@ -6,11 +6,16 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import HomeAddSection, { type SeasonScope } from "@/components/HomeAddSection";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
+import { bucketBySeason } from "@/lib/season-bucket";
 import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
 import { getNextAnimeSeason } from "@/lib/season";
 import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
+import { EditSheet, PosterLane, useWatchlistV2Editor } from "./watchlist/watchlist-client-v2-grok";
+
+// Reuse Grok watchlist styles for PosterCard / PosterLane
+import "./watchlist/watchlist-v2-grok.css";
 
 type HomeClientProps = {
   initialItems: AnimeStatusRecord[];
@@ -26,14 +31,12 @@ const ONBOARDING_DISMISSED_KEY = "anime-tier-board:onboarding:n2-dismissed";
  */
 export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientProps) {
   const router = useRouter();
-  const [items, setItems] = useState(initialItems);
   const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
   const [seasonScope, setSeasonScope] = useState<SeasonScope>("current");
   const [nextSeasonAnime, setNextSeasonAnime] = useState<AnimeItem[] | null>(null);
   const [nextSeasonLoading, setNextSeasonLoading] = useState(false);
   const [nextSeasonError, setNextSeasonError] = useState<string | null>(null);
-  const [removingPlannedId, setRemovingPlannedId] = useState<string | null>(null);
   useSeasonalPrefetch(initialSeasonalAnime);
 
   // Prefetch targets from home broadcast-calendar card taps (and general nav)
@@ -47,6 +50,30 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
     setIsOnboardingDismissed(window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "true");
     setHasCheckedOnboarding(true);
   }, []);
+
+  // Single source of truth for items + edit sheet (shared with /watchlist)
+  const editor = useWatchlistV2Editor(initialItems);
+  const {
+    items,
+    openSheet,
+    closeSheet,
+    editing,
+    draftStatus,
+    setDraftStatus,
+    draftFavorite,
+    setDraftFavorite,
+    draftWatchSlot,
+    setDraftWatchSlot,
+    draftNotes,
+    setDraftNotes,
+    draftWatched,
+    setDraftWatched,
+    savingId,
+    changeStatus,
+    saveTracking,
+    removeItem,
+    quickSetStatus,
+  } = editor;
 
   const addSectionItems = useMemo(
     () =>
@@ -90,70 +117,10 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
     [nextSeasonAnime, nextSeasonLoading]
   );
 
-  const handleQuickStatus = useCallback(
-    async (anime: AnimeItem, status: ViewingStatus) => {
-      const previousItems = items;
-      const optimisticRecord: AnimeStatusRecord = {
-        animeId: anime.id,
-        status,
-        anime,
-        favoriteLevel: null,
-        watchSlot: null,
-        notes: null,
-        watchRhythm: null,
-        watchedEpisodes: null,
-        updatedAt: new Date().toISOString(),
-      };
-
-      setItems((current) => [
-        optimisticRecord,
-        ...current.filter((record) => record.animeId !== anime.id),
-      ]);
-
-      try {
-        const response = await fetch("/api/statuses", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ animeId: anime.id, status, anime }),
-        });
-
-        if (!response.ok) {
-          throw new Error("ステータスの保存に失敗しました。");
-        }
-      } catch {
-        setItems(previousItems);
-      }
-    },
-    [items]
-  );
-
-  const handleRemovePlanned = useCallback(
-    async (record: AnimeStatusRecord) => {
-      const previousItems = items;
-      setRemovingPlannedId(record.animeId);
-      setItems((current) => current.filter((item) => item.animeId !== record.animeId));
-
-      try {
-        const response = await fetch(`/api/statuses?animeId=${encodeURIComponent(record.animeId)}`, {
-          method: "DELETE"
-        });
-
-        if (!response.ok) {
-          throw new Error("見たいの解除に失敗しました。");
-        }
-      } catch {
-        setItems(previousItems);
-      } finally {
-        setRemovingPlannedId(null);
-      }
-    },
-    [items]
-  );
-
   const addSection = (
     <HomeAddSection
       items={addSectionItems}
-      onQuickStatus={handleQuickStatus}
+      onQuickStatus={quickSetStatus}
       seasonScope={seasonScope}
       onSelectSeasonScope={handleSelectSeasonScope}
       loading={seasonScope === "next" && nextSeasonLoading}
@@ -165,27 +132,36 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
     window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, "true");
   }, []);
 
-  const visibleItems = items.filter((item) => item.anime);
   // 保存時スナップショットの airing は陳腐化する(次回放送日が過去になる)ため、
   // 取得済みの今期データから最新へ差し替えてからカレンダー判定する。
   const calendarItems = useMemo(
     () =>
       withFreshAiring(
-        visibleItems.filter(
+        items.filter(
           (item) => item.status === "watching" || item.status === "planned"
         ),
         initialSeasonalAnime
       ),
-    [visibleItems, initialSeasonalAnime]
-  );
-  const plannedItems = useMemo(
-    () => visibleItems.filter((item) => item.status === "planned"),
-    [visibleItems]
+    [items, initialSeasonalAnime]
   );
   const grouped = useMemo(() => groupItemsByBroadcastDay(calendarItems), [calendarItems]);
   const hasCalendar = BROADCAST_WEEKDAYS.some((day) => grouped[day].length > 0);
 
-  if (visibleItems.length === 0) {
+  // Rails data (intentional duplication of watching/planned in season buckets per spec)
+  const watchingItems = useMemo(() => {
+    return items
+      .filter((r) => r.status === "watching")
+      .slice()
+      .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+  }, [items]);
+
+  const plannedItems = useMemo(() => {
+    return items.filter((r) => r.status === "planned");
+  }, [items]);
+
+  const seasonBuckets = useMemo(() => bucketBySeason(items), [items]);
+
+  if (items.length === 0) {
     return (
       <HomeEmptyGuide
         addSection={addSection}
@@ -198,6 +174,40 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   return (
     <main className="app-main home-main">
       <h1 className="sr-only">ホーム</h1>
+
+      {/* 続きを見る — watching, updatedAt desc */}
+      {watchingItems.length > 0 ? (
+        <PosterLane
+          title="続きを見る"
+          records={watchingItems}
+          onOpenCard={openSheet}
+        />
+      ) : null}
+
+      {/* 今期 / 来期 / その他 — bucketBySeason over all */}
+      {seasonBuckets.map((bucket) => (
+        <PosterLane
+          key={bucket.key}
+          title={bucket.label}
+          hint={bucket.hint}
+          records={bucket.items}
+          onOpenCard={openSheet}
+        />
+      ))}
+
+      {/* 見たい — planned */}
+      {plannedItems.length > 0 ? (
+        <PosterLane
+          title="見たい"
+          records={plannedItems}
+          onOpenCard={openSheet}
+        />
+      ) : null}
+
+      {/* 発見レーン（今期新着おすすめ） — preserved as-is */}
+      {addSection}
+
+      {/* 放映カレンダー — bottom */}
       {hasCalendar ? (
         <WeeklyBroadcastCalendar grouped={grouped} onItemClick={() => router.push("/watchlist")} />
       ) : (
@@ -208,55 +218,28 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
           </p>
         </section>
       )}
-      {addSection}
-      {plannedItems.length > 0 ? (
-        <HomePlannedManager
-          items={plannedItems}
-          removingId={removingPlannedId}
-          onRemove={handleRemovePlanned}
+
+      {/* Shared Grok edit sheet */}
+      {editing && editing.anime ? (
+        <EditSheet
+          record={editing}
+          draftStatus={draftStatus}
+          draftFavorite={draftFavorite}
+          draftWatchSlot={draftWatchSlot}
+          draftNotes={draftNotes}
+          draftWatched={draftWatched}
+          saving={savingId === editing.animeId}
+          onClose={closeSheet}
+          onStatusChange={(s) => void changeStatus(editing, s)}
+          onFavoriteChange={setDraftFavorite}
+          onWatchSlotChange={setDraftWatchSlot}
+          onNotesChange={setDraftNotes}
+          onWatchedChange={setDraftWatched}
+          onSave={() => void saveTracking(editing)}
+          onRemove={() => void removeItem(editing)}
         />
       ) : null}
     </main>
-  );
-}
-
-type HomePlannedManagerProps = {
-  items: AnimeStatusRecord[];
-  removingId: string | null;
-  onRemove: (record: AnimeStatusRecord) => void;
-};
-
-function HomePlannedManager({ items, removingId, onRemove }: HomePlannedManagerProps) {
-  return (
-    <section className="home-planned-manager" aria-labelledby="home-planned-manager-title">
-      <div className="home-planned-manager-header">
-        <h2 className="watchlist-broadcast-lanes-heading" id="home-planned-manager-title">
-          見たい
-        </h2>
-        <p className="home-planned-manager-note">追加した作品はここから解除できます。</p>
-      </div>
-      <ul className="home-planned-manager-list" role="list">
-        {items.map((record) => {
-          const title = record.anime?.title ?? record.animeId;
-          const isRemoving = removingId === record.animeId;
-
-          return (
-            <li key={record.animeId} className="home-planned-manager-row">
-              <span className="home-planned-manager-title">{title}</span>
-              <button
-                type="button"
-                className="home-planned-manager-remove"
-                onClick={() => onRemove(record)}
-                disabled={isRemoving}
-                aria-label={`${title}を見たいから解除`}
-              >
-                {isRemoving ? "解除中" : "解除"}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }
 

@@ -12,13 +12,14 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { bucketBySeason } from "@/lib/season-bucket";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
+import type { AnimeItem } from "@/lib/types";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 
-const statusLabels: Record<ViewingStatus, string> = {
+export const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
   watching: "視聴中",
   completed: "完了",
@@ -44,14 +45,14 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "unwatched", label: "未視聴話あり" },
 ];
 
-function getStatusBadgeClass(status: ViewingStatus): string {
+export function getStatusBadgeClass(status: ViewingStatus): string {
   if (status === "watching") return "watching";
   if (status === "completed") return "completed";
   if (status === "planned") return "planned";
   return "paused";
 }
 
-function computeProgress(record: AnimeStatusRecord) {
+export function computeProgress(record: AnimeStatusRecord) {
   const a = record.anime;
   if (!a || !a.episodes) return null;
   const cur = record.watchedEpisodes ?? 0;
@@ -60,17 +61,41 @@ function computeProgress(record: AnimeStatusRecord) {
   return { cur, total, pct };
 }
 
-export function WatchlistClientV2Grok({
-  initialItems,
-}: {
-  initialItems: AnimeStatusRecord[];
-}) {
+export type WatchlistEditor = {
+  items: AnimeStatusRecord[];
+  openSheet: (record: AnimeStatusRecord) => void;
+  closeSheet: () => void;
+  editing: AnimeStatusRecord | null;
+  draftStatus: ViewingStatus;
+  setDraftStatus: (v: ViewingStatus) => void;
+  draftFavorite: number | null;
+  setDraftFavorite: (v: number | null) => void;
+  draftWatchSlot: string;
+  setDraftWatchSlot: (v: string) => void;
+  draftNotes: string;
+  setDraftNotes: (v: string) => void;
+  draftWatched: number;
+  setDraftWatched: (v: number) => void;
+  savingId: string | null;
+  message: string | null;
+  messageKind: "success" | "error";
+  setMessage: (m: string | null) => void;
+  setMessageKind: (k: "success" | "error") => void;
+  shareUrl: string | null;
+  shareOutcome: ShareOutcome;
+  sharing: boolean;
+  changeStatus: (record: AnimeStatusRecord, next: ViewingStatus) => void;
+  saveTracking: (record: AnimeStatusRecord) => void;
+  removeItem: (record: AnimeStatusRecord) => void;
+  createShare: () => void;
+  quickSetStatus: (anime: AnimeItem, status: ViewingStatus) => Promise<void>;
+};
+
+export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): WatchlistEditor {
   const [items, setItems] = useState<AnimeStatusRecord[]>(
     () => initialItems.filter((i) => i.anime)
   );
-  const [filter, setFilter] = useState<FilterKey>("all");
-  const [search, setSearch] = useState("");
-  const [savingId, setSavingId] = useState<string | null>(null);
+
   const [sharing, setSharing] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
@@ -84,6 +109,301 @@ export function WatchlistClientV2Grok({
   const [draftWatchSlot, setDraftWatchSlot] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
   const [draftWatched, setDraftWatched] = useState(0);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  function openSheet(record: AnimeStatusRecord) {
+    if (!record.anime) return;
+    setEditing(record);
+    setDraftStatus(record.status);
+    setDraftFavorite(record.favoriteLevel);
+    setDraftWatchSlot(record.watchSlot ?? "");
+    setDraftNotes(record.notes ?? "");
+    setDraftWatched(record.watchedEpisodes ?? 0);
+    setMessage(null);
+  }
+
+  function closeSheet() {
+    setEditing(null);
+  }
+
+  // Status change in sheet commits immediately
+  const changeStatus = useCallback(
+    async (record: AnimeStatusRecord, next: ViewingStatus) => {
+      if (!record.anime || next === record.status) return;
+
+      const prev = record;
+      setItems((recs) =>
+        recs.map((r) => (r.animeId === record.animeId ? { ...r, status: next } : r))
+      );
+      setSavingId(record.animeId);
+      setDraftStatus(next);
+
+      try {
+        const res = await fetch("/api/statuses", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            animeId: record.animeId,
+            status: next,
+            anime: record.anime,
+          }),
+        });
+        if (!res.ok) throw new Error("ステータス保存に失敗しました。");
+      } catch (e) {
+        setItems((recs) =>
+          recs.map((r) => (r.animeId === record.animeId ? prev : r))
+        );
+        setDraftStatus(prev.status);
+        setMessageKind("error");
+        setMessage(e instanceof Error ? e.message : "ステータス保存に失敗しました。");
+      } finally {
+        setSavingId(null);
+      }
+    },
+    []
+  );
+
+  const saveTracking = useCallback(
+    async (record: AnimeStatusRecord) => {
+      if (!record.anime) return;
+
+      const current = record;
+      const nextWatched =
+        draftWatched < 0
+          ? 0
+          : record.anime.episodes != null
+            ? Math.min(draftWatched, record.anime.episodes)
+            : draftWatched;
+
+      const nextRecord: AnimeStatusRecord = {
+        ...record,
+        favoriteLevel: draftFavorite,
+        watchSlot: draftWatchSlot || null,
+        notes: draftNotes || null,
+        watchedEpisodes: nextWatched,
+        status: draftStatus,
+      };
+
+      setItems((recs) =>
+        recs.map((r) => (r.animeId === record.animeId ? nextRecord : r))
+      );
+      setSavingId(record.animeId);
+
+      try {
+        if (draftStatus !== current.status) {
+          const sres = await fetch("/api/statuses", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              animeId: record.animeId,
+              status: draftStatus,
+              anime: record.anime,
+            }),
+          });
+          if (!sres.ok) throw new Error("ステータス保存に失敗しました。");
+        }
+
+        const tres = await fetch("/api/watchlist", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            animeId: record.animeId,
+            favoriteLevel: draftFavorite,
+            watchSlot: draftWatchSlot || null,
+            notes: draftNotes || null,
+            watchedEpisodes: nextWatched,
+          }),
+        });
+        if (!tres.ok) throw new Error("視聴管理の保存に失敗しました。");
+
+        setMessageKind("success");
+        setMessage("保存しました。");
+        // keep sheet open with latest
+        setEditing(nextRecord);
+      } catch (e) {
+        setItems((recs) =>
+          recs.map((r) => (r.animeId === record.animeId ? current : r))
+        );
+        setMessageKind("error");
+        setMessage(e instanceof Error ? e.message : "保存に失敗しました。");
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [draftStatus, draftFavorite, draftWatchSlot, draftNotes, draftWatched]
+  );
+
+  const removeItem = useCallback(
+    async (record: AnimeStatusRecord) => {
+      if (!record.anime) return;
+      const confirmed = window.confirm(`「${record.anime.title}」を視聴リストから削除しますか？`);
+      if (!confirmed) return;
+
+      const prevItems = items;
+      setItems((recs) => recs.filter((r) => r.animeId !== record.animeId));
+      setSavingId(record.animeId);
+      closeSheet();
+
+      try {
+        const res = await fetch(
+          `/api/statuses?animeId=${encodeURIComponent(record.animeId)}`,
+          { method: "DELETE" }
+        );
+        if (!res.ok) throw new Error("削除に失敗しました。");
+        setMessageKind("success");
+        setMessage(`「${record.anime.title}」を削除しました。`);
+      } catch (e) {
+        setItems(prevItems);
+        setMessageKind("error");
+        setMessage(e instanceof Error ? e.message : "削除に失敗しました。");
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [items]
+  );
+
+  const createShare = useCallback(async () => {
+    setSharing(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/watchlist/shares", { method: "POST" });
+      const payload = (await res.json()) as { shareId?: string; error?: string };
+      if (!res.ok || !payload.shareId) {
+        throw new Error(payload.error ?? "共有URLの作成に失敗しました。");
+      }
+      const url = `${window.location.origin}/watchlist/share/${payload.shareId}`;
+      setShareUrl(url);
+      const outcome = await shareOrCopyUrl({
+        url,
+        title: "私の視聴管理リスト",
+        text: "今追ってるアニメをまとめました",
+      });
+      setShareOutcome(outcome);
+    } catch (e) {
+      setMessageKind("error");
+      setMessage(e instanceof Error ? e.message : "共有URLの作成に失敗しました。");
+    } finally {
+      setSharing(false);
+    }
+  }, []);
+
+  const quickSetStatus = useCallback(
+    async (anime: AnimeItem, status: ViewingStatus) => {
+      const previousItems = items;
+      const optimisticRecord: AnimeStatusRecord = {
+        animeId: anime.id,
+        status,
+        anime,
+        favoriteLevel: null,
+        watchSlot: null,
+        notes: null,
+        watchRhythm: null,
+        watchedEpisodes: null,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setItems((current) => [
+        optimisticRecord,
+        ...current.filter((record) => record.animeId !== anime.id),
+      ]);
+
+      try {
+        const response = await fetch("/api/statuses", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ animeId: anime.id, status, anime }),
+        });
+
+        if (!response.ok) {
+          throw new Error("ステータスの保存に失敗しました。");
+        }
+      } catch {
+        setItems(previousItems);
+      }
+    },
+    [items]
+  );
+
+  // When editing record updates externally, refresh drafts
+  useEffect(() => {
+    if (!editing) return;
+    const live = items.find((r) => r.animeId === editing.animeId);
+    if (live) {
+      setDraftStatus(live.status);
+      setDraftFavorite(live.favoriteLevel);
+      setDraftWatchSlot(live.watchSlot ?? "");
+      setDraftNotes(live.notes ?? "");
+      setDraftWatched(live.watchedEpisodes ?? 0);
+    }
+  }, [items, editing?.animeId]);
+
+  return {
+    items,
+    openSheet,
+    closeSheet,
+    editing,
+    draftStatus,
+    setDraftStatus,
+    draftFavorite,
+    setDraftFavorite,
+    draftWatchSlot,
+    setDraftWatchSlot,
+    draftNotes,
+    setDraftNotes,
+    draftWatched,
+    setDraftWatched,
+    savingId,
+    message,
+    messageKind,
+    setMessage,
+    setMessageKind,
+    shareUrl,
+    shareOutcome,
+    sharing,
+    changeStatus,
+    saveTracking,
+    removeItem,
+    createShare,
+    quickSetStatus,
+  };
+}
+
+export function WatchlistClientV2Grok({
+  initialItems,
+}: {
+  initialItems: AnimeStatusRecord[];
+}) {
+  const editor = useWatchlistV2Editor(initialItems);
+  const {
+    items,
+    openSheet,
+    closeSheet,
+    editing,
+    draftStatus,
+    setDraftStatus,
+    draftFavorite,
+    setDraftFavorite,
+    draftWatchSlot,
+    setDraftWatchSlot,
+    draftNotes,
+    setDraftNotes,
+    draftWatched,
+    setDraftWatched,
+    savingId,
+    message,
+    messageKind,
+    shareUrl,
+    shareOutcome,
+    sharing,
+    changeStatus,
+    saveTracking,
+    removeItem,
+    createShare,
+  } = editor;
+
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [search, setSearch] = useState("");
 
   const visibleItems = items;
 
@@ -109,188 +429,6 @@ export function WatchlistClientV2Grok({
   // 期セクション（今期 / 来期 / その他）。通常版と共通の bucketBySeason を使用。
   // 上部フィルタチップで絞った filteredItems を期で分割する。
   const seasonBuckets = useMemo(() => bucketBySeason(filteredItems), [filteredItems]);
-
-  function openSheet(record: AnimeStatusRecord) {
-    if (!record.anime) return;
-    setEditing(record);
-    setDraftStatus(record.status);
-    setDraftFavorite(record.favoriteLevel);
-    setDraftWatchSlot(record.watchSlot ?? "");
-    setDraftNotes(record.notes ?? "");
-    setDraftWatched(record.watchedEpisodes ?? 0);
-    setMessage(null);
-  }
-
-  function closeSheet() {
-    setEditing(null);
-  }
-
-  // Status change in sheet commits immediately
-  async function changeStatus(record: AnimeStatusRecord, next: ViewingStatus) {
-    if (!record.anime || next === record.status) return;
-
-    const prev = record;
-    setItems((recs) =>
-      recs.map((r) => (r.animeId === record.animeId ? { ...r, status: next } : r))
-    );
-    setSavingId(record.animeId);
-    setDraftStatus(next);
-
-    try {
-      const res = await fetch("/api/statuses", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          animeId: record.animeId,
-          status: next,
-          anime: record.anime,
-        }),
-      });
-      if (!res.ok) throw new Error("ステータス保存に失敗しました。");
-    } catch (e) {
-      setItems((recs) =>
-        recs.map((r) => (r.animeId === record.animeId ? prev : r))
-      );
-      setDraftStatus(prev.status);
-      setMessageKind("error");
-      setMessage(e instanceof Error ? e.message : "ステータス保存に失敗しました。");
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  async function saveTracking(record: AnimeStatusRecord) {
-    if (!record.anime) return;
-
-    const current = record;
-    const nextWatched =
-      draftWatched < 0
-        ? 0
-        : record.anime.episodes != null
-          ? Math.min(draftWatched, record.anime.episodes)
-          : draftWatched;
-
-    const nextRecord: AnimeStatusRecord = {
-      ...record,
-      favoriteLevel: draftFavorite,
-      watchSlot: draftWatchSlot || null,
-      notes: draftNotes || null,
-      watchedEpisodes: nextWatched,
-      status: draftStatus, // sync in case
-    };
-
-    setItems((recs) =>
-      recs.map((r) => (r.animeId === record.animeId ? nextRecord : r))
-    );
-    setSavingId(record.animeId);
-
-    try {
-      // If status changed from original, commit it too
-      if (draftStatus !== current.status) {
-        const sres = await fetch("/api/statuses", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            animeId: record.animeId,
-            status: draftStatus,
-            anime: record.anime,
-          }),
-        });
-        if (!sres.ok) throw new Error("ステータス保存に失敗しました。");
-      }
-
-      const tres = await fetch("/api/watchlist", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          animeId: record.animeId,
-          favoriteLevel: draftFavorite,
-          watchSlot: draftWatchSlot || null,
-          notes: draftNotes || null,
-          watchedEpisodes: nextWatched,
-        }),
-      });
-      if (!tres.ok) throw new Error("視聴管理の保存に失敗しました。");
-
-      setMessageKind("success");
-      setMessage("保存しました。");
-      // keep sheet open with latest
-      setEditing(nextRecord);
-    } catch (e) {
-      setItems((recs) =>
-        recs.map((r) => (r.animeId === record.animeId ? current : r))
-      );
-      setMessageKind("error");
-      setMessage(e instanceof Error ? e.message : "保存に失敗しました。");
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  async function removeItem(record: AnimeStatusRecord) {
-    if (!record.anime) return;
-    const confirmed = window.confirm(`「${record.anime.title}」を視聴リストから削除しますか？`);
-    if (!confirmed) return;
-
-    const prevItems = items;
-    setItems((recs) => recs.filter((r) => r.animeId !== record.animeId));
-    setSavingId(record.animeId);
-    closeSheet();
-
-    try {
-      const res = await fetch(
-        `/api/statuses?animeId=${encodeURIComponent(record.animeId)}`,
-        { method: "DELETE" }
-      );
-      if (!res.ok) throw new Error("削除に失敗しました。");
-      setMessageKind("success");
-      setMessage(`「${record.anime.title}」を削除しました。`);
-    } catch (e) {
-      setItems(prevItems);
-      setMessageKind("error");
-      setMessage(e instanceof Error ? e.message : "削除に失敗しました。");
-    } finally {
-      setSavingId(null);
-    }
-  }
-
-  async function createShare() {
-    setSharing(true);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/watchlist/shares", { method: "POST" });
-      const payload = (await res.json()) as { shareId?: string; error?: string };
-      if (!res.ok || !payload.shareId) {
-        throw new Error(payload.error ?? "共有URLの作成に失敗しました。");
-      }
-      const url = `${window.location.origin}/watchlist/share/${payload.shareId}`;
-      setShareUrl(url);
-      const outcome = await shareOrCopyUrl({
-        url,
-        title: "私の視聴管理リスト",
-        text: "今追ってるアニメをまとめました",
-      });
-      setShareOutcome(outcome);
-    } catch (e) {
-      setMessageKind("error");
-      setMessage(e instanceof Error ? e.message : "共有URLの作成に失敗しました。");
-    } finally {
-      setSharing(false);
-    }
-  }
-
-  // When editing record updates externally, refresh drafts
-  useEffect(() => {
-    if (!editing) return;
-    const live = items.find((r) => r.animeId === editing.animeId);
-    if (live) {
-      setDraftStatus(live.status);
-      setDraftFavorite(live.favoriteLevel);
-      setDraftWatchSlot(live.watchSlot ?? "");
-      setDraftNotes(live.notes ?? "");
-      setDraftWatched(live.watchedEpisodes ?? 0);
-    }
-  }, [items, editing?.animeId]);
 
   const count = visibleItems.length;
 
@@ -419,7 +557,7 @@ export function WatchlistClientV2Grok({
   );
 }
 
-function PosterCard({
+export function PosterCard({
   record,
   onOpen,
 }: {
@@ -480,7 +618,47 @@ function PosterCard({
   );
 }
 
-function EditSheet({
+export function PosterLane({
+  title,
+  hint,
+  count,
+  records,
+  onOpenCard,
+}: {
+  title: string;
+  hint?: string | null;
+  count?: number;
+  records: AnimeStatusRecord[];
+  onOpenCard: (record: AnimeStatusRecord) => void;
+}) {
+  const n = count ?? records.length;
+  return (
+    <div>
+      <div className="wl2g-sec">
+        <h3>
+          {title}
+          {hint ? (
+            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--muted)" }}>
+              {hint}
+            </span>
+          ) : null}
+        </h3>
+        <span style={{ fontSize: 11, color: "var(--muted)" }}>{n}件</span>
+      </div>
+      <div className="wl2g-lane">
+        {records.map((record) => (
+          <PosterCard
+            key={record.animeId}
+            record={record}
+            onOpen={() => onOpenCard(record)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function EditSheet({
   record,
   draftStatus,
   draftFavorite,
