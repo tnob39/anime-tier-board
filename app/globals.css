@@ -4188,6 +4188,64 @@ a.cl-history-title:hover {
   border-radius: 4px;
 }
 
+/* オーナー限定: 視聴管理リスト V2 の実機比較スイッチ */
+.hamburger-owner-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hamburger-owner-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #b45309;
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.wl2-modeswitch {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 8px 0;
+}
+.wl2-modeswitch-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--fg);
+  font-size: 0.85rem;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s;
+}
+.wl2-modeswitch-btn:hover {
+  background: var(--surface-soft);
+}
+.wl2-modeswitch-btn.is-active {
+  border-color: currentColor;
+  background: var(--surface-soft);
+  font-weight: 700;
+}
+.wl2-modeswitch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.wl2-modeswitch-dot--off { background: var(--muted); }
+.wl2-modeswitch-dot--codex { background: #2563eb; }
+.wl2-modeswitch-dot--grok { background: #16a34a; }
+.wl2-modeswitch-check {
+  margin-left: auto;
+  color: var(--accent);
+}
+
 /* ========================================
    WelcomeModal
 ======================================== */
