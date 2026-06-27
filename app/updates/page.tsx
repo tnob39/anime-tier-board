@@ -27,10 +27,24 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.29",
+    date: "2026-06-27",
+    label: "ヘッダー・フッター・メニューのダークモード対応",
+    isLatest: true,
+    changes: [
+      {
+        icon: Menu,
+        iconColor: "#0ea5e9",
+        title: "ヘッダー・フッター・メニューのダークモード対応",
+        description: "GlobalNav、MobileNav、ハンバーガードロワーをテーマトークンに追従させ、ダークモードでも適切な配色で表示されるようにしました。",
+      },
+    ]
+  },
+  {
     version: "1.28",
     date: "2026-06-27",
     label: "共有された視聴リストも今期/来期セクションごとに横スライドで見やすく",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Layers,
