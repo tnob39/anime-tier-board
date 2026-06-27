@@ -4,6 +4,7 @@ import { Check, Copy, Loader2, Search, Share2, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { bucketBySeason } from "@/lib/season-bucket";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import "./watchlist-v2-codex.css";
@@ -45,17 +46,6 @@ const watchSlotOptions = [
   "週末にまとめて見る",
   "配信されたら見る",
   "時間がある時に見る"
-];
-
-const sectionDefs: Array<{
-  key: string;
-  title: string;
-  statuses: ViewingStatus[];
-}> = [
-  { key: "watching", title: "現在視聴中", statuses: ["watching"] },
-  { key: "planned", title: "気になっている", statuses: ["planned"] },
-  { key: "completed", title: "視聴完了", statuses: ["completed"] },
-  { key: "paused", title: "保留中", statuses: ["paused", "dropped"] }
 ];
 
 function hasUnwatchedEpisodes(record: AnimeStatusRecord) {
@@ -121,16 +111,9 @@ export function WatchlistClientV2Codex({ initialItems }: { initialItems: AnimeSt
     [filter, items, query]
   );
 
-  const sections = useMemo(
-    () =>
-      sectionDefs
-        .map((section) => ({
-          ...section,
-          items: visibleItems.filter((item) => section.statuses.includes(item.status))
-        }))
-        .filter((section) => section.items.length > 0),
-    [visibleItems]
-  );
+  // 期セクション（今期 / 来期 / その他）。通常版と共通の bucketBySeason を使用。
+  // ステータスフィルタ（上部チップ）で絞った visibleItems を期で分割する。
+  const seasonBuckets = useMemo(() => bucketBySeason(visibleItems), [visibleItems]);
 
   function showMessage(kind: "success" | "error", text: string) {
     setMessageKind(kind);
@@ -310,29 +293,17 @@ export function WatchlistClientV2Codex({ initialItems }: { initialItems: AnimeSt
       ) : null}
 
       {visibleItems.length ? (
-        filter === "all" ? (
-          sections.map((section) => (
-            <section className="wl2c-section" key={section.key}>
-              <div className="wl2c-section-heading">
-                <h2>{section.title}</h2>
-                <span>{section.items.length}件</span>
-              </div>
-              <div className="wl2c-lane">
-                {section.items.map((record) => (
-                  <PosterCard
-                    key={record.animeId}
-                    record={record}
-                    saving={savingId === record.animeId}
-                    onEdit={() => openEditor(record)}
-                  />
-                ))}
-              </div>
-            </section>
-          ))
-        ) : (
-          <section className="wl2c-section">
-            <div className="wl2c-grid">
-              {visibleItems.map((record) => (
+        seasonBuckets.map((bucket) => (
+          <section className="wl2c-section" key={bucket.key}>
+            <div className="wl2c-section-heading">
+              <h2>
+                {bucket.label}
+                {bucket.hint ? <span className="wl2c-section-hint">{bucket.hint}</span> : null}
+              </h2>
+              <span>{bucket.items.length}件</span>
+            </div>
+            <div className="wl2c-lane">
+              {bucket.items.map((record) => (
                 <PosterCard
                   key={record.animeId}
                   record={record}
@@ -342,7 +313,7 @@ export function WatchlistClientV2Codex({ initialItems }: { initialItems: AnimeSt
               ))}
             </div>
           </section>
-        )
+        ))
       ) : (
         <section className="wl2c-empty">
           <h2>まだ作品がありません</h2>

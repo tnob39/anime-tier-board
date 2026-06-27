@@ -133,6 +133,13 @@
   font-size: 1rem;
 }
 
+.wl2c-section-hint {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #9a9a9a;
+}
+
 .wl2c-section-heading span,
 .wl2c-section-heading a {
   color: #9a9a9a;

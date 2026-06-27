@@ -7,11 +7,11 @@ import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { EvangelistCreateModal } from "@/components/EvangelistCreateModal";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { groupItemsByBroadcastDay, normalizeBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
-import { getCurrentAnimeSeason, getNextAnimeSeason, normalizeSeason } from "@/lib/season";
+import { bucketBySeason } from "@/lib/season-bucket";
 import { searchUrlFromProviderId } from "@/lib/service-search";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
-import { SEASON_LABELS, type AnimeItem } from "@/lib/types";
+import { type AnimeItem } from "@/lib/types";
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -20,65 +20,6 @@ const statusLabels: Record<ViewingStatus, string> = {
   paused: "一時停止",
   dropped: "中止"
 };
-
-type SeasonBucketKey = "current" | "next" | "other";
-
-type SeasonBucket = {
-  key: SeasonBucketKey;
-  label: string;
-  hint: string | null;
-  items: AnimeStatusRecord[];
-};
-
-/**
- * 視聴リストを「今期 / 来期 / その他」に振り分ける。
- * 今期=放送中シーズン、来期=次シーズンで、変わり目に向けて貯めた作品を別管理できるようにする。
- */
-function bucketBySeason(records: AnimeStatusRecord[]): SeasonBucket[] {
-  const current = getCurrentAnimeSeason();
-  const next = getNextAnimeSeason();
-  const seasonText = (year: number, season: keyof typeof SEASON_LABELS) =>
-    `${year}年${SEASON_LABELS[season]}`;
-
-  const buckets: Record<SeasonBucketKey, AnimeStatusRecord[]> = {
-    current: [],
-    next: [],
-    other: []
-  };
-
-  for (const record of records) {
-    const season = normalizeSeason(record.anime?.season ?? null);
-    const year = record.anime?.seasonYear ?? null;
-    if (season === current.season && year === current.year) {
-      buckets.current.push(record);
-    } else if (season === next.season && year === next.year) {
-      buckets.next.push(record);
-    } else {
-      buckets.other.push(record);
-    }
-  }
-
-  return [
-    {
-      key: "current" as const,
-      label: `今期（${seasonText(current.year, current.season)}）`,
-      hint: null,
-      items: buckets.current
-    },
-    {
-      key: "next" as const,
-      label: `来期（${seasonText(next.year, next.season)}）`,
-      hint: "これから視聴予定",
-      items: buckets.next
-    },
-    {
-      key: "other" as const,
-      label: "その他",
-      hint: "継続クール・過去作など",
-      items: buckets.other
-    }
-  ].filter((bucket) => bucket.items.length > 0);
-}
 
 const watchSlotOptions = [
   "",
