@@ -4,6 +4,7 @@ import { listStatuses } from "@/lib/statuses";
 import { getSubscriptionState } from "@/lib/subscriptions";
 import type { Metadata } from "next";
 import { ExploreClient } from "./explore-client";
+import { isOwnerEmail } from "@/lib/owner";
 
 export const metadata: Metadata = {
   title: "さがす — numanie"
@@ -14,6 +15,10 @@ export default async function ExplorePage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
+    redirect("/");
+  }
+
+  if (!isOwnerEmail(session?.user?.email)) {
     redirect("/");
   }
 
