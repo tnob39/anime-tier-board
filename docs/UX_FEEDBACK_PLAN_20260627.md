@@ -150,16 +150,16 @@
 
 相互依存を踏まえ、以下の順で Grok にスライス委任する想定。
 
-| # | スライス | 主対象 | 依存 | リスク |
-|---|---------|--------|------|--------|
-| S1 | テーマ ヘッダー/フッター切替バグ修正（§7） | GlobalNav/MobileNav/HamburgerMenu CSS | なし | 低 |
-| S2 | ハンバーガー整備（テーマ上/その他下）（§6） | HamburgerMenu.tsx | S1 | 低 |
-| S3 | 探す オーナー限定化（§5・検索追加は除く） | ナビ + explore ゲート | owner.ts | 低 |
-| S4 | 分析 一般/オーナー分岐＋好み分析アコーディオン（§4） | dashboard-client.tsx | owner.ts | 中 |
-| S5 | Grok版 watchlist 全採用＋トークン載せ替え（§2） | watchlist 一式 | S1 | 中 |
-| S6 | ホーム=マイリスト化＋全話数/曜日＋カレンダー作法統一（§1） | app/page.tsx + watchlist | S5 | 高 |
-| S7 | 追加UI 横スライド刷新（§3） | ホーム/watchlist 追加導線 | S6 | 中 |
-| S8 | （後回し）探す ワード/ジャンル検索（§5追加） | explore | S3 | 中 |
+| # | issue | スライス | 主対象 | 依存 | リスク |
+|---|-------|---------|--------|------|--------|
+| S1 | #231 | テーマ ヘッダー/フッター切替バグ修正（§7） | GlobalNav/MobileNav/HamburgerMenu CSS | なし | 低 |
+| S2 | #232 | ハンバーガー整備（テーマ上/その他下）（§6） | HamburgerMenu.tsx | S1 | 低 |
+| S3 | #233 | 探す オーナー限定化（§5・検索追加は除く） | ナビ + explore ゲート | owner.ts | 低 |
+| S4 | #234 | 分析 一般/オーナー分岐＋好み分析アコーディオン（§4） | dashboard-client.tsx | owner.ts | 中 |
+| S5 | #235 | Grok版 watchlist 全採用＋トークン載せ替え（§2） | watchlist 一式 | S1 | 中 |
+| S6 | #236 | ホーム=マイリスト化＋全話数/曜日＋カレンダー作法統一（§1） | app/page.tsx + watchlist | S5 | 高 |
+| S7 | #237 | 追加UI 横スライド刷新（§3） | ホーム/watchlist 追加導線 | S6 | 中 |
+| S8 | #238 | （後回し）探す ワード/ジャンル検索（§5追加） | explore | S3 | 中 |
 
 各スライスは別worktreeで Grok 実装 → Claude レビュー（mojibake/差分）→ tsc/build → PR → オーナー承認 → squash マージ →
 本番デプロイ確認 → `/updates` 追記、の1サイクルで完結させる。
