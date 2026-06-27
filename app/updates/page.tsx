@@ -27,10 +27,45 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.30",
+    date: "2026-06-27",
+    label: "ホームを「マイリスト」に刷新（横スワイプのレーン表示）",
+    isLatest: true,
+    changes: [
+      {
+        icon: ListChecks,
+        iconColor: "#6366f1",
+        title: "ホームを「マイリスト」に刷新",
+        description: "ホームを視聴管理リスト中心に作り直しました。「続きを見る」「今期 / 来期 / その他」「見たい」を横スワイプで一覧でき、下に今週の放映カレンダーを表示します。",
+        href: "/",
+      },
+      {
+        icon: Sparkles,
+        iconColor: "#f59e0b",
+        title: "新しい視聴管理リストを全員に",
+        description: "ポスターカードと話数の進捗バーで見やすくした新デザインの視聴管理リストを全ユーザーに導入しました。ライト / ダークのテーマにも追従します。",
+        href: "/watchlist",
+      },
+      {
+        icon: BarChart3,
+        iconColor: "#10b981",
+        title: "分析タブをシンプルに",
+        description: "分析タブは加入中サブスクのカバー率を中心に整理し、ひと目で分かるようにしました。",
+        href: "/dashboard",
+      },
+      {
+        icon: Menu,
+        iconColor: "#0ea5e9",
+        title: "ナビをすっきり整理",
+        description: "下部ナビをホーム / Tier / 分析に整理しました。",
+      },
+    ]
+  },
+  {
     version: "1.29",
     date: "2026-06-27",
     label: "ヘッダー・フッター・メニューのダークモード対応",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Menu,
