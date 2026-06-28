@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.32",
+    date: "2026-06-28",
+    label: "マイリストにTierランクバッジを表示",
+    isLatest: true,
+    changes: [
+      {
+        icon: Layers,
+        iconColor: "#f59e0b",
+        title: "マイリストカードにTierバッジ",
+        description: "視聴リストのポスターカードに、Tier表でユーザーが付けたS/A/Bなどのランクバッジを表示するようになりました。ステータスバッジの反対側（左上）に色付きの小さいピルで表示され、一覧で自分の評価がわかります。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.31",
     date: "2026-06-28",
     label: "ホームから今期 / 来期の作品を横スワイプで追加",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Bookmark,
