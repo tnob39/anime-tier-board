@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.33",
+    date: "2026-06-28",
+    label: "マイリストからワンタップで削除",
+    isLatest: true,
+    changes: [
+      {
+        icon: Trash2,
+        iconColor: "#ef4444",
+        title: "カードからすぐに削除",
+        description: "マイリストのポスターカードに削除ボタンを追加しました。編集画面を開かず、カードからワンタップで作品を削除できます。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.32",
     date: "2026-06-28",
     label: "マイリストにTierランクバッジを表示",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Layers,
