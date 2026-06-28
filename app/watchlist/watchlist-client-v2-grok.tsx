@@ -537,6 +537,7 @@ export function WatchlistClientV2Grok({
                     key={record.animeId}
                     record={record}
                     onOpen={() => openSheet(record)}
+                    onRemove={() => void removeItem(record)}
                     tier={tier}
                   />
                 );
@@ -576,10 +577,12 @@ export function WatchlistClientV2Grok({
 export function PosterCard({
   record,
   onOpen,
+  onRemove,
   tier,
 }: {
   record: AnimeStatusRecord;
   onOpen: () => void;
+  onRemove?: () => void;
   tier?: { label: string; color: string };
 }) {
   const anime = record.anime!;
@@ -597,6 +600,20 @@ export function PosterCard({
           <span className={`wl2g-badge ${badge}`}>{label}</span>
           {tier ? (
             <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
+          ) : null}
+          {onRemove ? (
+            <button
+              type="button"
+              className="wl2g-del"
+              aria-label="マイリストから削除"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onRemove();
+              }}
+            >
+              <Trash2 size={14} aria-hidden="true" />
+            </button>
           ) : null}
           {prog && record.status === "watching" ? (
             <div className="wl2g-meta">
@@ -632,6 +649,20 @@ export function PosterCard({
           <span className={`wl2g-badge ${badge}`} style={{ zIndex: 3 }}>{label}</span>
           {tier ? (
             <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
+          ) : null}
+          {onRemove ? (
+            <button
+              type="button"
+              className="wl2g-del"
+              aria-label="マイリストから削除"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onRemove();
+              }}
+            >
+              <Trash2 size={14} aria-hidden="true" />
+            </button>
           ) : null}
           <div className="wl2g-meta">
             <div className="wl2g-ptitle" style={{ textShadow: "none" }}>{anime.title}</div>
