@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.31",
+    date: "2026-06-28",
+    label: "ホームから今期 / 来期の作品を横スワイプで追加",
+    isLatest: true,
+    changes: [
+      {
+        icon: Bookmark,
+        iconColor: "#6366f1",
+        title: "今期 / 来期から横スワイプで追加",
+        description: "ホームの追加セクションを横スワイプのポスターレーンに刷新しました。今期 / 来期を切り替えながら、気になる作品を「見たい」「視聴中」でワンタップ追加できます。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.30",
     date: "2026-06-27",
     label: "ホームを「マイリスト」に刷新（横スワイプのレーン表示）",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: ListChecks,
