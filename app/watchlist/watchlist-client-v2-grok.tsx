@@ -404,6 +404,7 @@ export function WatchlistClientV2Grok({
 
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
+  const [tierMap, setTierMap] = useState<Record<string, { label: string; color: string }>>({});
 
   const visibleItems = items;
 
@@ -431,6 +432,17 @@ export function WatchlistClientV2Grok({
   const seasonBuckets = useMemo(() => bucketBySeason(filteredItems), [filteredItems]);
 
   const count = visibleItems.length;
+
+  useEffect(() => {
+    fetch("/api/boards/tiers")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data: { tiers?: Record<string, { label: string; color: string }> }) => {
+        setTierMap(data.tiers ?? {});
+      })
+      .catch(() => {
+        // silent on failure: badge simply won't show
+      });
+  }, []);
 
   return (
     <div className="wl2g-root">
@@ -518,13 +530,17 @@ export function WatchlistClientV2Grok({
               </span>
             </div>
             <div className="wl2g-lane">
-              {bucket.items.map((record) => (
-                <PosterCard
-                  key={record.animeId}
-                  record={record}
-                  onOpen={() => openSheet(record)}
-                />
-              ))}
+              {bucket.items.map((record) => {
+                const tier = tierMap[record.animeId];
+                return (
+                  <PosterCard
+                    key={record.animeId}
+                    record={record}
+                    onOpen={() => openSheet(record)}
+                    tier={tier}
+                  />
+                );
+              })}
             </div>
           </div>
         ))
@@ -560,9 +576,11 @@ export function WatchlistClientV2Grok({
 export function PosterCard({
   record,
   onOpen,
+  tier,
 }: {
   record: AnimeStatusRecord;
   onOpen: () => void;
+  tier?: { label: string; color: string };
 }) {
   const anime = record.anime!;
   const prog = computeProgress(record);
@@ -577,6 +595,9 @@ export function PosterCard({
           style={{ backgroundImage: `url(${anime.proxiedImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }}
         >
           <span className={`wl2g-badge ${badge}`}>{label}</span>
+          {tier ? (
+            <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
+          ) : null}
           {prog && record.status === "watching" ? (
             <div className="wl2g-meta">
               <div className="wl2g-ptitle">{anime.title}</div>
@@ -609,6 +630,9 @@ export function PosterCard({
         <div className="pic" style={{ background: "var(--surface-soft)" }}>
           <AnimeCardPlaceholder title={anime.title} />
           <span className={`wl2g-badge ${badge}`} style={{ zIndex: 3 }}>{label}</span>
+          {tier ? (
+            <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
+          ) : null}
           <div className="wl2g-meta">
             <div className="wl2g-ptitle" style={{ textShadow: "none" }}>{anime.title}</div>
           </div>

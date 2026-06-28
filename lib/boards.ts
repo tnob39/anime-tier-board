@@ -86,3 +86,35 @@ function ensureSchema() {
 
   return schemaReady;
 }
+
+export async function getTierLabelsByAnimeId(
+  userId: string
+): Promise<Record<string, { label: string; color: string }>> {
+  await ensureSchema();
+
+  const result = await getTursoClient().execute({
+    sql: `select season_year, season, board_json from tier_boards where user_id = ?`,
+    args: [userId]
+  });
+
+  const map: Record<string, { label: string; color: string }> = {};
+
+  for (const row of result.rows) {
+    const raw = row.board_json;
+    if (typeof raw !== "string") continue;
+    try {
+      const board = JSON.parse(raw) as PersistedBoard;
+      for (const tier of board.tiers ?? []) {
+        const label = tier.label;
+        const color = tier.color;
+        for (const itemId of tier.itemIds ?? []) {
+          map[itemId] = { label, color };
+        }
+      }
+    } catch {
+      // skip malformed board
+    }
+  }
+
+  return map;
+}
