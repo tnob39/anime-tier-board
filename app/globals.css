@@ -5372,3 +5372,31 @@ a.cl-history-title:hover {
   color: #ffffff;
   border-color: var(--accent, #2dd4bf);
 }
+
+/* S8 explore title/genre search */
+.explore-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+.explore-search input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  min-width: 0;
+}
+
+.explore-search input::placeholder {
+  color: var(--muted);
+}
