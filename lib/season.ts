@@ -52,3 +52,14 @@ export function normalizeSeason(value: string | null): AnimeSeason | null {
 
   return null;
 }
+
+export function seasonLabelJa(season: AnimeSeason, year: number): string {
+  const labels: Record<AnimeSeason, string> = {
+    WINTER: "冬",
+    SPRING: "春",
+    SUMMER: "夏",
+    FALL: "秋"
+  };
+
+  return `${year}${labels[season]}`;
+}
