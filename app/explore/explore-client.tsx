@@ -50,6 +50,8 @@ export function ExploreClient({
   const [hideMovies, setHideMovies] = useState(false);
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
   const [onlyInstantWatch, setOnlyInstantWatch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const subscribedProviderIds = useMemo(
     () =>
       initialSubscriptions.flatMap((subscription) => {
@@ -64,6 +66,19 @@ export function ExploreClient({
     const start = 1990;
     return Array.from({ length: currentYear - start + 1 }, (_, index) => currentYear - index);
   }, [currentYear]);
+
+  const genreOptions = useMemo(() => {
+    const countMap = new Map<string, number>();
+    for (const it of items) {
+      for (const g of it.genres ?? []) {
+        countMap.set(g, (countMap.get(g) ?? 0) + 1);
+      }
+    }
+    return Array.from(countMap.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name]) => name);
+  }, [items]);
+
   const filteredItems = useMemo(
     () =>
       filterAnimeItems(items, {
@@ -75,18 +90,45 @@ export function ExploreClient({
       }),
     [hideMovies, hideRerunCandidates, items, year, onlyInstantWatch, subscribedProviderIds]
   );
+
+  const searchFilteredItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const activeGenres = selectedGenres;
+    if (!q && activeGenres.length === 0) {
+      return filteredItems;
+    }
+    return filteredItems.filter((item) => {
+      if (q) {
+        const t = item.title?.toLowerCase() ?? "";
+        const n = item.titles?.native?.toLowerCase() ?? "";
+        const r = item.titles?.romaji?.toLowerCase() ?? "";
+        const e = item.titles?.english?.toLowerCase() ?? "";
+        if (!t.includes(q) && !n.includes(q) && !r.includes(q) && !e.includes(q)) {
+          return false;
+        }
+      }
+      if (activeGenres.length > 0) {
+        const gs = item.genres ?? [];
+        if (!activeGenres.some((g) => gs.includes(g))) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [filteredItems, searchQuery, selectedGenres]);
+
   const rankedItems = useMemo(
-    () => rankItems(filteredItems, preferences, statusMap, sortMode),
-    [filteredItems, preferences, statusMap, sortMode]
+    () => rankItems(searchFilteredItems, preferences, statusMap, sortMode),
+    [searchFilteredItems, preferences, statusMap, sortMode]
   );
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const visibleItems = rankedItems.slice(0, visibleCount);
   const hasMoreItems = rankedItems.length > visibleCount;
 
-  // 新しい年代を取得した時・並び替えを変えた時は表示件数をリセットする
+  // 新しい年代を取得した時・並び替えを変えた時・検索/ジャンルが変わった時は表示件数をリセットする
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [items, sortMode]);
+  }, [items, sortMode, searchQuery, selectedGenres]);
 
   async function loadYear() {
     setLoading(true);
@@ -137,6 +179,17 @@ export function ExploreClient({
     }
   }
 
+  function toggleGenre(genre: string) {
+    setSelectedGenres((current) =>
+      current.includes(genre) ? current.filter((g) => g !== genre) : [...current, genre]
+    );
+  }
+
+  function clearSearchAndGenres() {
+    setSearchQuery("");
+    setSelectedGenres([]);
+  }
+
   return (
     <main className="app-main explore-main">
       <header className="explore-header">
@@ -158,6 +211,15 @@ export function ExploreClient({
             ))}
           </select>
         </label>
+        <div className="explore-search">
+          <Search size={18} />
+          <input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="タイトルで検索"
+            aria-label="タイトルで検索"
+          />
+        </div>
         <div className="explore-sort-tabs" aria-label="ランキング種別">
           {[
             ["fit", "おすすめ"],
@@ -205,6 +267,30 @@ export function ExploreClient({
             {hasSubscriptions ? "今すぐ見放題（加入中）" : "今すぐ見放題"}
           </button>
         </div>
+        {genreOptions.length > 0 ? (
+          <div className="filter-chip-group" aria-label="ジャンルで絞り込み">
+            {genreOptions.map((genre) => (
+              <button
+                key={genre}
+                className={selectedGenres.includes(genre) ? "filter-chip is-active" : "filter-chip"}
+                type="button"
+                onClick={() => toggleGenre(genre)}
+                aria-pressed={selectedGenres.includes(genre)}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {searchQuery || selectedGenres.length > 0 ? (
+          <button
+            type="button"
+            className="filter-chip"
+            onClick={clearSearchAndGenres}
+          >
+            クリア
+          </button>
+        ) : null}
         {onlyInstantWatch && !hasSubscriptions ? (
           <p className="explore-instant-watch-hint">
             サブスクを登録すると、加入中サービスで見られる作品だけに絞り込めます。{" "}
