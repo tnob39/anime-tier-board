@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.34",
+    date: "2026-06-29",
+    label: "新しいナビゲーション（ベータ）",
+    isLatest: true,
+    changes: [
+      {
+        icon: Smartphone,
+        iconColor: "#6366f1",
+        title: "5タブ＋マイページを試せるようになりました",
+        description: "設定から「新しいナビ」をONにすると、マイリストとマイページを含む5タブのナビゲーションを試せます。",
+        href: "/settings",
+      },
+    ]
+  },
+  {
     version: "1.33",
     date: "2026-06-28",
     label: "マイリストからワンタップで削除",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Trash2,
