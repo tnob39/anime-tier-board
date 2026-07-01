@@ -27,10 +27,24 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.35",
+    date: "2026-07-01",
+    label: "シェア画面に配信サービスを表示",
+    isLatest: true,
+    changes: [
+      {
+        icon: Tv2,
+        iconColor: "#6366f1",
+        title: "Tier表にサブスクアイコンを表示",
+        description: "シェアされたTier表の各作品に配信中のサブスクアイコンを表示しました。",
+        href: "/tier",
+      },
+    ]
+  },
+  {
     version: "1.34",
     date: "2026-07-01",
     label: "シェアページを刷新",
-    isLatest: true,
     changes: [
       {
         icon: Share2,
