@@ -60,8 +60,7 @@ body {
 
 .season-share-header,
 .promote-panel,
-.season-share-empty,
-.season-share-footer {
+.season-share-empty {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -75,8 +74,7 @@ body {
 }
 
 .season-share-header p,
-.promote-panel p,
-.season-share-footer p {
+.promote-panel p {
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
@@ -144,15 +142,8 @@ body {
   text-decoration: none;
 }
 
-.season-share-empty,
-.season-share-footer {
+.season-share-empty {
   margin-top: 16px;
-}
-
-.season-share-footer {
-  display: grid;
-  gap: 12px;
-  text-align: center;
 }
 
 .promote-page {
@@ -4689,32 +4680,34 @@ a.cl-history-title:hover {
   line-height: 1.6;
 }
 
-/* ─── Share page CTA ─────────────────────────────────────────────────────── */
-.share-page-cta {
-  margin: 2.5rem auto 1rem;
+/* ─── Share card CTA ─────────────────────────────────────────────────────── */
+.share-card-cta {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+  margin: 1.5rem auto;
   max-width: 600px;
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem;
   background: var(--surface-raised, rgba(99,102,241,0.06));
   border: 1px solid var(--border, rgba(99,102,241,0.2));
   border-radius: 12px;
   text-align: center;
 }
-.share-page-cta p {
-  margin: 0 0 0.75rem;
-  font-size: 0.95rem;
-  color: var(--muted);
+
+.share-card-cta p {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.6;
 }
-.share-page-cta a {
-  display: inline-block;
-  padding: 0.55rem 1.2rem;
-  background: var(--accent, #6366f1);
-  color: #fff;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-decoration: none;
+
+.share-card-cta .command-button {
+  min-height: 44px;
+  padding-inline: 1.25rem;
 }
-.share-page-cta a:hover {
+
+.share-card-cta .command-button:hover {
   opacity: 0.88;
 }
 
