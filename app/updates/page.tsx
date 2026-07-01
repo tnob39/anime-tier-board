@@ -27,10 +27,24 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.34",
+    date: "2026-07-01",
+    label: "シェアページを刷新",
+    isLatest: true,
+    changes: [
+      {
+        icon: Share2,
+        iconColor: "#6366f1",
+        title: "コメントと作成導線に集約",
+        description: "シェアページからいいねを廃止し、コメントと「自分のシェアカードを作る」導線に集約しました。",
+        href: "/tier",
+      },
+    ]
+  },
+  {
     version: "1.33",
     date: "2026-06-28",
     label: "マイリストからワンタップで削除",
-    isLatest: true,
     changes: [
       {
         icon: Trash2,

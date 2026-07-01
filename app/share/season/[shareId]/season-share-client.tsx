@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { ShareCardCTA } from "@/components/ShareCardCTA";
 import type { AnimeStatusRecord } from "@/lib/statuses";
 import { getStreamingProviders } from "@/lib/streaming-services";
 
@@ -61,12 +61,11 @@ export function SeasonShareClient({
         <p className="season-share-empty">この期の対象作品はまだありません。</p>
       )}
 
-      <footer className="season-share-footer">
-        <p>あなたも今期のアニメをまとめて布教しませんか？</p>
-        <Link className="command-button emphasis-button" href="/">
-          numanie で作る
-        </Link>
-      </footer>
+      <ShareCardCTA
+        headline="あなたも今期の沼をまとめて共有しよう"
+        buttonLabel="自分のシェアカードを作る"
+        href="/lab/promote?from=season-share"
+      />
     </main>
   );
 }
