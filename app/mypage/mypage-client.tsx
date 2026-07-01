@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  BookOpen,
   ChevronRight,
   CreditCard,
   Megaphone,
@@ -13,6 +14,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 
 const links = [
+  { href: "/guide", label: "使い方", icon: BookOpen },
   { href: "/dashboard", label: "分析", icon: BarChart3 },
   { href: "/dashboard?section=subscriptions", label: "サブスク", icon: CreditCard },
   { href: "/voice-actors", label: "声優", icon: Mic2 },

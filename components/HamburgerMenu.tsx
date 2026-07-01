@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BookOpen,
   CreditCard,
   Megaphone,
   Mic2,
@@ -18,6 +19,7 @@ type Props = {
 
 // ボトムタブにないページのみ
 const navItems = [
+  { href: "/guide", label: "使い方", icon: BookOpen },
   { href: "/dashboard?section=subscriptions", label: "サブスク", icon: CreditCard },
   { href: "/voice-actors", label: "声優", icon: Mic2 },
   { href: "/settings", label: "設定", icon: Settings },
