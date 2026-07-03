@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.48",
+    date: "2026-07-04",
+    label: "期まとめ布教をマイリストから",
+    isLatest: true,
+    changes: [
+      {
+        icon: Share2,
+        iconColor: "#6366f1",
+        title: "「期まとめ布教」がマイリストから作れるように",
+        description: "今期のアニメをまとめて友だちに布教できる共有ページを、マイリストのボタンから作成できるようになりました。共有リンクは常に最新の内容を反映します。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.47",
     date: "2026-07-04",
     label: "季節アニメの配信一覧ページを公開",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Tv2,
