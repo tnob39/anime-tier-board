@@ -4,6 +4,7 @@ import "./watchlist-v2-grok.css";
 import {
   ExternalLink,
   Loader2,
+  Megaphone,
   Minus,
   Plus,
   Share2,
@@ -506,6 +507,10 @@ export function WatchlistClientV2Grok({
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <Link href="/lab/promote" className="command-button" style={{ flex: 1 }}>
+            <Megaphone size={16} />
+            <span style={{ marginLeft: 6 }}>期まとめ布教</span>
+          </Link>
           <button
             type="button"
             className="command-button emphasis-button"
