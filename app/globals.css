@@ -7,10 +7,10 @@
   --muted: #66707a;
   --line: #d8dde2;
   --line-strong: #b7c0c8;
-  --accent: var(--accent);
-  --danger: var(--danger);
+  --accent: #0f766e;
+  --danger: #b42318;
   --danger-soft: #fff0ee;
-  --warning: var(--warning);
+  --warning: #7a4a05;
   --warning-soft: #fff6dc;
   --shadow: 0 14px 30px rgba(25, 31, 36, 0.1);
   --nav-surface: rgba(255,255,255,0.94);
