@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.43",
+    date: "2026-07-04",
+    label: "視聴中カードに「未視聴◯話」を表示",
+    isLatest: true,
+    changes: [
+      {
+        icon: PlayCircle,
+        iconColor: "#0f766e",
+        title: "追いつき状況がひと目で分かるように",
+        description: "視聴中の作品カードに「未視聴◯話」または「追いつき済み」を表示するようにしました。今すぐ見られる話数がすぐ分かります。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.42",
     date: "2026-07-04",
     label: "マイリストの読み込み表示と操作感を改善",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Zap,
