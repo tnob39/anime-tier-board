@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.47",
+    date: "2026-07-04",
+    label: "季節アニメの配信一覧ページを公開",
+    isLatest: true,
+    changes: [
+      {
+        icon: Tv2,
+        iconColor: "#0f766e",
+        title: "「今期アニメ どこで見れる」がひと目で分かるページ",
+        description: "季節ごとのアニメを配信サービスとあわせて一覧できる公開ページを作りました。ログインなしで誰でも見られます。",
+        href: "/seasons/2026/summer",
+      },
+    ]
+  },
+  {
     version: "1.46",
     date: "2026-07-04",
     label: "マイページにTier分布を表示",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Layers,
