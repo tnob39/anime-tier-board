@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import {
-  BarChart3, Bell, CalendarDays, Compass, CreditCard,
+  BarChart3, Bell, BookOpen, CalendarDays, Compass, CreditCard,
   Filter, Layers, ListChecks, Menu, Mic2, PlayCircle, Search, Share2, Smartphone, Sparkles, Star,
   Trash2, Tv2, UserCheck, Zap, Download, Loader2, Bookmark, type LucideIcon
 } from "lucide-react";
@@ -27,7 +27,7 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
-    version: "1.35",
+    version: "1.37",
     date: "2026-07-01",
     label: "シェア画面に配信サービスを表示",
     isLatest: true,
@@ -42,9 +42,10 @@ const RELEASES: Release[] = [
     ]
   },
   {
-    version: "1.34",
+    version: "1.36",
     date: "2026-07-01",
     label: "シェアページを刷新",
+    isLatest: false,
     changes: [
       {
         icon: Share2,
@@ -56,9 +57,40 @@ const RELEASES: Release[] = [
     ]
   },
   {
+    version: "1.35",
+    date: "2026-07-01",
+    label: "使い方ガイドを追加",
+    isLatest: false,
+    changes: [
+      {
+        icon: BookOpen,
+        iconColor: "#6366f1",
+        title: "使い方ガイドを追加しました",
+        description: "メニューの「使い方」から、主要機能をアニメーション付きで確認できます。",
+        href: "/guide",
+      },
+    ]
+  },
+  {
+    version: "1.34",
+    date: "2026-06-29",
+    label: "新しいナビゲーション（ベータ）",
+    isLatest: false,
+    changes: [
+      {
+        icon: Smartphone,
+        iconColor: "#6366f1",
+        title: "5タブ＋マイページを試せるようになりました",
+        description: "設定から「新しいナビ」をONにすると、マイリストとマイページを含む5タブのナビゲーションを試せます。",
+        href: "/settings",
+      },
+    ]
+  },
+  {
     version: "1.33",
     date: "2026-06-28",
     label: "マイリストからワンタップで削除",
+    isLatest: false,
     changes: [
       {
         icon: Trash2,
