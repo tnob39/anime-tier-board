@@ -279,13 +279,21 @@ export async function buildProviderMapWithStats(
     };
   }
 
-  const client = getTursoClient();
-  await ensureStreamingProvidersTable(client);
-
   const allTitles = items.flatMap((item) =>
     [item.title, item.titles?.romaji].filter((t): t is string => Boolean(t?.trim()))
   );
-  const cached = await getCachedProvidersByTitles(client, [...new Set(allTitles)]);
+  let cached: Map<string, StreamingProvidersJp>;
+  try {
+    const client = getTursoClient();
+    await ensureStreamingProvidersTable(client);
+    cached = await getCachedProvidersByTitles(client, [...new Set(allTitles)]);
+  } catch (error) {
+    console.error("[streaming-providers] provider cache unavailable:", error);
+    return {
+      map,
+      stats: { attempted: 0, failed: 0, credentialsMissing: false },
+    };
+  }
 
   const uncached: AnimeItem[] = [];
   for (const item of items) {
