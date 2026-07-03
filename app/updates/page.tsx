@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.40",
+    date: "2026-07-03",
+    label: "マイリストにも配信サービスを表示",
+    isLatest: true,
+    changes: [
+      {
+        icon: Tv2,
+        iconColor: "#0f766e",
+        title: "マイリストのカードに配信サービスを表示",
+        description: "マイリストページの各カードにも、どのサブスクで見られるかをロゴで表示するようにしました。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.39",
     date: "2026-07-03",
     label: "配信サービス表示とPC向けナビ改善",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Tv2,
