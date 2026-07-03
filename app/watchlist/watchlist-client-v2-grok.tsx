@@ -11,9 +11,12 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { isOwnerEmail } from "@/lib/owner";
 import { bucketBySeason } from "@/lib/season-bucket";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
@@ -371,8 +374,12 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
 
 export function WatchlistClientV2Grok({
   initialItems,
+  recommendedAnime = [],
+  recommendedByGenre = false,
 }: {
   initialItems: AnimeStatusRecord[];
+  recommendedAnime?: AnimeItem[];
+  recommendedByGenre?: boolean;
 }) {
   const editor = useWatchlistV2Editor(initialItems);
   const {
@@ -400,6 +407,7 @@ export function WatchlistClientV2Grok({
     saveTracking,
     removeItem,
     createShare,
+    quickSetStatus,
   } = editor;
 
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -551,6 +559,13 @@ export function WatchlistClientV2Grok({
         </div>
       )}
 
+      <DiscoveryLane
+        recommendedAnime={recommendedAnime}
+        recommendedByGenre={recommendedByGenre}
+        items={items}
+        onQuickStatus={quickSetStatus}
+      />
+
       {editing && editing.anime ? (
         <EditSheet
           record={editing}
@@ -571,6 +586,99 @@ export function WatchlistClientV2Grok({
         />
       ) : null}
     </div>
+  );
+}
+
+function DiscoveryLane({
+  recommendedAnime,
+  recommendedByGenre,
+  items,
+  onQuickStatus,
+}: {
+  recommendedAnime: AnimeItem[];
+  recommendedByGenre: boolean;
+  items: AnimeStatusRecord[];
+  onQuickStatus: (anime: AnimeItem, status: ViewingStatus) => Promise<void>;
+}) {
+  const { data: session } = useSession();
+  const isOwner = isOwnerEmail(session?.user?.email);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const laneItems = recommendedAnime.filter(
+    (anime) => !items.some((record) => record.animeId === anime.id)
+  );
+
+  if (laneItems.length === 0) return null;
+
+  async function handleAdd(anime: AnimeItem) {
+    setSavingId(anime.id);
+    try {
+      await onQuickStatus(anime, "planned");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  return (
+    <section className="wl2g-discover">
+      <div className="wl2g-discover-head">
+        <div>
+          <h2>今期のおすすめ</h2>
+          <p>
+            {recommendedByGenre
+              ? "マイリストのジャンル傾向から選んでいます"
+              : "今期の人気作から"}
+          </p>
+        </div>
+        {isOwner ? (
+          <Link href="/explore" className="wl2g-discover-more">
+            もっと探す
+          </Link>
+        ) : null}
+      </div>
+      <div className="wl2g-discover-lane" role="list" aria-label="今期のおすすめ">
+        {laneItems.map((anime) => {
+          const coverImage = anime.proxiedImageUrl || anime.imageUrl || null;
+          const provider = anime.streamingProvidersJp?.flatrate?.[0] ?? null;
+          const isSaving = savingId === anime.id;
+
+          return (
+            <div key={anime.id} className="wl2g-discover-card" role="listitem">
+              <div className="wl2g-discover-poster">
+                {coverImage ? (
+                  <Image
+                    src={coverImage}
+                    alt={anime.title}
+                    width={92}
+                    height={130}
+                    className="wl2g-discover-image"
+                    unoptimized
+                  />
+                ) : (
+                  <AnimeCardPlaceholder
+                    title={anime.title}
+                    className="wl2g-discover-placeholder"
+                  />
+                )}
+                {provider?.logoUrl ? (
+                  <span className="wl2g-provider" title={provider.name}>
+                    <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
+                  </span>
+                ) : null}
+              </div>
+              <p className="wl2g-discover-title">{anime.title}</p>
+              <button
+                type="button"
+                className="wl2g-discover-button"
+                disabled={isSaving}
+                onClick={() => void handleAdd(anime)}
+              >
+                {isSaving ? <Loader2 className="spin" size={12} /> : "見たい"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
