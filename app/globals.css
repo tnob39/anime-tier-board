@@ -4267,6 +4267,34 @@ a.cl-history-title:hover {
   gap: 4px;
 }
 
+.global-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.global-nav-link {
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.global-nav-link:hover {
+  color: var(--ink);
+  background: var(--surface-soft);
+}
+
+.global-nav-link.is-active {
+  color: var(--accent);
+  background: var(--nav-active-bg);
+}
+
 .global-nav-logo {
   font-size: 17px;
   font-weight: 800;
@@ -4344,6 +4372,12 @@ a.cl-history-title:hover {
 }
 .user-dropdown-logout {
   color: var(--danger);
+}
+
+@media (max-width: 520px) {
+  .global-nav-links {
+    display: none;
+  }
 }
 
 /* ========================================

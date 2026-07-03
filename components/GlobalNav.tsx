@@ -2,10 +2,20 @@
 
 import Link from "next/link";
 import { LogOut, Menu, User, UserCircle2 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
 import { useNavV5 } from "@/lib/nav-flag";
+import { isOwnerEmail } from "@/lib/owner";
+
+const NAV_ITEMS = [
+  { href: "/", label: "ホーム", exact: true },
+  { href: "/tier", label: "Tier", exact: false },
+  { href: "/dashboard", label: "分析", exact: false },
+  { href: "/watchlist", label: "マイリスト", exact: false },
+  { href: "/explore", label: "さがす", exact: false, ownerOnly: true },
+];
 
 export function GlobalNav() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -13,7 +23,10 @@ export function GlobalNav() {
   const [isCompact, setIsCompact] = useState(false);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
+  const pathname = usePathname();
+  const isOwner = isOwnerEmail(session?.user?.email);
   const navV5 = useNavV5();
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.ownerOnly || isOwner);
 
   useEffect(() => {
     function handleScroll() {
@@ -49,6 +62,23 @@ export function GlobalNav() {
           <Link href="/" className="global-nav-logo" aria-label="numanie トップへ">
             numanie
           </Link>
+          <nav className="global-nav-links" aria-label="主要ページ（デスクトップ）">
+            {visibleNavItems.map((item) => {
+              const active = item.exact
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(item.href + "/");
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={active ? "global-nav-link is-active" : "global-nav-link"}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
         <div className="global-nav-right">
@@ -74,6 +104,14 @@ export function GlobalNav() {
                       <p className="user-dropdown-name">
                         {session?.user?.name ?? session?.user?.email}
                       </p>
+                      <Link
+                        href="/mypage"
+                        className="user-dropdown-item"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <User size={15} />
+                        <span>マイページ</span>
+                      </Link>
                       <button
                         className="user-dropdown-item user-dropdown-logout"
                         onClick={() => {
