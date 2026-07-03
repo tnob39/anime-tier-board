@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.42",
+    date: "2026-07-04",
+    label: "マイリストの読み込み表示と操作感を改善",
+    isLatest: true,
+    changes: [
+      {
+        icon: Zap,
+        iconColor: "#ec4899",
+        title: "マイリストの読み込みがなめらかに",
+        description: "読み込み中も実際の画面と同じ形のプレースホルダーを表示するようにしました。カードのタップ時の反応も心地よくしています。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.41",
     date: "2026-07-04",
     label: "マイリストに今期のおすすめレーン",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Compass,
