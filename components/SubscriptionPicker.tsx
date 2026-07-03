@@ -11,6 +11,7 @@ type SubscriptionPickerProps = {
   showSkip?: boolean;
   submitLabel?: string;
   skipLabel?: string;
+  autoSave?: boolean;
 };
 
 export function SubscriptionPicker({
@@ -19,35 +20,46 @@ export function SubscriptionPicker({
   onSkip,
   showSkip = false,
   submitLabel = "保存する",
-  skipLabel = "スキップ"
+  skipLabel = "スキップ",
+  autoSave = false
 }: SubscriptionPickerProps) {
   const [selectedIds, setSelectedIds] = useState(new Set(initialServiceIds));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  function toggleService(serviceId: string) {
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(serviceId)) {
-        next.delete(serviceId);
-      } else {
-        next.add(serviceId);
-      }
-      return next;
-    });
-  }
-
-  async function handleSave() {
+  async function save(nextIds: Set<string>, previousIds?: Set<string>) {
     setSaving(true);
     setMessage(null);
 
     try {
-      await onSave([...selectedIds]);
+      await onSave([...nextIds]);
     } catch (error) {
+      if (previousIds) {
+        setSelectedIds(previousIds);
+      }
       setMessage(error instanceof Error ? error.message : "保存に失敗しました。");
     } finally {
       setSaving(false);
     }
+  }
+
+  function toggleService(serviceId: string) {
+    const previous = selectedIds;
+    const next = new Set(previous);
+    if (next.has(serviceId)) {
+      next.delete(serviceId);
+    } else {
+      next.add(serviceId);
+    }
+    setSelectedIds(next);
+
+    if (autoSave) {
+      void save(next, previous);
+    }
+  }
+
+  async function handleSave() {
+    await save(selectedIds);
   }
 
   async function handleSkip() {
@@ -93,27 +105,29 @@ export function SubscriptionPicker({
 
       {message ? <div className="notice error">{message}</div> : null}
 
-      <div className="subscription-picker-actions">
-        {showSkip ? (
+      {!autoSave ? (
+        <div className="subscription-picker-actions">
+          {showSkip ? (
+            <button
+              className="command-button"
+              type="button"
+              onClick={() => void handleSkip()}
+              disabled={saving}
+            >
+              {skipLabel}
+            </button>
+          ) : null}
           <button
-            className="command-button"
+            className="command-button emphasis-button"
             type="button"
-            onClick={() => void handleSkip()}
+            onClick={() => void handleSave()}
             disabled={saving}
           >
-            {skipLabel}
+            {saving ? <Loader2 className="spin" size={18} /> : null}
+            <span>{submitLabel}</span>
           </button>
-        ) : null}
-        <button
-          className="command-button emphasis-button"
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={saving}
-        >
-          {saving ? <Loader2 className="spin" size={18} /> : null}
-          <span>{submitLabel}</span>
-        </button>
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }
