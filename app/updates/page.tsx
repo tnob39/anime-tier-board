@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.41",
+    date: "2026-07-04",
+    label: "マイリストに今期のおすすめレーン",
+    isLatest: true,
+    changes: [
+      {
+        icon: Compass,
+        iconColor: "#6366f1",
+        title: "マイリストの下に「今期のおすすめ」を表示",
+        description: "マイリストのジャンル傾向に合わせた今期作品を横スクロールで提案します。気になる作品は「見たい」ですぐ追加できます。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.40",
     date: "2026-07-03",
     label: "マイリストにも配信サービスを表示",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Tv2,
