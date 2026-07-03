@@ -268,7 +268,7 @@ export type EnrichBuildStats = {
 
 export async function buildProviderMapWithStats(
   items: AnimeItem[],
-  options?: { concurrency?: number; skipUncached?: boolean }
+  options?: { concurrency?: number; skipUncached?: boolean; warmUncachedBudget?: number }
 ): Promise<{ map: Map<string, StreamingProvidersJp>; stats: EnrichBuildStats }> {
   const map = new Map<string, StreamingProvidersJp>();
   const credentialsMissing = !hasTmdbCredentials();
@@ -309,14 +309,16 @@ export async function buildProviderMapWithStats(
   }
 
   // skipUncached: DB キャッシュのみ返す（タイムアウト回避、lazy fetch 向け）
-  if (options?.skipUncached) {
+  const warmUncachedBudget = options?.warmUncachedBudget;
+  if (options?.skipUncached && !(typeof warmUncachedBudget === "number" && warmUncachedBudget >= 1)) {
     return { map, stats: { attempted: 0, failed: 0, credentialsMissing: false } };
   }
 
+  const targets = options?.skipUncached ? uncached.slice(0, warmUncachedBudget) : uncached;
   let failed = 0;
   const concurrency = Math.max(1, options?.concurrency ?? 3);
-  for (let index = 0; index < uncached.length; index += concurrency) {
-    const batch = uncached.slice(index, index + concurrency);
+  for (let index = 0; index < targets.length; index += concurrency) {
+    const batch = targets.slice(index, index + concurrency);
     const results = await Promise.all(
       batch.map(async (item) => {
         try {
@@ -349,7 +351,7 @@ export async function buildProviderMapWithStats(
   return {
     map,
     stats: {
-      attempted: uncached.length,
+      attempted: targets.length,
       failed,
       credentialsMissing: false,
     },

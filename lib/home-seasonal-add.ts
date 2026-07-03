@@ -32,6 +32,7 @@ export async function fetchCurrentSeasonAnimeForHome(): Promise<AnimeItem[]> {
   const result = await fetchSeasonalAnime(year, season);
   const { map: providerMap } = await buildProviderMapWithStats(result.items, {
     skipUncached: true,
+    warmUncachedBudget: 5,
   });
   return enrichWithStreamingProviders(result.items, providerMap);
 }

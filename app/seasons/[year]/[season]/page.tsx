@@ -131,6 +131,7 @@ export default async function SeasonPage({
   const result = await fetchSeasonalAnime(parsed.year, parsed.season);
   const { map: providerMap } = await buildProviderMapWithStats(result.items, {
     skipUncached: true,
+    warmUncachedBudget: 5,
   });
   const items = enrichWithStreamingProviders(result.items, providerMap);
   const seasonName = SEASON_LABELS[parsed.season];
