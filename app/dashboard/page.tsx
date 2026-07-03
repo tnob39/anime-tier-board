@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    redirect("/");
+    redirect("/?login=required");
   }
 
   const isOwner = isOwnerEmail(session?.user?.email);

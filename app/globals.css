@@ -5142,7 +5142,8 @@ a.cl-history-title:hover {
 .home-guest-hero {
   text-align: center;
   padding: 40px 16px;
-  max-width: 360px;
+  width: 100%;
+  max-width: 452px;
 }
 
 .home-guest-symbol {
@@ -5172,6 +5173,44 @@ a.cl-history-title:hover {
   flex-direction: column;
   gap: 10px;
   align-items: center;
+}
+
+.home-guest-login-notice {
+  margin: 0 auto 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--warning-soft);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.home-guest-feature-list {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  margin: 28px auto 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.home-guest-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.home-guest-feature-item svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
 }
 
 .home-calendar-empty {

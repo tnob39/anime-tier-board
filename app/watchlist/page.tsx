@@ -13,7 +13,7 @@ export default async function WatchlistPage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    redirect("/");
+    redirect("/?login=required");
   }
 
   const items = await listStatuses(userId);
