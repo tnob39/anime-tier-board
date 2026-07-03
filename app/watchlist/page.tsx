@@ -21,6 +21,10 @@ export default async function WatchlistPage() {
   const items = await listStatuses(userId);
 
   const watchlistAnime = items.map((record) => record.anime).filter((anime): anime is AnimeItem => Boolean(anime));
+  if (watchlistAnime.length === 0) {
+    return <WatchlistClientV2Grok initialItems={items} />;
+  }
+
   const { map: providerMap } = await buildProviderMapWithStats(watchlistAnime, { skipUncached: true });
   const enrichedItems = items.map((record) =>
     record.anime
