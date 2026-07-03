@@ -81,7 +81,11 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
         <h2>サブスク設定</h2>
         <p>チェックを変更するとすぐに保存されます。</p>
         {message ? <div className="notice success">{message}</div> : null}
-        <SubscriptionPicker initialServiceIds={serviceIds} onSave={saveSubscriptions} />
+        <SubscriptionPicker
+          initialServiceIds={serviceIds}
+          onSave={saveSubscriptions}
+          autoSave
+        />
       </section>
 
       <section className="settings-panel">
