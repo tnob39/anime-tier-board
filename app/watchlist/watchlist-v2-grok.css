@@ -674,3 +674,15 @@
     transform: none;
   }
 }
+
+/* Catch-up badge */
+.wl2g-catchup {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.wl2g-catchup--behind {
+  color: var(--accent);
+}

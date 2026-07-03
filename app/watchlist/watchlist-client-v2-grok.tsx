@@ -64,6 +64,28 @@ export function computeProgress(record: AnimeStatusRecord) {
   return { cur, total, pct };
 }
 
+export function computeCatchUp(record: AnimeStatusRecord): { unwatched: number } | "caughtUp" | null {
+  const anime = record.anime;
+  if (record.status !== "watching" || !anime) return null;
+
+  const nextEpisode = anime.airing?.nextEpisode;
+  let airedCount: number | null = null;
+  if (typeof nextEpisode?.episode === "number" && nextEpisode.episode >= 1) {
+    airedCount = nextEpisode.episode - 1;
+  } else if (
+    typeof anime.episodes === "number"
+    && anime.episodes >= 1
+    && nextEpisode == null
+  ) {
+    airedCount = anime.episodes;
+  }
+
+  if (airedCount === null || airedCount < 1) return null;
+
+  const watched = record.watchedEpisodes ?? 0;
+  return watched >= airedCount ? "caughtUp" : { unwatched: airedCount - watched };
+}
+
 export type WatchlistEditor = {
   items: AnimeStatusRecord[];
   openSheet: (record: AnimeStatusRecord) => void;
@@ -695,6 +717,7 @@ export function PosterCard({
 }) {
   const anime = record.anime!;
   const prog = computeProgress(record);
+  const catchUp = computeCatchUp(record);
   const badge = getStatusBadgeClass(record.status);
   const label = statusLabels[record.status];
   const provider = anime.streamingProvidersJp?.flatrate?.[0] ?? null;
@@ -739,6 +762,11 @@ export function PosterCard({
                 <div className="wl2g-pnum">
                   {prog.cur} / {prog.total}話
                 </div>
+                {catchUp === "caughtUp" ? (
+                  <div className="wl2g-catchup">追いつき済み</div>
+                ) : catchUp ? (
+                  <div className="wl2g-catchup wl2g-catchup--behind">未視聴{catchUp.unwatched}話</div>
+                ) : null}
               </div>
             </div>
           ) : record.status === "completed" && prog ? (
