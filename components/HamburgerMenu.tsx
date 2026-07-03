@@ -3,11 +3,13 @@
 import {
   BookOpen,
   CreditCard,
+  Lock,
   Megaphone,
   Mic2,
   Settings,
   X
 } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect } from "react";
 import { ThemeSwitch } from "./ThemeSwitch";
@@ -25,7 +27,16 @@ const navItems = [
   { href: "/settings", label: "設定", icon: Settings },
 ];
 
+const loginRequiredHrefs = new Set([
+  "/dashboard?section=subscriptions",
+  "/voice-actors",
+  "/settings",
+]);
+
 export function HamburgerMenu({ isOpen, onClose }: Props) {
+  const { status } = useSession();
+  const isLoggedOut = status === "unauthenticated";
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -63,6 +74,20 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
           <nav>
             {navItems.map((item) => {
               const Icon = item.icon;
+              if (isLoggedOut && loginRequiredHrefs.has(item.href)) {
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    className="hamburger-nav-item"
+                    onClick={() => signIn("google")}
+                  >
+                    <Icon size={18} className="hamburger-nav-icon" />
+                    <span>{item.label}</span>
+                    <Lock size={14} className="hamburger-locked-icon" aria-hidden="true" />
+                  </button>
+                );
+              }
               return (
                 <Link
                   key={item.href}
@@ -76,6 +101,11 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
               );
             })}
           </nav>
+          {isLoggedOut && (
+            <p className="hamburger-locked-hint">
+              ログインすると、サブスク・声優・設定を利用できます。
+            </p>
+          )}
         </section>
 
         <div className="hamburger-divider" />

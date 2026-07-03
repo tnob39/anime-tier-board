@@ -4388,6 +4388,17 @@ a.cl-history-title:hover {
   color: var(--muted);
   flex-shrink: 0;
 }
+.hamburger-locked-icon {
+  margin-left: auto;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.hamburger-locked-hint {
+  margin: 8px 10px 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
 .hamburger-pro-badge {
   margin-left: auto;
   font-size: 0.65rem;
