@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { isOwnerEmail } from "@/lib/owner";
 import type { ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
@@ -32,6 +34,8 @@ export default function HomeAddSection({
   loading = false,
   error = null,
 }: HomeAddSectionProps) {
+  const { data: session } = useSession();
+  const isOwner = isOwnerEmail(session?.user?.email);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState<ViewingStatus | null>(null);
 
@@ -47,12 +51,14 @@ export default function HomeAddSection({
   }
 
   return (
-    <section className="anime-list-section home-add-section">
+    <section id="home-add-section" className="anime-list-section home-add-section">
       <div className="anime-list-header">
         <h2 className="anime-list-heading">{SEASON_SCOPE_HEADING[seasonScope]}</h2>
-        <Link href="/explore" className="home-add-more-link">
-          もっと
-        </Link>
+        {isOwner ? (
+          <Link href="/explore" className="home-add-more-link">
+            もっと
+          </Link>
+        ) : null}
       </div>
 
       <div className="home-add-season-toggle" role="group" aria-label="表示するシーズン">

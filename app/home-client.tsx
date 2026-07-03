@@ -278,7 +278,7 @@ export function HomeEmptyGuide({ addSection, showOnboarding, onDismiss }: HomeEm
         </div>
         </section>
       ) : null}
-      <div id="home-add-section">{addSection}</div>
+      {addSection}
     </main>
   );
 }
