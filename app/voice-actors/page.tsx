@@ -13,7 +13,7 @@ export default async function VoiceActorsPage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    redirect("/");
+    redirect("/?login=required");
   }
 
   const statuses = await listStatuses(userId);
