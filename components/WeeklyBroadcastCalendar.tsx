@@ -60,10 +60,13 @@ export function WeeklyBroadcastCalendar({
   function toCardData(entry: BroadcastEntry): LaneCardData {
     const { record } = entry;
     const anime = record.anime as AnimeItem;
+    const provider = anime.streamingProvidersJp?.flatrate?.[0] ?? null;
     return {
       id: record.animeId,
       title: anime.title,
       coverImage: anime.proxiedImageUrl ?? anime.imageUrl ?? null,
+      providerLogoUrl: provider?.logoUrl ?? null,
+      providerName: provider?.name ?? null,
       statusVariant: record.status === "watching" ? "watching" : "planned",
       dimmed: entry.state === "upcoming",
       noteLabel: entry.state === "upcoming" && entry.startLabel ? `${entry.startLabel}〜` : null
