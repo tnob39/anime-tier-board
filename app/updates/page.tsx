@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.44",
+    date: "2026-07-04",
+    label: "マイページに視聴データサマリー",
+    isLatest: true,
+    changes: [
+      {
+        icon: UserCheck,
+        iconColor: "#6366f1",
+        title: "マイページで自分の視聴データがひと目で分かるように",
+        description: "視聴中・見たい・完了の件数をマイページに表示しました。マイリストや分析へもマイページから直接移動できます。",
+        href: "/mypage",
+      },
+    ]
+  },
+  {
     version: "1.43",
     date: "2026-07-04",
     label: "視聴中カードに「未視聴◯話」を表示",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: PlayCircle,
