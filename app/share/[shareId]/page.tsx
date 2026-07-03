@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getShare } from "@/lib/shares";
+import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
 import { SharePageClient } from "./share-page-client";
 
 export default async function SharePage({
@@ -14,5 +15,8 @@ export default async function SharePage({
     notFound();
   }
 
-  return <SharePageClient initialShare={share} />;
+  const { map: providerMap } = await buildProviderMapWithStats(share.items, { skipUncached: true });
+  const enrichedItems = enrichWithStreamingProviders(share.items, providerMap);
+
+  return <SharePageClient initialShare={{ ...share, items: enrichedItems }} />;
 }

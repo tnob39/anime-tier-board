@@ -140,6 +140,16 @@ export function SharePageClient({
                       ) : (
                         <AnimeCardPlaceholder title={item.title} draggable={false} />
                       )}
+                      {item.streamingProvidersJp?.flatrate?.[0]?.logoUrl ? (
+                        <span className="share-tier-provider-badge" title={item.streamingProvidersJp.flatrate[0].name}>
+                          <img
+                            src={item.streamingProvidersJp.flatrate[0].logoUrl}
+                            alt={item.streamingProvidersJp.flatrate[0].name}
+                            width={16}
+                            height={16}
+                          />
+                        </span>
+                      ) : null}
                     </article>
                   ))}
               </div>
