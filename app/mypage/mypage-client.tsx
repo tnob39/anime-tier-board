@@ -24,7 +24,6 @@ const links = [
 
 export function MyPageClient() {
   const { data: session, status } = useSession();
-  const isAuthenticated = status === "authenticated";
 
   return (
     <main className="app-main mypage-main">
@@ -35,7 +34,13 @@ export function MyPageClient() {
 
       <section className="mypage-section">
         <h2>アカウント</h2>
-        {isAuthenticated ? (
+        {status === "loading" ? (
+          <div className="mypage-account">
+            <span style={{ color: "var(--muted)" }}>
+              ログイン状態を確認中...
+            </span>
+          </div>
+        ) : status === "authenticated" ? (
           <>
             <div className="mypage-account">
               {session?.user?.name ? <strong>{session.user.name}</strong> : null}
@@ -54,7 +59,6 @@ export function MyPageClient() {
             type="button"
             className="command-button emphasis-button"
             onClick={() => void signIn("google")}
-            disabled={status === "loading"}
           >
             Googleでログイン
           </button>
