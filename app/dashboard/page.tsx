@@ -29,10 +29,6 @@ export default async function DashboardPage() {
     listStatuses(userId)
   ]);
 
-  if (!subscriptionState.onboardingDone) {
-    redirect("/onboarding");
-  }
-
   const watchlist = statuses
     .map((record) => record.anime)
     .filter((anime): anime is AnimeItem => Boolean(anime));
