@@ -27,10 +27,42 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.39",
+    date: "2026-07-03",
+    label: "配信サービス表示とPC向けナビ改善",
+    isLatest: true,
+    changes: [
+      {
+        icon: Tv2,
+        iconColor: "#0f766e",
+        title: "ホームのカードに配信サービスを表示",
+        description: "放映カレンダー・視聴中/見たいレーン・今期から追加の各カードに、どのサブスクで見られるかをロゴで表示するようにしました。",
+      },
+      {
+        icon: Menu,
+        iconColor: "#6366f1",
+        title: "パソコンでも主要ページへ移動しやすく",
+        description: "PCなど広い画面でもヘッダーからホーム・Tier・分析・マイリストへ直接移動できるようになりました。",
+      },
+      {
+        icon: BarChart3,
+        iconColor: "#f59e0b",
+        title: "分析ページがすぐ開けるように",
+        description: "サブスク未登録でもジャンルや声優の分析をすぐ確認できるようになりました。サブスク登録は分析ページからいつでも行えます。",
+      },
+      {
+        icon: Zap,
+        iconColor: "#ec4899",
+        title: "サブスク設定は変更した瞬間に保存",
+        description: "設定画面のサブスクのチェックは変更するとすぐに保存されるようになりました。",
+      },
+    ]
+  },
+  {
     version: "1.38",
     date: "2026-07-03",
     label: "配色修正とはじめての方向けの改善",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Sparkles,
