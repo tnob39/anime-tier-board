@@ -27,10 +27,37 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.38",
+    date: "2026-07-03",
+    label: "配色修正とはじめての方向けの改善",
+    isLatest: true,
+    changes: [
+      {
+        icon: Sparkles,
+        iconColor: "#0f766e",
+        title: "ライトテーマの配色を修正",
+        description: "ライトテーマでボタンや強調表示の色が表示されない不具合を修正しました。",
+      },
+      {
+        icon: Compass,
+        iconColor: "#6366f1",
+        title: "はじめての画面を刷新",
+        description: "ログイン前のトップからTier表と使い方ガイドへすぐ移動できるようになり、できることを一目で確認できます。",
+        href: "/guide",
+      },
+      {
+        icon: UserCheck,
+        iconColor: "#f59e0b",
+        title: "ログインが必要な場面の案内を追加",
+        description: "ログインが必要なページや操作では、突然画面が切り替わらず理由とログイン導線を表示するようにしました。",
+      },
+    ]
+  },
+  {
     version: "1.37",
     date: "2026-07-01",
     label: "シェア画面に配信サービスを表示",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Tv2,
