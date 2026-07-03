@@ -37,11 +37,17 @@ type MyPageClientProps = {
     watchlistCount: number;
     coveredCount: number;
   } | null;
+  tierDistribution?: Array<{
+    label: string;
+    color: string;
+    count: number;
+  }> | null;
 };
 
 export function MyPageClient({
   statusCounts = null,
-  subscriptionSummary = null
+  subscriptionSummary = null,
+  tierDistribution = null
 }: MyPageClientProps = {}) {
   const { data: session, status } = useSession();
   const total = statusCounts
@@ -105,6 +111,24 @@ export function MyPageClient({
               <div className="mypage-stat-label">完了</div>
             </div>
           </div>
+          {tierDistribution && tierDistribution.length > 0 ? (
+            <div className="mypage-tier-block">
+              <p className="mypage-tier-caption">Tier分布</p>
+              <div className="mypage-tier-chips">
+                {tierDistribution.map((chip) => (
+                  <span key={chip.label} className="mypage-tier-chip">
+                    <i
+                      className="mypage-tier-dot"
+                      style={{ background: chip.color }}
+                      aria-hidden="true"
+                    />
+                    {chip.label}
+                    <b>{chip.count}</b>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <Link href="/watchlist" className="hamburger-nav-item">
             <ListChecks size={18} className="hamburger-nav-icon" />
             <span>マイリストを見る（全{total}件）</span>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { auth } from "@/auth";
+import { getTierLabelsByAnimeId } from "@/lib/boards";
 import { listStatuses } from "@/lib/statuses";
 import { calcSubscriptionStats } from "@/lib/subscription-stats";
 import { getSubscriptionState } from "@/lib/subscriptions";
@@ -16,12 +17,32 @@ export default async function MyPage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
   let statusCounts = null;
   let subscriptionSummary = null;
+  let tierDistribution: Array<{ label: string; color: string; count: number }> | null = null;
 
   if (userId) {
-    const [items, subscriptionState] = await Promise.all([
+    const [items, subscriptionState, tierLabelsByAnimeId] = await Promise.all([
       listStatuses(userId),
-      getSubscriptionState(userId)
+      getSubscriptionState(userId),
+      getTierLabelsByAnimeId(userId)
     ]);
+    const tierCounts = new Map<string, { label: string; color: string; count: number }>();
+    for (const { label, color } of Object.values(tierLabelsByAnimeId)) {
+      const existing = tierCounts.get(label);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        tierCounts.set(label, { label, color, count: 1 });
+      }
+    }
+    const knownTierOrder = ["S", "A", "B", "C", "D"];
+    tierDistribution = Array.from(tierCounts.values()).sort((a, b) => {
+      const aRank = knownTierOrder.indexOf(a.label);
+      const bRank = knownTierOrder.indexOf(b.label);
+      if (aRank !== -1 && bRank !== -1) return aRank - bRank;
+      if (aRank !== -1) return -1;
+      if (bRank !== -1) return 1;
+      return b.count - a.count;
+    });
     statusCounts = {
       planned: items.filter((item) => item.status === "planned").length,
       watching: items.filter((item) => item.status === "watching").length,
@@ -60,6 +81,7 @@ export default async function MyPage() {
     <MyPageClient
       statusCounts={statusCounts}
       subscriptionSummary={subscriptionSummary}
+      tierDistribution={tierDistribution}
     />
   );
 }
