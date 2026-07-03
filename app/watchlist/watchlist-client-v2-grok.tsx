@@ -506,10 +506,10 @@ export function WatchlistClientV2Grok({
       {count === 0 ? (
         <div className="wl2g-empty">
           <h3>まだ作品がありません</h3>
-          <p>作品を探して「見たい」や「視聴中」に追加しましょう。</p>
+          <p>ホームの「今期から追加」から「見たい」や「視聴中」に追加しましょう。</p>
           <div style={{ marginTop: 12 }}>
-            <Link className="command-button emphasis-button" href="/explore">
-              作品を探す →
+            <Link className="command-button emphasis-button" href="/#home-add-section">
+              ホームから作品を追加する →
             </Link>
           </div>
         </div>
