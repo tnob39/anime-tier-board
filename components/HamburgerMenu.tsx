@@ -1,42 +1,31 @@
 "use client";
 
 import {
-  Check,
+  BookOpen,
   CreditCard,
   Megaphone,
   Mic2,
-  Monitor,
-  Moon,
   Settings,
-  Sun,
   X
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
-import { useTheme, type ThemePref } from "@/lib/theme";
+import { ThemeSwitch } from "./ThemeSwitch";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
 };
 
-const themeOptions: { pref: ThemePref; label: string; icon: LucideIcon }[] = [
-  { pref: "light", label: "ライト", icon: Sun },
-  { pref: "dark", label: "ダーク", icon: Moon },
-  { pref: "system", label: "システム", icon: Monitor }
-];
-
 // ボトムタブにないページのみ
 const navItems = [
+  { href: "/guide", label: "使い方", icon: BookOpen },
   { href: "/dashboard?section=subscriptions", label: "サブスク", icon: CreditCard },
   { href: "/voice-actors", label: "声優", icon: Mic2 },
   { href: "/settings", label: "設定", icon: Settings },
 ];
 
 export function HamburgerMenu({ isOpen, onClose }: Props) {
-  const [themePref, setThemePref] = useTheme();
-
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -64,26 +53,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
 
         <section className="hamburger-section">
           <p className="hamburger-section-label">テーマ</p>
-          <div className="theme-switch" role="radiogroup" aria-label="テーマ">
-            {themeOptions.map((opt) => {
-              const Icon = opt.icon;
-              const active = themePref === opt.pref;
-              return (
-                <button
-                  key={opt.pref}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  className={active ? "theme-switch-btn is-active" : "theme-switch-btn"}
-                  onClick={() => setThemePref(opt.pref)}
-                >
-                  <Icon size={16} className="theme-switch-icon" />
-                  <span>{opt.label}</span>
-                  {active && <Check size={15} className="theme-switch-check" />}
-                </button>
-              );
-            })}
-          </div>
+          <ThemeSwitch />
         </section>
 
         <div className="hamburger-divider" />

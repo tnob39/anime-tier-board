@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Menu, UserCircle2 } from "lucide-react";
+import { LogOut, Menu, User, UserCircle2 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
+import { useNavV5 } from "@/lib/nav-flag";
 
 export function GlobalNav() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -12,6 +13,7 @@ export function GlobalNav() {
   const [isCompact, setIsCompact] = useState(false);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
+  const navV5 = useNavV5();
 
   useEffect(() => {
     function handleScroll() {
@@ -30,14 +32,20 @@ export function GlobalNav() {
         aria-label="グローバルナビゲーション"
       >
         <div className="global-nav-left">
-          <button
-            className="global-nav-btn"
-            onClick={() => setIsDrawerOpen(true)}
-            aria-label="メニューを開く"
-            aria-expanded={isDrawerOpen}
-          >
-            <Menu size={20} />
-          </button>
+          {navV5 ? (
+            <Link href="/mypage" className="global-nav-btn" aria-label="マイページ">
+              <User size={20} />
+            </Link>
+          ) : (
+            <button
+              className="global-nav-btn"
+              onClick={() => setIsDrawerOpen(true)}
+              aria-label="メニューを開く"
+              aria-expanded={isDrawerOpen}
+            >
+              <Menu size={20} />
+            </button>
+          )}
           <Link href="/" className="global-nav-logo" aria-label="numanie トップへ">
             numanie
           </Link>
@@ -94,7 +102,9 @@ export function GlobalNav() {
         </div>
       </nav>
 
-      <HamburgerMenu isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+      {!navV5 ? (
+        <HamburgerMenu isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+      ) : null}
     </>
   );
 }

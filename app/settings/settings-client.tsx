@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PushToggle } from "@/components/PushToggle";
 import { SubscriptionPicker } from "@/components/SubscriptionPicker";
+import { readNavV5, setNavV5 } from "@/lib/nav-flag";
 
 export function SettingsClient({ initialServiceIds }: { initialServiceIds: string[] }) {
   const [serviceIds, setServiceIds] = useState(initialServiceIds);
   const [message, setMessage] = useState<string | null>(null);
+  const [navV5, setNavV5State] = useState(false);
+
+  useEffect(() => {
+    setNavV5State(readNavV5());
+  }, []);
 
   async function saveSubscriptions(nextServiceIds: string[]) {
     const previous = serviceIds;
@@ -47,6 +53,23 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
           ダッシュボードへ
         </Link>
       </header>
+
+      <section className="settings-panel">
+        <h2>ベータ機能</h2>
+        <p>新しいナビゲーションを端末ごとに切り替えられます。</p>
+        <label className="settings-nav-toggle">
+          <span>新しいナビ（5タブ＋マイページ）を試す（ベータ）</span>
+          <input
+            type="checkbox"
+            checked={navV5}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setNavV5State(checked);
+              setNavV5(checked);
+            }}
+          />
+        </label>
+      </section>
 
       <section className="settings-panel">
         <h2>プッシュ通知</h2>
