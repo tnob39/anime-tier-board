@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.46",
+    date: "2026-07-04",
+    label: "マイページにTier分布を表示",
+    isLatest: true,
+    changes: [
+      {
+        icon: Layers,
+        iconColor: "#f59e0b",
+        title: "自分のTier分布がマイページで見られるように",
+        description: "S・A・BなどのTierごとに何作品評価したかをマイページの視聴データに表示しました。自分の評価の傾向がひと目で分かります。",
+        href: "/mypage",
+      },
+    ]
+  },
+  {
     version: "1.45",
     date: "2026-07-04",
     label: "マイページにサブスク状況を表示",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: CreditCard,

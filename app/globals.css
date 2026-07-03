@@ -4680,6 +4680,39 @@ a.cl-history-title:hover {
   font-size: 13px;
   color: var(--muted);
 }
+.mypage-tier-block {
+  margin-bottom: 10px;
+}
+.mypage-tier-caption {
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.mypage-tier-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mypage-tier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.mypage-tier-chip b {
+  font-weight: 800;
+}
+.mypage-tier-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
 .mypage-account {
   display: flex;
   flex-direction: column;
