@@ -85,6 +85,7 @@ export default function HomeAddSection({
           {items.slice(0, 30).map((item) => {
             const isSaving = savingId === item.id;
             const coverImage = item.proxiedImageUrl || item.imageUrl || null;
+            const provider = item.streamingProvidersJp?.flatrate?.[0] ?? null;
 
             return (
               <div key={item.id} className="home-add-card" role="listitem">
@@ -101,6 +102,11 @@ export default function HomeAddSection({
                   ) : (
                     <AnimeCardPlaceholder title={item.title} className="home-add-card-placeholder" />
                   )}
+                  {provider?.logoUrl ? (
+                    <span className="card-provider-badge" title={provider.name}>
+                      <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
+                    </span>
+                  ) : null}
                 </div>
                 <p className="home-add-card-title">{item.title}</p>
                 <div className="home-add-card-actions">

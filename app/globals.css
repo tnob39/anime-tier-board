@@ -773,6 +773,28 @@ button:disabled {
   object-fit: contain;
 }
 
+.card-provider-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(20, 26, 32, 0.35);
+  z-index: 2;
+}
+
+.card-provider-badge img {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .anime-card.is-overlay {
   box-shadow: var(--shadow);
   transform: rotate(1deg);
@@ -4908,6 +4930,7 @@ a.cl-history-title:hover {
 }
 
 .lane-card-poster {
+  position: relative;
   width: 96px;
   height: 136px;
   border-radius: 8px;
@@ -5617,6 +5640,7 @@ a.cl-history-title:hover {
 }
 
 .home-add-card-poster {
+  position: relative;
   width: 92px;
   height: 130px;
   border-radius: 8px;

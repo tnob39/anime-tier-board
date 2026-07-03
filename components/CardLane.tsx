@@ -19,6 +19,8 @@ export type LaneCardData = {
   dimmed?: boolean;
   /** タイトル下に出す補助ラベル（例: 放送開始日 "4/10〜"）*/
   noteLabel?: string | null;
+  providerLogoUrl?: string | null;
+  providerName?: string | null;
 };
 
 export type CardLaneProps = {
@@ -86,6 +88,11 @@ function LaneCard({
         ) : (
           <AnimeCardPlaceholder title={item.title} className="lane-card-placeholder" />
         )}
+        {item.providerLogoUrl ? (
+          <span className="card-provider-badge" title={item.providerName ?? undefined}>
+            <img src={item.providerLogoUrl} alt={item.providerName ?? ""} width={16} height={16} />
+          </span>
+        ) : null}
       </div>
       <div className="lane-card-body">
         <p className="lane-card-title">{item.title}</p>

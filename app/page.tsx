@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { fetchCurrentSeasonAnimeForHome } from "@/lib/home-seasonal-add";
 import { listStatuses } from "@/lib/statuses";
+import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
+import type { AnimeItem } from "@/lib/types";
 import { HomeClient } from "./home-client";
 import { HomeGuest } from "./home-guest";
 
@@ -22,5 +24,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     fetchCurrentSeasonAnimeForHome().catch(() => []),
   ]);
 
-  return <HomeClient initialItems={items} initialSeasonalAnime={seasonalAnime} />;
+  const watchlistAnime = items.map((record) => record.anime).filter((anime): anime is AnimeItem => Boolean(anime));
+  const { map: providerMap } = await buildProviderMapWithStats(
+    [...watchlistAnime, ...seasonalAnime],
+    { skipUncached: true }
+  );
+  const enrichedSeasonal = enrichWithStreamingProviders(seasonalAnime, providerMap);
+  const enrichedItems = items.map((record) =>
+    record.anime
+      ? { ...record, anime: enrichWithStreamingProviders([record.anime], providerMap)[0] }
+      : record
+  );
+
+  return <HomeClient initialItems={enrichedItems} initialSeasonalAnime={enrichedSeasonal} />;
 }

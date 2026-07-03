@@ -589,6 +589,7 @@ export function PosterCard({
   const prog = computeProgress(record);
   const badge = getStatusBadgeClass(record.status);
   const label = statusLabels[record.status];
+  const provider = anime.streamingProvidersJp?.flatrate?.[0] ?? null;
 
   return (
     <div className="wl2g-poster" onClick={onOpen}>
@@ -600,6 +601,11 @@ export function PosterCard({
           <span className={`wl2g-badge ${badge}`}>{label}</span>
           {tier ? (
             <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
+          ) : null}
+          {provider?.logoUrl ? (
+            <span className={tier ? "wl2g-provider wl2g-provider--below" : "wl2g-provider"} title={provider.name}>
+              <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
+            </span>
           ) : null}
           {onRemove ? (
             <button
@@ -649,6 +655,11 @@ export function PosterCard({
           <span className={`wl2g-badge ${badge}`} style={{ zIndex: 3 }}>{label}</span>
           {tier ? (
             <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
+          ) : null}
+          {provider?.logoUrl ? (
+            <span className={tier ? "wl2g-provider wl2g-provider--below" : "wl2g-provider"} title={provider.name}>
+              <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
+            </span>
           ) : null}
           {onRemove ? (
             <button
