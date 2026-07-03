@@ -1,42 +1,23 @@
 "use client";
 
-import { Heart, MessageCircle, Sparkles, ThumbsUp, Zap } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
-import type { BoardShare, ReactionCounts, ReactionKind, ShareComment } from "@/lib/shares";
+import { ShareCardCTA } from "@/components/ShareCardCTA";
+import type { BoardShare, ShareComment } from "@/lib/shares";
 import type { AnimeItem } from "@/lib/types";
 import { SEASON_LABELS } from "@/lib/types";
 
 const UNRANKED_TIER_ID = "tier-unranked";
 
-const reactionOptions: Array<{
-  kind: ReactionKind;
-  label: string;
-  icon: typeof Heart;
-}> = [
-  { kind: "like", label: "いいね", icon: Heart },
-  { kind: "agree", label: "わかる", icon: ThumbsUp },
-  { kind: "surprised", label: "気になる", icon: Zap },
-  { kind: "want_to_watch", label: "見たい", icon: Sparkles }
-];
-
 export function SharePageClient({
-  initialShare,
-  initialViewerReactions = []
+  initialShare
 }: {
   initialShare: BoardShare;
-  initialViewerReactions?: ReactionKind[];
 }) {
   const { data: session, status: authStatus } = useSession();
-  const [reactionCounts, setReactionCounts] = useState<ReactionCounts>(
-    initialShare.reactionCounts
-  );
-  const [viewerReactions, setViewerReactions] = useState<ReactionKind[]>(
-    initialViewerReactions
-  );
-  const [reactingKind, setReactingKind] = useState<ReactionKind | null>(null);
   const [comments, setComments] = useState<ShareComment[]>([]);
   const [commentBody, setCommentBody] = useState("");
   const [commenting, setCommenting] = useState(false);
@@ -49,11 +30,6 @@ export function SharePageClient({
     (tier) => tier.id !== UNRANKED_TIER_ID
   );
   const isAuthenticated = authStatus === "authenticated";
-
-  useEffect(() => {
-    setReactionCounts(initialShare.reactionCounts);
-    setViewerReactions(initialViewerReactions);
-  }, [initialShare.shareId, initialShare.reactionCounts, initialViewerReactions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,46 +57,6 @@ export function SharePageClient({
       cancelled = true;
     };
   }, [initialShare.shareId]);
-
-  async function handleReaction(kind: ReactionKind) {
-    if (viewerReactions.includes(kind) || reactingKind) {
-      return;
-    }
-
-    if (!isAuthenticated) {
-      void signIn("google");
-      return;
-    }
-
-    setReactingKind(kind);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`/api/shares/${initialShare.shareId}/reactions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ kind })
-      });
-
-      if (!response.ok) {
-        throw new Error("Reaction failed.");
-      }
-
-      const payload = (await response.json()) as {
-        reactionCounts: ReactionCounts;
-        viewerReactions: ReactionKind[];
-      };
-
-      setReactionCounts(payload.reactionCounts);
-      setViewerReactions(payload.viewerReactions);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Reaction failed.");
-    } finally {
-      setReactingKind(null);
-    }
-  }
 
   async function handleComment() {
     const body = commentBody.trim();
@@ -168,26 +104,6 @@ export function SharePageClient({
             {initialShare.board.seasonYear} {SEASON_LABELS[initialShare.board.season]}
           </p>
         </div>
-        <div className="share-actions">
-          {reactionOptions.map((option) => {
-            const Icon = option.icon;
-            const active = viewerReactions.includes(option.kind);
-
-            return (
-              <button
-                key={option.kind}
-                className={active ? "command-button reaction-button is-active" : "command-button reaction-button"}
-                type="button"
-                onClick={() => void handleReaction(option.kind)}
-                disabled={active || reactingKind === option.kind}
-              >
-                <Icon size={17} fill={active ? "currentColor" : "none"} />
-                <span>{option.label}</span>
-                <strong>{reactionCounts[option.kind]}</strong>
-              </button>
-            );
-          })}
-        </div>
       </header>
 
       {message ? <div className="notice error">{message}</div> : null}
@@ -232,10 +148,16 @@ export function SharePageClient({
         </div>
       </section>
 
+      <ShareCardCTA
+        headline="あなたも今期のアニメを Tier 表にして布教しよう"
+        buttonLabel="自分の Tier 表を作る"
+        href="/tier?from=share"
+      />
+
       <section className="comment-panel" aria-label="Share comments">
         <div className="comment-heading">
           <MessageCircle size={18} />
-          <h2>Comments</h2>
+          <h2>コメント</h2>
           <span>{comments.length}</span>
         </div>
 
@@ -249,13 +171,13 @@ export function SharePageClient({
                   <div className="comment-avatar" />
                 )}
                 <div>
-                  <strong>{comment.userName ?? "Google user"}</strong>
+                  <strong>{comment.userName ?? "名無しさん"}</strong>
                   <p>{comment.body}</p>
                 </div>
               </article>
             ))
           ) : (
-            <p className="comment-empty">No comments yet.</p>
+            <p className="comment-empty">まだコメントはありません。</p>
           )}
         </div>
 
@@ -264,7 +186,7 @@ export function SharePageClient({
             <textarea
               value={commentBody}
               onChange={(event) => setCommentBody(event.target.value)}
-              placeholder="Write a comment..."
+              placeholder="感想を書く…"
               aria-label="コメントを書く"
               maxLength={1000}
             />
@@ -274,7 +196,7 @@ export function SharePageClient({
               onClick={() => void handleComment()}
               disabled={commenting || !commentBody.trim()}
             >
-              Post
+              投稿
             </button>
           </div>
         ) : (
@@ -283,16 +205,11 @@ export function SharePageClient({
             type="button"
             onClick={() => void signIn("google")}
           >
-            Google login to comment
+            Google ログインしてコメント
           </button>
         )}
-        {session?.user?.name ? <p className="comment-user">Signed in as {session.user.name}</p> : null}
+        {session?.user?.name ? <p className="comment-user">{session.user.name} としてログイン中</p> : null}
       </section>
-
-      <div className="share-page-cta">
-        <p>あなたも numanie でアニメ Tier 表を作ろう</p>
-        <a href="/">numanie を使ってみる →</a>
-      </div>
     </main>
   );
 }
