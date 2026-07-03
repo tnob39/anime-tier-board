@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.45",
+    date: "2026-07-04",
+    label: "マイページにサブスク状況を表示",
+    isLatest: true,
+    changes: [
+      {
+        icon: CreditCard,
+        iconColor: "#0f766e",
+        title: "サブスクの加入状況とカバー率がマイページに",
+        description: "加入中のサービス数と見放題カバー率をマイページで確認できるようになりました。未登録の方は登録への案内を表示します。",
+        href: "/mypage",
+      },
+    ]
+  },
+  {
     version: "1.44",
     date: "2026-07-04",
     label: "マイページに視聴データサマリー",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: UserCheck,

@@ -18,7 +18,6 @@ const links = [
   { href: "/watchlist", label: "マイリスト", icon: ListChecks },
   { href: "/guide", label: "使い方", icon: BookOpen },
   { href: "/dashboard", label: "分析", icon: BarChart3 },
-  { href: "/dashboard?section=subscriptions", label: "サブスク", icon: CreditCard },
   { href: "/voice-actors", label: "声優", icon: Mic2 },
   { href: "/settings", label: "設定", icon: Settings },
   { href: "/updates", label: "更新情報", icon: Megaphone },
@@ -32,9 +31,18 @@ type MyPageClientProps = {
     paused: number;
     dropped: number;
   } | null;
+  subscriptionSummary?: {
+    serviceCount: number;
+    coveragePercentage: number;
+    watchlistCount: number;
+    coveredCount: number;
+  } | null;
 };
 
-export function MyPageClient({ statusCounts = null }: MyPageClientProps = {}) {
+export function MyPageClient({
+  statusCounts = null,
+  subscriptionSummary = null
+}: MyPageClientProps = {}) {
   const { data: session, status } = useSession();
   const total = statusCounts
     ? Object.values(statusCounts).reduce((sum, count) => sum + count, 0)
@@ -107,6 +115,39 @@ export function MyPageClient({ statusCounts = null }: MyPageClientProps = {}) {
             <span>分析で詳細を見る</span>
             <ChevronRight size={18} className="mypage-link-arrow" />
           </Link>
+        </section>
+      ) : null}
+
+      {subscriptionSummary ? (
+        <section className="mypage-section">
+          <h2>サブスク</h2>
+          {subscriptionSummary.serviceCount > 0 ? (
+            <>
+              <p className="mypage-subs-summary">
+                加入中 {subscriptionSummary.serviceCount}サービス
+                {subscriptionSummary.watchlistCount > 0
+                  ? `・見放題カバー率 ${subscriptionSummary.coveragePercentage}%（${subscriptionSummary.coveredCount}/${subscriptionSummary.watchlistCount}作品）`
+                  : null}
+              </p>
+              <Link
+                href="/dashboard?section=subscriptions"
+                className="hamburger-nav-item"
+              >
+                <CreditCard size={18} className="hamburger-nav-icon" />
+                <span>サブスク管理</span>
+                <ChevronRight size={18} className="mypage-link-arrow" />
+              </Link>
+            </>
+          ) : (
+            <Link
+              href="/dashboard?section=subscriptions"
+              className="hamburger-nav-item"
+            >
+              <CreditCard size={18} className="hamburger-nav-icon" />
+              <span>サブスクを登録してカバー率をチェック</span>
+              <ChevronRight size={18} className="mypage-link-arrow" />
+            </Link>
+          )}
         </section>
       ) : null}
 

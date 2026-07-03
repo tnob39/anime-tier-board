@@ -4675,6 +4675,11 @@ a.cl-history-title:hover {
   font-size: 11px;
   color: var(--muted);
 }
+.mypage-subs-summary {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
 .mypage-account {
   display: flex;
   flex-direction: column;
