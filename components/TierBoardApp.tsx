@@ -184,6 +184,7 @@ export function TierBoardApp({
   );
   const [statusMap, setStatusMap] = useState<Record<string, ViewingStatus>>({});
   const [sharing, setSharing] = useState(false);
+  const [loginPrompt, setLoginPrompt] = useState<null | "status" | "share">(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -583,7 +584,7 @@ export function TierBoardApp({
 
   async function handleStatusChange(item: AnimeItem, status: ViewingStatus | null) {
     if (!isAuthenticated) {
-      void signIn("google");
+      setLoginPrompt("status");
       return;
     }
 
@@ -670,7 +671,7 @@ export function TierBoardApp({
     }
 
     if (!isAuthenticated) {
-      void signIn("google");
+      setLoginPrompt("share");
       return;
     }
 
@@ -847,6 +848,41 @@ export function TierBoardApp({
           </div>
         </div>
       </header>
+
+      {loginPrompt ? (
+        <div
+          className="tier-login-prompt"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="tier-login-prompt-title"
+        >
+          <div className="tier-login-prompt-content">
+            <strong id="tier-login-prompt-title">ログインが必要です</strong>
+            <p>
+              {loginPrompt === "status"
+                ? "視聴ステータスを保存するにはログインしてください。Tier表の編集はログインなしで続けられます。"
+                : "Tier表を共有するにはログインしてください。作成したTier表はそのまま残ります。"}
+            </p>
+          </div>
+          <div className="tier-login-prompt-actions">
+            <button
+              className="command-button emphasis-button"
+              type="button"
+              onClick={() => void signIn("google")}
+            >
+              Googleでログイン
+            </button>
+            <button
+              className="command-button tier-login-prompt-close"
+              type="button"
+              onClick={() => setLoginPrompt(null)}
+              aria-label="閉じる"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <main className="app-main">
         {warning ? <div className="notice warning">{warning}</div> : null}

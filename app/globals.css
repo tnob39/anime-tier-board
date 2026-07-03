@@ -433,6 +433,65 @@ button:disabled {
   margin: 0;
 }
 
+.tier-login-prompt {
+  position: fixed;
+  z-index: 40;
+  top: 76px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(calc(100% - 24px), 560px);
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  transform: translateX(-50%);
+}
+
+.tier-login-prompt-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tier-login-prompt-content strong {
+  font-size: 15px;
+}
+
+.tier-login-prompt-content p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tier-login-prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tier-login-prompt-close {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  font-size: 22px;
+}
+
+@media (max-width: 600px) {
+  .tier-login-prompt {
+    top: 12px;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tier-login-prompt-actions .emphasis-button {
+    flex: 1;
+  }
+}
+
 .tier-add-button {
   display: flex;
   margin: 12px auto 0;
