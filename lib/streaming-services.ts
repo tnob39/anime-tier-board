@@ -100,6 +100,19 @@ export function getServiceLandingUrl(serviceId: string): string | null {
   return service.affiliateUrl ?? service.homeUrl;
 }
 
+const PROVIDER_NAME_ALIASES: Array<{ pattern: RegExp; serviceId: string }> = [
+  { pattern: /netflix/i, serviceId: "netflix" },
+  { pattern: /amazon|prime\s*video/i, serviceId: "amazon_prime" },
+  { pattern: /u-?next/i, serviceId: "unext" },
+  { pattern: /d\s*anime|dアニメ/i, serviceId: "danime" },
+  { pattern: /abema/i, serviceId: "abema" },
+  { pattern: /hulu|disney/i, serviceId: "hulu_disney" },
+];
+
+export function matchServiceIdByProviderName(name: string): string | null {
+  return PROVIDER_NAME_ALIASES.find(({ pattern }) => pattern.test(name))?.serviceId ?? null;
+}
+
 // ---- AniList アイテムから配信URLを取り出すユーティリティ (evangelist-card 向け) ----
 
 export type StreamingProvider = {
