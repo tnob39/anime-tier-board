@@ -81,8 +81,14 @@ async function findTmdbAvailability(title: string, mediaType: "tv" | "movie") {
     region: "JP",
   });
 
-  const candidates = (search.results ?? []).filter((item: any) => item[resultsKey]);
-  const sorted = [...candidates.length ? candidates : (search.results ?? [])].sort((a: any, b: any) => {
+  // アニメ前提ガード: 日本語原語 + Animation ジャンル(16) 以外は候補にしない。
+  // タイトル検索の誤ヒット(例: 「サンダー３」→ 洋画 Thor)で誤った配信バッジを
+  // 保存しないため、該当ゼロなら「バッジなし」に倒す(誤表示より無表示)。
+  const animeOnly = (search.results ?? []).filter(
+    (item: any) => item.original_language === "ja" && (item.genre_ids ?? []).includes(16)
+  );
+  const candidates = animeOnly.filter((item: any) => item[resultsKey]);
+  const sorted = [...(candidates.length ? candidates : animeOnly)].sort((a: any, b: any) => {
     const aVotes = a.vote_count ?? 0;
     const bVotes = b.vote_count ?? 0;
     const aDate = Date.parse(a.first_air_date ?? a.release_date ?? "") || 0;
