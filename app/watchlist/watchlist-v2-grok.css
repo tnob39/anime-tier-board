@@ -686,3 +686,30 @@
 .wl2g-catchup--behind {
   color: var(--accent);
 }
+
+/* Watch chips (EditSheet) */
+.wl2g-watch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 10px;
+}
+
+.wl2g-watch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+
+.wl2g-watch-chip img {
+  border-radius: 4px;
+}

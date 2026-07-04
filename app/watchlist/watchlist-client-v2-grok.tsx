@@ -20,6 +20,7 @@ import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { isOwnerEmail } from "@/lib/owner";
 import { bucketBySeason } from "@/lib/season-bucket";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
+import { matchServiceIdByProviderName } from "@/lib/streaming-services";
 import type { AnimeItem } from "@/lib/types";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 
@@ -901,6 +902,17 @@ export function EditSheet({
   const anime = record.anime!;
   const totalEps = anime.episodes ?? null;
   const curW = Math.max(0, Math.min(draftWatched, totalEps ?? draftWatched));
+  const flatrateProviders = anime.streamingProvidersJp?.flatrate ?? [];
+  const seenServiceIds = new Set<string>();
+  const dedupedChips = flatrateProviders.flatMap((provider) => {
+    const serviceId = matchServiceIdByProviderName(provider.name);
+    if (!serviceId || seenServiceIds.has(serviceId)) return [];
+    seenServiceIds.add(serviceId);
+    return [{ provider, serviceId }];
+  });
+  const hasUnmatchedProvider = flatrateProviders.some(
+    (provider) => matchServiceIdByProviderName(provider.name) === null
+  );
 
   function dec() {
     const next = Math.max(0, draftWatched - 1);
@@ -934,6 +946,37 @@ export function EditSheet({
             </button>
           ))}
         </div>
+
+        {flatrateProviders.length ? (
+          <div className="wl2g-watch-row" aria-label="配信サービスで見る">
+            {dedupedChips.map(({ provider, serviceId }) => (
+              <a
+                key={serviceId}
+                href={`/api/go/${serviceId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="wl2g-watch-chip"
+              >
+                {provider.logoUrl ? (
+                  <img src={provider.logoUrl} alt="" width={16} height={16} />
+                ) : null}
+                {provider.name}
+                <ExternalLink size={12} aria-hidden="true" />
+              </a>
+            ))}
+            {hasUnmatchedProvider && anime.streamingProvidersJp?.providerLink ? (
+              <a
+                href={anime.streamingProvidersJp.providerLink}
+                target="_blank"
+                rel="noreferrer"
+                className="wl2g-watch-chip"
+              >
+                配信情報を見る
+                <ExternalLink size={12} aria-hidden="true" />
+              </a>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="wl2g-stars" aria-label="お気に入り度">
           {[1, 2, 3, 4, 5].map((lv) => (

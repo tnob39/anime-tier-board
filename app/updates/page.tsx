@@ -27,10 +27,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.49",
+    date: "2026-07-04",
+    label: "作品の詳細から配信サービスへ直行",
+    isLatest: true,
+    changes: [
+      {
+        icon: PlayCircle,
+        iconColor: "#0f766e",
+        title: "「配信サービスで見る」ボタンを追加",
+        description: "マイリストの作品詳細から、その作品が見られる配信サービスへワンタップで移動できるようになりました。未視聴話の追いつきがさらに楽になります。",
+        href: "/watchlist",
+      },
+    ]
+  },
+  {
     version: "1.48",
     date: "2026-07-04",
     label: "期まとめ布教をマイリストから",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Share2,
