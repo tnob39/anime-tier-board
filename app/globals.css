@@ -6287,6 +6287,33 @@ a.cl-history-title:hover {
   text-decoration: none;
 }
 
+.season-page-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.season-page-nav-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.season-page-nav-chip.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
 .season-page-count {
   margin: 24px 0 12px;
   color: var(--muted);

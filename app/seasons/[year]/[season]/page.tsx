@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchSeasonalAnime } from "@/lib/anime-sources";
-import { normalizeSeason, seasonLabelJa } from "@/lib/season";
+import { getCurrentAnimeSeason, getNextAnimeSeason, normalizeSeason, seasonLabelJa } from "@/lib/season";
 import {
   buildProviderMapWithStats,
   enrichWithStreamingProviders,
@@ -42,6 +42,43 @@ function parseParams(params: SeasonPageParams): {
   }
 
   return { year, season };
+}
+
+const SEASON_ORDER: AnimeSeason[] = ["WINTER", "SPRING", "SUMMER", "FALL"];
+
+function getPreviousAnimeSeason(base: { year: number; season: AnimeSeason }): {
+  year: number;
+  season: AnimeSeason;
+} {
+  const index = SEASON_ORDER.indexOf(base.season);
+  if (index === 0) {
+    return { year: base.year - 1, season: "FALL" };
+  }
+  return { year: base.year, season: SEASON_ORDER[index - 1] };
+}
+
+// 期切替ナビは「実際の現在シーズン」基準の前期/今期/来期に固定する
+// （表示中の期を基準にすると前へ前へと無限のクロールチェーンができるため）。
+function buildSeasonNav(viewing: { year: number; season: AnimeSeason }): Array<{
+  key: string;
+  label: string;
+  href: string;
+  active: boolean;
+}> {
+  const current = getCurrentAnimeSeason();
+  const next = getNextAnimeSeason();
+  const prev = getPreviousAnimeSeason(current);
+
+  return [
+    { ...prev, caption: "前期" },
+    { ...current, caption: "今期" },
+    { ...next, caption: "来期" },
+  ].map(({ year, season, caption }) => ({
+    key: `${year}-${season}`,
+    label: `${caption}: ${seasonLabelJa(season, year)}`,
+    href: `/seasons/${year}/${season.toLowerCase()}`,
+    active: viewing.year === year && viewing.season === season,
+  }));
 }
 
 function getJapaneseTitle(item: AnimeItem): string {
@@ -150,6 +187,20 @@ export default async function SeasonPage({
           自分のTier表を作る
         </Link>
       </header>
+
+      <nav className="season-page-nav" aria-label="シーズン切り替え">
+        {buildSeasonNav(parsed).map((item) =>
+          item.active ? (
+            <span key={item.key} className="season-page-nav-chip is-active" aria-current="page">
+              {item.label}
+            </span>
+          ) : (
+            <Link key={item.key} href={item.href} className="season-page-nav-chip">
+              {item.label}
+            </Link>
+          )
+        )}
+      </nav>
 
       <p className="season-page-count">{items.length}作品を掲載</p>
 
