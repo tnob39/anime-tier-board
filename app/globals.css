@@ -495,11 +495,40 @@ button:disabled {
 .route-loading {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
   min-height: 50vh;
   color: var(--muted);
+}
+
+.route-loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.route-loading-skeleton-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.route-loading-skeleton-heading {
+  width: 140px;
+  height: 18px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface-soft) 25%, var(--line) 50%, var(--surface-soft) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+.route-loading-skeleton-row {
+  display: flex;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.route-loading-skeleton-row .skeleton-card {
+  flex: none;
 }
 
 .notice {
@@ -2147,6 +2176,14 @@ button:disabled {
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-card,
+  .route-loading-skeleton-heading {
+    animation: none;
+    background-position: 0 0;
+  }
 }
 
 .watchlist-season-section {
