@@ -367,6 +367,38 @@ button:disabled {
   }
 }
 
+.save-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger);
+}
+
+.save-retry-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-retry-button:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.save-retry-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .filter-chip-group {
   display: inline-flex;
   align-items: center;
