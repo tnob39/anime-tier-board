@@ -199,10 +199,23 @@ export function TierBoardApp({
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
   const [moveHintSeen, setMoveHintSeen] = useState(true);
   const [poolDrawerOpen, setPoolDrawerOpen] = useState(false);
+  const [moveAnnouncement, setMoveAnnouncement] = useState<string | null>(null);
+  const moveAnnouncementTimeoutRef = useRef<number | null>(null);
   const dragOriginTierIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     setMoveHintSeen(window.localStorage.getItem(MOVE_HINT_STORAGE_KEY) === "1");
+  }, []);
+
+  const announceMove = useCallback((itemTitle: string, tierLabel: string) => {
+    if (moveAnnouncementTimeoutRef.current !== null) {
+      window.clearTimeout(moveAnnouncementTimeoutRef.current);
+    }
+    setMoveAnnouncement(`「${itemTitle}」を${tierLabel}に移動しました`);
+    moveAnnouncementTimeoutRef.current = window.setTimeout(() => {
+      setMoveAnnouncement(null);
+      moveAnnouncementTimeoutRef.current = null;
+    }, 2400);
   }, []);
 
   useEffect(() => {
@@ -212,6 +225,9 @@ export function TierBoardApp({
       }
       if (saveSuccessTimeoutRef.current !== null) {
         window.clearTimeout(saveSuccessTimeoutRef.current);
+      }
+      if (moveAnnouncementTimeoutRef.current !== null) {
+        window.clearTimeout(moveAnnouncementTimeoutRef.current);
       }
     };
   }, []);
@@ -530,15 +546,34 @@ export function TierBoardApp({
       return;
     }
 
+    let movedToTierId: string | null = null;
+
     updateBoard((current) => {
       const currentTierId = findTierIdByItemId(current.tiers, activeId);
 
       if (originTierId && currentTierId && originTierId !== currentTierId) {
+        movedToTierId = currentTierId;
         return current;
       }
 
-      return moveItemBetweenTiers(current, activeId, overId);
+      const next = moveItemBetweenTiers(current, activeId, overId);
+      const nextTierId = findTierIdByItemId(next.tiers, activeId);
+
+      if (originTierId && nextTierId && nextTierId !== originTierId) {
+        movedToTierId = nextTierId;
+      }
+
+      return next;
     });
+
+    if (movedToTierId) {
+      const item = itemMap.get(activeId);
+      const tier = board.tiers.find((candidate) => candidate.id === movedToTierId);
+
+      if (item && tier) {
+        announceMove(item.title, tier.label);
+      }
+    }
   }
 
   function handleRenameTier(tierId: string, label: string) {
@@ -602,6 +637,8 @@ export function TierBoardApp({
   }
 
   function handleMoveItemToTier(itemId: string, targetTierId: string) {
+    let moved = false;
+
     updateBoard((current) => {
       const sourceTierId = findTierIdByItemId(current.tiers, itemId);
 
@@ -612,6 +649,8 @@ export function TierBoardApp({
       if (sourceTierId === targetTierId) {
         return current;
       }
+
+      moved = true;
 
       return {
         ...current,
@@ -634,6 +673,16 @@ export function TierBoardApp({
         })
       };
     });
+
+    if (moved) {
+      const item = itemMap.get(itemId);
+      const tier = board?.tiers.find((candidate) => candidate.id === targetTierId);
+
+      if (item && tier) {
+        announceMove(item.title, tier.label);
+      }
+    }
+
     setMoveMenuItemId(null);
   }
 
@@ -775,6 +824,11 @@ export function TierBoardApp({
 
   return (
     <div className={moveHintSeen ? "app-shell move-hint-seen" : "app-shell"}>
+      {moveAnnouncement ? (
+        <div className="tier-move-toast" role="status" aria-live="polite">
+          {moveAnnouncement}
+        </div>
+      ) : null}
       <header className="topbar">
         <div className="title-block">
           <h1>今期アニメTier表</h1>

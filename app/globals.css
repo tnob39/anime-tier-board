@@ -394,6 +394,48 @@ button:disabled {
   color: #fff;
 }
 
+.tier-move-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 65;
+  transform: translateX(-50%);
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  animation: tier-move-toast-in 0.18s ease-out;
+}
+
+@keyframes tier-move-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier-move-toast {
+    animation: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .tier-move-toast {
+    bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}
+
 .save-retry-button:disabled {
   opacity: 0.6;
   cursor: default;
