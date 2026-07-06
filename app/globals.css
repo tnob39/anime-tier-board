@@ -12,6 +12,8 @@
   --danger-soft: #fff0ee;
   --warning: #7a4a05;
   --warning-soft: #fff6dc;
+  --success: #0f5f55;
+  --success-soft: #edfaf5;
   --shadow: 0 14px 30px rgba(25, 31, 36, 0.1);
   --nav-surface: rgba(255,255,255,0.94);
   --nav-border: rgba(183,192,200,0.85);
@@ -35,6 +37,8 @@
   --danger-soft: #3a1d1c;
   --warning: #fbbf24;
   --warning-soft: #3a2f12;
+  --success: #4ade80;
+  --success-soft: #123a2c;
   --shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
   --nav-surface: rgba(24,28,31,0.94);
   --nav-border: rgba(60,69,75,0.85);
@@ -559,8 +563,8 @@ button:disabled {
 
 .notice.success {
   border-color: #9bd8c7;
-  background: #edfaf5;
-  color: #0f5f55;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .notice a {
