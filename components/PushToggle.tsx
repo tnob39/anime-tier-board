@@ -18,6 +18,7 @@ export function PushToggle() {
   const [state, setState] = useState<State>("loading");
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     async function checkState() {
@@ -39,6 +40,7 @@ export function PushToggle() {
   async function subscribe() {
     setWorking(true);
     setMessage(null);
+    setIsError(false);
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -49,6 +51,7 @@ export function PushToggle() {
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
       if (!vapidKey) {
         setMessage("通知機能が設定されていません。");
+        setIsError(true);
         return;
       }
 
@@ -70,6 +73,7 @@ export function PushToggle() {
       setMessage("通知を有効にしました。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "エラーが発生しました。");
+      setIsError(true);
     } finally {
       setWorking(false);
     }
@@ -78,6 +82,7 @@ export function PushToggle() {
   async function unsubscribe() {
     setWorking(true);
     setMessage(null);
+    setIsError(false);
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
@@ -93,6 +98,7 @@ export function PushToggle() {
       setMessage("通知を無効にしました。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "エラーが発生しました。");
+      setIsError(true);
     } finally {
       setWorking(false);
     }
@@ -145,7 +151,14 @@ export function PushToggle() {
           {working ? <Loader2 size={14} className="spin" /> : isOn ? "無効にする" : "有効にする"}
         </button>
       </div>
-      {message ? <p className="push-toggle-message">{message}</p> : null}
+      {message ? (
+        <p
+          className={`push-toggle-message${isError ? " is-error" : ""}`}
+          role={isError ? "alert" : "status"}
+        >
+          {message}
+        </p>
+      ) : null}
       {isOn ? (
         <p className="push-toggle-hint">
           視聴中・見たいアニメの放送日に通知が届きます。

@@ -4370,6 +4370,10 @@ a.cl-history-title:hover {
   margin: 0;
 }
 
+.push-toggle-message.is-error {
+  color: var(--danger);
+}
+
 .push-toggle-unsupported,
 .push-toggle-denied {
   font-size: 0.85rem;
