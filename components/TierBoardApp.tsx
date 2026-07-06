@@ -192,6 +192,7 @@ export function TierBoardApp({
   const copyConfirmTimeoutRef = useRef<number | null>(null);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
   const saveSuccessTimeoutRef = useRef<number | null>(null);
+  const [retryingSave, setRetryingSave] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
@@ -441,6 +442,32 @@ export function TierBoardApp({
       window.clearTimeout(timeout);
     };
   }, [board, isAuthenticated, storageKey]);
+
+  async function handleRetrySave() {
+    if (!board || retryingSave) {
+      return;
+    }
+
+    setRetryingSave(true);
+    setSaveState("saving");
+
+    try {
+      await saveRemoteBoard(board, new AbortController().signal);
+      setSaveState("saved");
+      setSaveSuccessVisible(true);
+      if (saveSuccessTimeoutRef.current !== null) {
+        window.clearTimeout(saveSuccessTimeoutRef.current);
+      }
+      saveSuccessTimeoutRef.current = window.setTimeout(() => {
+        setSaveSuccessVisible(false);
+        saveSuccessTimeoutRef.current = null;
+      }, 2000);
+    } catch {
+      setSaveState("error");
+    } finally {
+      setRetryingSave(false);
+    }
+  }
 
   function updateBoard(updater: (current: BoardState) => BoardState) {
     setBoard((current) => {
@@ -756,7 +783,19 @@ export function TierBoardApp({
             {source ? ` / ${source === "anilist" ? "AniList" : "Jikan"}` : ""}
             {cached ? " / キャッシュ" : ""}
             {isAuthenticated && saveState === "saving" ? " / 保存中..." : null}
-            {isAuthenticated && saveState === "error" ? " / 保存エラー" : null}
+            {isAuthenticated && saveState === "error" ? (
+              <span className="save-error" role="alert">
+                {" / 保存に失敗しました"}
+                <button
+                  type="button"
+                  className="save-retry-button"
+                  onClick={handleRetrySave}
+                  disabled={retryingSave}
+                >
+                  {retryingSave ? "再試行中..." : "再試行"}
+                </button>
+              </span>
+            ) : null}
             {isAuthenticated && saveSuccessVisible ? (
               <span className="save-success-check">
                 {" / "}
