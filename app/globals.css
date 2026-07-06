@@ -330,6 +330,29 @@ button:disabled {
   background: var(--surface-soft);
 }
 
+.command-button.copy-confirm {
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: copy-confirm-in 0.15s ease-out;
+}
+
+@keyframes copy-confirm-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-button.copy-confirm {
+    animation: none;
+  }
+}
+
 .filter-chip-group {
   display: inline-flex;
   align-items: center;

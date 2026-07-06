@@ -27,6 +27,7 @@ import {
 import { signIn, useSession } from "next-auth/react";
 import {
   CalendarDays,
+  Check,
   ExternalLink,
   Heart,
   Loader2,
@@ -187,6 +188,8 @@ export function TierBoardApp({
   const [loginPrompt, setLoginPrompt] = useState<null | "status" | "share">(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
+  const [copyConfirm, setCopyConfirm] = useState(false);
+  const copyConfirmTimeoutRef = useRef<number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
@@ -197,6 +200,14 @@ export function TierBoardApp({
 
   useEffect(() => {
     setMoveHintSeen(window.localStorage.getItem(MOVE_HINT_STORAGE_KEY) === "1");
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyConfirmTimeoutRef.current !== null) {
+        window.clearTimeout(copyConfirmTimeoutRef.current);
+      }
+    };
   }, []);
 
   const dismissMoveHint = useCallback(() => {
@@ -700,6 +711,17 @@ export function TierBoardApp({
         text: "私の今期アニメTier表をシェアします"
       });
       setShareOutcome(outcome);
+
+      if (outcome === "copied") {
+        if (copyConfirmTimeoutRef.current !== null) {
+          window.clearTimeout(copyConfirmTimeoutRef.current);
+        }
+        setCopyConfirm(true);
+        copyConfirmTimeoutRef.current = window.setTimeout(() => {
+          setCopyConfirm(false);
+          copyConfirmTimeoutRef.current = null;
+        }, 2000);
+      }
     } catch (shareError) {
       setError(shareError instanceof Error ? shareError.message : String(shareError));
     } finally {
@@ -762,14 +784,20 @@ export function TierBoardApp({
           </button>
 
           <button
-            className="command-button"
+            className={copyConfirm ? "command-button copy-confirm" : "command-button"}
             type="button"
             onClick={() => void handleCreateShare()}
             disabled={!board || sharing || loading || !items.length}
             title="共有URLを作成"
           >
-            {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
-            <span>共有</span>
+            {sharing ? (
+              <Loader2 className="spin" size={18} />
+            ) : copyConfirm ? (
+              <Check size={18} />
+            ) : (
+              <Share2 size={18} />
+            )}
+            <span>{copyConfirm ? "コピーしました" : "共有"}</span>
           </button>
 
           <div className="toolbar-more-wrap">
