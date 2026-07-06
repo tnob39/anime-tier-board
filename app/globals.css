@@ -5691,7 +5691,7 @@ a.cl-history-title:hover {
 }
 
 .home-add-status-note--error {
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 .home-add-list {
