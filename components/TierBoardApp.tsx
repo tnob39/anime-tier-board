@@ -190,6 +190,8 @@ export function TierBoardApp({
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
   const [copyConfirm, setCopyConfirm] = useState(false);
   const copyConfirmTimeoutRef = useRef<number | null>(null);
+  const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
+  const saveSuccessTimeoutRef = useRef<number | null>(null);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [moveMenuItemId, setMoveMenuItemId] = useState<string | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
@@ -206,6 +208,9 @@ export function TierBoardApp({
     return () => {
       if (copyConfirmTimeoutRef.current !== null) {
         window.clearTimeout(copyConfirmTimeoutRef.current);
+      }
+      if (saveSuccessTimeoutRef.current !== null) {
+        window.clearTimeout(saveSuccessTimeoutRef.current);
       }
     };
   }, []);
@@ -410,8 +415,20 @@ export function TierBoardApp({
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
       setSaveState("saving");
+      setSaveSuccessVisible(false);
+      if (saveSuccessTimeoutRef.current !== null) {
+        window.clearTimeout(saveSuccessTimeoutRef.current);
+        saveSuccessTimeoutRef.current = null;
+      }
       void saveRemoteBoard(board, controller.signal)
-        .then(() => setSaveState("saved"))
+        .then(() => {
+          setSaveState("saved");
+          setSaveSuccessVisible(true);
+          saveSuccessTimeoutRef.current = window.setTimeout(() => {
+            setSaveSuccessVisible(false);
+            saveSuccessTimeoutRef.current = null;
+          }, 2000);
+        })
         .catch(() => {
           if (!controller.signal.aborted) {
             setSaveState("error");
@@ -740,6 +757,13 @@ export function TierBoardApp({
             {cached ? " / キャッシュ" : ""}
             {isAuthenticated && saveState === "saving" ? " / 保存中..." : null}
             {isAuthenticated && saveState === "error" ? " / 保存エラー" : null}
+            {isAuthenticated && saveSuccessVisible ? (
+              <span className="save-success-check">
+                {" / "}
+                <Check size={12} strokeWidth={3} />
+                保存済み
+              </span>
+            ) : null}
           </div>
         </div>
 

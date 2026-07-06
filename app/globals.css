@@ -353,6 +353,20 @@ button:disabled {
   }
 }
 
+.save-success-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--accent);
+  animation: copy-confirm-in 0.15s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .save-success-check {
+    animation: none;
+  }
+}
+
 .filter-chip-group {
   display: inline-flex;
   align-items: center;
