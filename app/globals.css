@@ -5466,12 +5466,12 @@ a.cl-history-title:hover {
   color: var(--warning);
 }
 .anime-row-badge--completed {
-  background: #e7ecf3;
-  color: #44506a;
+  background: var(--info-soft);
+  color: var(--info);
 }
 .anime-row-badge--dropped {
   background: var(--surface-soft);
-  color: #888;
+  color: var(--muted);
 }
 .anime-row-badge--default {
   display: none;
