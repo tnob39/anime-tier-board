@@ -3396,7 +3396,7 @@ button:disabled {
 
 .changelog-version.is-latest {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .changelog-date {
