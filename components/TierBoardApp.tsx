@@ -836,7 +836,11 @@ export function TierBoardApp({
             {items.length}作品
             {source ? ` / ${source === "anilist" ? "AniList" : "Jikan"}` : ""}
             {cached ? " / キャッシュ" : ""}
-            {isAuthenticated && saveState === "saving" ? " / 保存中..." : null}
+            {isAuthenticated && saveState === "saving" ? (
+              <span role="status" aria-live="polite">
+                {" / 保存中..."}
+              </span>
+            ) : null}
             {isAuthenticated && saveState === "error" ? (
               <span className="save-error" role="alert">
                 {" / 保存に失敗しました"}
@@ -851,7 +855,7 @@ export function TierBoardApp({
               </span>
             ) : null}
             {isAuthenticated && saveSuccessVisible ? (
-              <span className="save-success-check">
+              <span className="save-success-check" role="status" aria-live="polite">
                 {" / "}
                 <Check size={12} strokeWidth={3} />
                 保存済み
