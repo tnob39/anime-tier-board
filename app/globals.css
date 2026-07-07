@@ -471,7 +471,7 @@ button:disabled {
 
 .filter-chip.is-active {
   border-color: rgba(15, 118, 110, 0.35);
-  background: #e7f5f2;
+  background: var(--success-soft);
   color: var(--accent);
 }
 
