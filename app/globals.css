@@ -1819,7 +1819,7 @@ button:disabled {
 
 .tutorial-steps strong,
 .tutorial-empty-callout strong {
-  color: #111827;
+  color: var(--ink);
 }
 
 .tutorial-steps span,
