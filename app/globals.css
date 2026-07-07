@@ -14,6 +14,8 @@
   --warning-soft: #fff6dc;
   --success: #0f5f55;
   --success-soft: #edfaf5;
+  --info: #37306a;
+  --info-soft: #f2f0ff;
   --shadow: 0 14px 30px rgba(25, 31, 36, 0.1);
   --nav-surface: rgba(255,255,255,0.94);
   --nav-border: rgba(183,192,200,0.85);
@@ -39,6 +41,8 @@
   --warning-soft: #3a2f12;
   --success: #4ade80;
   --success-soft: #123a2c;
+  --info: #a5b4fc;
+  --info-soft: #241f42;
   --shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
   --nav-surface: rgba(24,28,31,0.94);
   --nav-border: rgba(60,69,75,0.85);
@@ -1083,8 +1087,8 @@ button:disabled {
 }
 
 .airing-badges span {
-  background: #f2f0ff;
-  color: #37306a;
+  background: var(--info-soft);
+  color: var(--info);
 }
 
 .streaming-links a {
