@@ -4344,8 +4344,8 @@ a.cl-history-title:hover {
   padding: 6px 14px;
   font-size: 0.82rem;
   border-radius: 6px;
-  border: 1.5px solid var(--border);
-  background: var(--surface-2, #f0f0f0);
+  border: 1.5px solid var(--line);
+  background: var(--surface-soft);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   display: flex;
@@ -4354,7 +4354,7 @@ a.cl-history-title:hover {
   white-space: nowrap;
 }
 .push-toggle-btn:hover:not(:disabled) {
-  background: var(--surface-3, #e0e0e0);
+  background: var(--line);
 }
 .push-toggle-btn:disabled {
   opacity: 0.5;
