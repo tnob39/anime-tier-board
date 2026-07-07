@@ -18,7 +18,7 @@ export default function Error({
       <h1 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.75rem" }}>
         表示中にエラーが発生しました
       </h1>
-      <p style={{ color: "#666", marginBottom: "1.25rem", lineHeight: 1.6 }}>
+      <p style={{ color: "var(--muted)", marginBottom: "1.25rem", lineHeight: 1.6 }}>
         ページの読み込みに失敗しました。再試行するか、トップに戻ってください。
       </p>
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -28,8 +28,9 @@ export default function Error({
           style={{
             padding: "0.5rem 1rem",
             borderRadius: 8,
-            border: "1px solid #ddd",
-            background: "#fff",
+            border: "1px solid var(--line)",
+            background: "var(--surface)",
+            color: "var(--ink)",
             cursor: "pointer",
           }}
         >
@@ -40,8 +41,8 @@ export default function Error({
           style={{
             padding: "0.5rem 1rem",
             borderRadius: 8,
-            border: "1px solid #ddd",
-            background: "#fff",
+            border: "1px solid var(--line)",
+            background: "var(--surface)",
             textDecoration: "none",
             color: "inherit",
           }}
