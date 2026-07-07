@@ -5977,7 +5977,7 @@ a.cl-history-title:hover {
 
 .home-add-card-btn--watching {
   background: var(--accent, #2dd4bf);
-  color: #ffffff;
+  color: var(--accent-ink);
   border-color: var(--accent, #2dd4bf);
 }
 
