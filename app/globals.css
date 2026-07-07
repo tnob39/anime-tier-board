@@ -1655,9 +1655,9 @@ button:disabled {
 }
 
 .reaction-button.is-active {
-  border-color: #ef4444;
-  background: #fff1f2;
-  color: #be123c;
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .comment-panel,
