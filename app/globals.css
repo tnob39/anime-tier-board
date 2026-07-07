@@ -5254,7 +5254,7 @@ a.cl-history-title:hover {
   width: fit-content;
 }
 .lane-card-badge--watching {
-  background: #edfaf5;
+  background: var(--success-soft);
   color: var(--accent);
 }
 .lane-card-badge--completed {
