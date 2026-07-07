@@ -5454,7 +5454,7 @@ a.cl-history-title:hover {
   white-space: nowrap;
 }
 .anime-row-badge--watching {
-  background: #dcf3ef;
+  background: var(--success-soft);
   color: var(--accent);
 }
 .anime-row-badge--planned {
