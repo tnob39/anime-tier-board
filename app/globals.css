@@ -3557,7 +3557,7 @@ a.changelog-change-title:hover {
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .updates-version {
