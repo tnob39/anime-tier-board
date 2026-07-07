@@ -5692,7 +5692,7 @@ a.cl-history-title:hover {
 .home-add-season-toggle-btn.is-active {
   border-color: var(--accent);
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink);
 }
 
 .home-add-status-note {
