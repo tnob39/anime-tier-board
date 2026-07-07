@@ -5262,12 +5262,12 @@ a.cl-history-title:hover {
   color: var(--accent);
 }
 .lane-card-badge--completed {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--info-soft);
+  color: var(--info);
 }
 .lane-card-badge--planned {
-  background: #f5f3ff;
-  color: #6d28d9;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 .lane-card-badge--dropped {
   background: var(--danger-soft);
