@@ -1049,8 +1049,8 @@ button:disabled {
   padding: 0 5px;
   overflow: hidden;
   border-radius: 6px;
-  background: #eef4f2;
-  color: #25423e;
+  background: var(--success-soft);
+  color: var(--success);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
