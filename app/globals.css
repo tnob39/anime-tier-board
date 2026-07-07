@@ -3669,7 +3669,7 @@ a.updates-change:hover {
   padding: 3px 7px;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   flex-shrink: 0;
   margin-top: 2px;
 }
