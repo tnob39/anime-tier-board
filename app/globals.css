@@ -16,6 +16,7 @@
   --success-soft: #edfaf5;
   --info: #37306a;
   --info-soft: #f2f0ff;
+  --accent-ink: #ffffff;
   --shadow: 0 14px 30px rgba(25, 31, 36, 0.1);
   --nav-surface: rgba(255,255,255,0.94);
   --nav-border: rgba(183,192,200,0.85);
@@ -43,6 +44,7 @@
   --success-soft: #123a2c;
   --info: #a5b4fc;
   --info-soft: #241f42;
+  --accent-ink: #06231d;
   --shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
   --nav-surface: rgba(24,28,31,0.94);
   --nav-border: rgba(60,69,75,0.85);
@@ -482,12 +484,13 @@ button:disabled {
 .emphasis-button {
   border-color: rgba(15, 118, 110, 0.25);
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink);
 }
 
 .emphasis-button:hover:not(:disabled) {
   border-color: rgba(15, 118, 110, 0.4);
   background: #115e59;
+  color: #ffffff;
 }
 
 .spin {
