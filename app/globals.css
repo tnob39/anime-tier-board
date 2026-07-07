@@ -1833,7 +1833,7 @@ button:disabled {
   grid-column: 1 / -1;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  background: #edfaf5;
+  background: var(--success-soft);
   border-color: #9bd8c7;
 }
 
