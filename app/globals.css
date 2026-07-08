@@ -2350,9 +2350,9 @@ button:disabled {
 }
 
 .watchlist-favorite button.is-active {
-  border-color: #f4c542;
-  background: #fff8d9;
-  color: #d59a00;
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--warning-soft));
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .watchlist-info,
