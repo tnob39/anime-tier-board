@@ -768,7 +768,7 @@ button:disabled {
 .pool-lane.is-over .pool-items,
 .tier-items.is-over,
 .pool-items.is-over {
-  background: #eefaf6;
+  background: var(--success-soft);
   box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.24);
 }
 
