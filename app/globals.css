@@ -6200,7 +6200,7 @@ a.cl-history-title:hover {
   place-items: center;
   border-radius: 50%;
   background: var(--accent);
-  color: white;
+  color: var(--accent-ink);
   font-size: 22px;
   font-weight: 800;
   animation: guide-pop-in 1.8s ease-in-out infinite;
