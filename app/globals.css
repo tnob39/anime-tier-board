@@ -5798,15 +5798,15 @@ a.cl-history-title:hover {
 }
 
 .home-add-btn--planned {
-  background: #fdf0d8;
+  background: var(--warning-soft);
   color: var(--warning);
-  border-color: #f0d9a8;
+  border-color: var(--warning-soft);
 }
 
 .home-add-btn--watching {
-  background: #dcf3ef;
+  background: var(--success-soft);
   color: var(--accent);
-  border-color: #b8e8df;
+  border-color: var(--success-soft);
 }
 
 .explore-load-more,
