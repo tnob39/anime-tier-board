@@ -6474,7 +6474,7 @@ a.cl-history-title:hover {
 .season-page-nav-chip.is-active {
   border-color: var(--accent);
   background: var(--accent);
-  color: white;
+  color: var(--accent-ink);
 }
 
 .season-page-count {
