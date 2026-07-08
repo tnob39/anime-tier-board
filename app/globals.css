@@ -551,13 +551,13 @@ button:disabled {
 }
 
 .notice.warning {
-  border-color: #f3c454;
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--warning-soft));
   background: var(--warning-soft);
   color: var(--warning);
 }
 
 .notice.error {
-  border-color: #f1a39b;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--danger-soft));
   background: var(--danger-soft);
   color: var(--danger);
 }
@@ -569,7 +569,7 @@ button:disabled {
 }
 
 .notice.success {
-  border-color: #9bd8c7;
+  border-color: color-mix(in srgb, var(--success) 45%, var(--success-soft));
   background: var(--success-soft);
   color: var(--success);
 }
