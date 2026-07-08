@@ -693,8 +693,8 @@ button:disabled {
 }
 
 .like-button.is-liked {
-  border-color: rgba(180, 35, 24, 0.2);
-  background: #fff0ee;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--danger-soft));
+  background: var(--danger-soft);
   color: var(--danger);
 }
 
