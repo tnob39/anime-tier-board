@@ -6333,7 +6333,7 @@ a.cl-history-title:hover {
 .guide-action-primary {
   border-color: var(--accent);
   background: var(--accent);
-  color: white;
+  color: var(--accent-ink, #fff);
 }
 
 @keyframes guide-fade-in {
