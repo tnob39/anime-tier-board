@@ -1095,13 +1095,13 @@ button:disabled {
 }
 
 .streaming-links a {
-  color: #245443;
-  background: #eef8ef;
+  color: var(--success);
+  background: var(--success-soft);
   text-decoration: none;
 }
 
 .streaming-links a:hover {
-  background: #dff0e1;
+  background: color-mix(in srgb, var(--success) 20%, var(--success-soft));
 }
 
 .streaming-links .streaming-more {
@@ -1111,8 +1111,8 @@ button:disabled {
   min-height: 18px;
   padding: 0 5px;
   border-radius: 6px;
-  background: #eef4f2;
-  color: #49645e;
+  background: var(--surface-soft);
+  color: var(--muted);
   font-size: 10px;
   font-weight: 800;
 }
