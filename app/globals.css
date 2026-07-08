@@ -1900,7 +1900,7 @@ button:disabled {
   overflow: hidden;
   height: 9px;
   border-radius: 999px;
-  background: #e5e7eb;
+  background: var(--surface-soft);
 }
 
 .status-bar-row i {
