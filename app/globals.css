@@ -6445,7 +6445,7 @@ a.cl-history-title:hover {
   border: 1px solid var(--accent);
   border-radius: 8px;
   background: var(--accent);
-  color: white;
+  color: var(--accent-ink);
   font-weight: 700;
   text-decoration: none;
 }
