@@ -104,7 +104,7 @@
 .wl2g-fchip.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink);
   font-weight: 700;
 }
 
@@ -433,7 +433,7 @@
 
 .wl2g-status-chip.active {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink);
   border-color: var(--accent);
   font-weight: 600;
 }
@@ -525,7 +525,7 @@
 
 .wl2g-btn.primary {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink);
   border: none;
 }
 
