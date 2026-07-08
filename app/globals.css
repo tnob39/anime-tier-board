@@ -1834,7 +1834,7 @@ button:disabled {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   background: var(--success-soft);
-  border-color: #9bd8c7;
+  border-color: color-mix(in srgb, var(--success) 45%, var(--success-soft));
 }
 
 .tutorial-empty-callout span {
