@@ -5480,7 +5480,7 @@ a.cl-history-title:hover {
   display: none;
 }
 .anime-list-section--today .anime-row {
-  border-color: #f3caca;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--danger-soft));
 }
 
 .home-guest {
