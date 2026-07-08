@@ -4970,7 +4970,7 @@ a.cl-history-title:hover {
   margin: 0 auto 12px;
 }
 .welcome-symbol span {
-  color: #fff;
+  color: var(--accent-ink);
   font-size: 28px;
   font-weight: 900;
   line-height: 1;
