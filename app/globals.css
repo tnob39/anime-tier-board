@@ -960,7 +960,7 @@ button:disabled {
   height: 128px;
   display: block;
   object-fit: cover;
-  background: #e7eaed;
+  background: var(--surface-soft);
 }
 
 .anime-card.is-compact img {
@@ -1158,7 +1158,7 @@ button:disabled {
   height: 76px;
   border-radius: 8px;
   object-fit: cover;
-  background: #e7eaed;
+  background: var(--surface-soft);
 }
 
 .move-sheet-preview strong,
@@ -2712,7 +2712,7 @@ button:disabled {
   height: 76px;
   border-radius: 8px;
   object-fit: cover;
-  background: #e7eaed;
+  background: var(--surface-soft);
 }
 
 .evangelist-sheet-preview strong,
@@ -2823,7 +2823,7 @@ button:disabled {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
-  background: #e7eaed;
+  background: var(--surface-soft);
 }
 
 .evangelist-share-body {
