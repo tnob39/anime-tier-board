@@ -401,7 +401,7 @@ button:disabled {
 
 .save-retry-button:hover:not(:disabled) {
   background: var(--danger);
-  color: #fff;
+  color: var(--background);
 }
 
 .tier-move-toast {
