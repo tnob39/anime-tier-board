@@ -4362,7 +4362,7 @@ a.cl-history-title:hover {
 }
 .push-toggle-btn.is-on {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   border-color: var(--accent);
 }
 .push-toggle-btn.is-on:hover:not(:disabled) {
