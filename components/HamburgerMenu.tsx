@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ThemeSwitch } from "./ThemeSwitch";
 
 type Props = {
@@ -36,6 +36,7 @@ const loginRequiredHrefs = new Set([
 export function HamburgerMenu({ isOpen, onClose }: Props) {
   const { status } = useSession();
   const isLoggedOut = status === "unauthenticated";
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -48,6 +49,26 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -57,7 +78,12 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
       <aside className="hamburger-drawer">
         <div className="hamburger-head">
           <span className="hamburger-title">設定</span>
-          <button className="hamburger-close-btn" onClick={onClose} aria-label="閉じる">
+          <button
+            ref={closeButtonRef}
+            className="hamburger-close-btn"
+            onClick={onClose}
+            aria-label="閉じる"
+          >
             <X size={20} />
           </button>
         </div>
