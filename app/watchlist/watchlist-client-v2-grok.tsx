@@ -995,13 +995,13 @@ export function EditSheet({
           <div className="wl2g-field">
             <label>視聴済み話数</label>
             <div className="wl2g-episodes">
-              <button type="button" onClick={dec} disabled={saving}>
+              <button type="button" onClick={dec} disabled={saving} aria-label="視聴済み話数を減らす">
                 <Minus size={18} />
               </button>
               <span className="num">
                 {curW} / {totalEps}
               </span>
-              <button type="button" onClick={inc} disabled={saving}>
+              <button type="button" onClick={inc} disabled={saving} aria-label="視聴済み話数を増やす">
                 <Plus size={18} />
               </button>
             </div>
