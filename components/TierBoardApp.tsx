@@ -1034,8 +1034,16 @@ export function TierBoardApp({
       ) : null}
 
       <main className="app-main">
-        {warning ? <div className="notice warning">{warning}</div> : null}
-        {error ? <div className="notice error">{error}</div> : null}
+        {warning ? (
+          <div className="notice warning" role="status" aria-live="polite">
+            {warning}
+          </div>
+        ) : null}
+        {error ? (
+          <div className="notice error" role="alert">
+            {error}
+          </div>
+        ) : null}
         {shareUrl ? (
           <div className="notice success">
             {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
