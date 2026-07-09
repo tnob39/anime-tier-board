@@ -103,7 +103,11 @@ export function SubscriptionPicker({
         })}
       </div>
 
-      {message ? <div className="notice error">{message}</div> : null}
+      {message ? (
+        <div className="notice error" role="alert">
+          {message}
+        </div>
+      ) : null}
 
       {!autoSave ? (
         <div className="subscription-picker-actions">
