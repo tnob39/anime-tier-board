@@ -303,6 +303,11 @@ button:disabled {
   font-size: 13px;
 }
 
+.field:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .field select {
   min-width: 76px;
   border: 0;
@@ -734,6 +739,11 @@ button:disabled {
   align-items: stretch;
   justify-content: stretch;
   background: var(--tier-color);
+}
+
+.tier-label:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .tier-label input {
@@ -3072,6 +3082,11 @@ button:disabled {
   gap: 8px;
   min-height: 46px;
   padding: 0 12px;
+}
+
+.voice-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .voice-search input {
@@ -5993,6 +6008,11 @@ a.cl-history-title:hover {
   background: var(--surface);
   flex: 1 1 220px;
   min-width: 180px;
+}
+
+.explore-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .explore-search input {
