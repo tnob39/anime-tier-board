@@ -280,6 +280,8 @@ export default function StatusBottomSheet({
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeBtnRef.current?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
@@ -309,6 +311,7 @@ export default function StatusBottomSheet({
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      previousActiveElement?.focus();
     };
   }, [mounted, visible]);
 
