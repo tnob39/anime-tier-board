@@ -1149,8 +1149,9 @@ export function EditSheet({
         ) : null}
 
         <div className="wl2g-field">
-          <label>いつ見る？</label>
+          <label htmlFor="wl2g-watch-slot">いつ見る？</label>
           <select
+            id="wl2g-watch-slot"
             className="wl2g-select"
             value={draftWatchSlot}
             onChange={(e) => onWatchSlotChange(e.target.value)}
@@ -1164,8 +1165,9 @@ export function EditSheet({
         </div>
 
         <div className="wl2g-field">
-          <label>メモ</label>
+          <label htmlFor="wl2g-notes">メモ</label>
           <textarea
+            id="wl2g-notes"
             className="wl2g-textarea"
             value={draftNotes}
             onChange={(e) => onNotesChange(e.target.value)}
