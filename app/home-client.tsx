@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import HomeAddSection, { type SeasonScope } from "@/components/HomeAddSection";
+import HomeContextCards from "@/components/HomeContextCards";
 import StatusBottomSheet from "@/components/StatusBottomSheet";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
@@ -232,6 +233,9 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
           </p>
         </section>
       )}
+
+      {/* 文脈カード（期末 Tier / 月初サブスク）— カレンダー下。カレンダーを押し下げない */}
+      <HomeContextCards />
 
       {/* Shared Grok edit sheet */}
       {editing && editing.anime ? (
