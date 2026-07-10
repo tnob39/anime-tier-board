@@ -94,9 +94,13 @@ export function DashboardClient({
         </header>
       ) : null}
 
-      {isOwner && message ? <div className="notice error">{message}</div> : null}
+      {isOwner && message ? (
+        <div className="notice error" role="alert">
+          {message}
+        </div>
+      ) : null}
       {isOwner && shareUrl ? (
-        <div className="notice success">
+        <div className="notice success" role="status" aria-live="polite">
           {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
           <a href={shareUrl} target="_blank" rel="noreferrer">
             {shareUrl}
