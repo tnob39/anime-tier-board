@@ -213,6 +213,82 @@
   transform: scale(0.92);
 }
 
+/* Card ⋯ menu (status sheet entry) */
+.wl2g-more {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 4;
+}
+
+.wl2g-more-trigger {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+
+.wl2g-more-trigger:hover,
+.wl2g-more-trigger[aria-expanded="true"] {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.wl2g-more-trigger:active {
+  transform: scale(0.97);
+}
+
+.wl2g-more-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  min-width: 168px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.wl2g-more-panel button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wl2g-more-panel button:hover {
+  background: var(--surface-soft);
+}
+
+.wl2g-more-panel button:active {
+  transform: scale(0.97);
+}
+
+.wl2g-more-danger {
+  color: #dc2626 !important;
+}
+
+.wl2g-more-danger:hover {
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+
 .wl2g-meta {
   position: absolute;
   left: 8px;

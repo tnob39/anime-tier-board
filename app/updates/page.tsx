@@ -27,10 +27,24 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.50",
+    date: "2026-07-10",
+    label: "カードからステータス変更がすぐできる",
+    isLatest: true,
+    changes: [
+      {
+        icon: ListChecks,
+        iconColor: "#0f766e",
+        title: "ステータス変更ボトムシートを追加",
+        description: "ホームの放映カレンダーやマイリストのカードから、ページ遷移なしで視聴ステータスと話数進捗を変更できるようになりました。下にスワイプして閉じられます。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.49",
     date: "2026-07-04",
     label: "作品の詳細から配信サービスへ直行",
-    isLatest: true,
     changes: [
       {
         icon: PlayCircle,

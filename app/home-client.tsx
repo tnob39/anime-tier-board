@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import HomeAddSection, { type SeasonScope } from "@/components/HomeAddSection";
+import StatusBottomSheet from "@/components/StatusBottomSheet";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
 import { bucketBySeason } from "@/lib/season-bucket";
 import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
 import { getNextAnimeSeason } from "@/lib/season";
 import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
-import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
+import type { AnimeStatusRecord } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 import { EditSheet, PosterLane, useWatchlistV2Editor } from "./watchlist/watchlist-client-v2-grok";
 
@@ -73,7 +74,17 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
     saveTracking,
     removeItem,
     quickSetStatus,
+    patchRecord,
   } = editor;
+
+  // Status bottom sheet (calendar card tap — no page navigation)
+  const [statusSheetRecord, setStatusSheetRecord] = useState<AnimeStatusRecord | null>(null);
+
+  // Keep sheet record in sync with items after optimistic patches
+  const liveStatusSheetRecord = useMemo(() => {
+    if (!statusSheetRecord) return null;
+    return items.find((r) => r.animeId === statusSheetRecord.animeId) ?? statusSheetRecord;
+  }, [items, statusSheetRecord]);
 
   const addSectionItems = useMemo(
     () =>
@@ -209,7 +220,10 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
 
       {/* 放映カレンダー — bottom */}
       {hasCalendar ? (
-        <WeeklyBroadcastCalendar grouped={grouped} onItemClick={() => router.push("/watchlist")} />
+        <WeeklyBroadcastCalendar
+          grouped={grouped}
+          onItemClick={(record) => setStatusSheetRecord(record)}
+        />
       ) : (
         <section className="home-calendar-empty">
           <h2 className="watchlist-broadcast-lanes-heading">今週の放映カレンダー</h2>
@@ -239,6 +253,18 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
           onRemove={() => void removeItem(editing)}
         />
       ) : null}
+
+      <StatusBottomSheet
+        open={Boolean(liveStatusSheetRecord?.anime)}
+        record={liveStatusSheetRecord}
+        onClose={() => setStatusSheetRecord(null)}
+        onStatusSaved={(animeId, nextStatus) => {
+          patchRecord(animeId, { status: nextStatus });
+        }}
+        onEpisodesSaved={(animeId, watchedEpisodes) => {
+          patchRecord(animeId, { watchedEpisodes });
+        }}
+      />
     </main>
   );
 }
