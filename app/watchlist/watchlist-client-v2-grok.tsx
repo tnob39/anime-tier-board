@@ -348,8 +348,10 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
         if (!response.ok) {
           throw new Error("ステータスの保存に失敗しました。");
         }
-      } catch {
+      } catch (e) {
         setItems(previousItems);
+        setMessageKind("error");
+        setMessage(e instanceof Error ? e.message : "ステータスの保存に失敗しました。");
       }
     },
     [items]
