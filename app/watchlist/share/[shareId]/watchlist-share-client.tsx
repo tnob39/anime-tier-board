@@ -191,7 +191,11 @@ export function WatchlistShareClient({
         </div>
       </header>
 
-      {message ? <div className="notice error">{message}</div> : null}
+      {message ? (
+        <div className="notice error" role="alert">
+          {message}
+        </div>
+      ) : null}
 
       {seasonBuckets.map((bucket) => (
         <section
