@@ -4,7 +4,7 @@ import Link from "next/link";
 import { LogOut, Menu, User, UserCircle2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
 import { useNavV5 } from "@/lib/nav-flag";
 import { isOwnerEmail } from "@/lib/owner";
@@ -27,6 +27,7 @@ export function GlobalNav() {
   const isOwner = isOwnerEmail(session?.user?.email);
   const navV5 = useNavV5();
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.ownerOnly || isOwner);
+  const userMenuFirstItemRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     function handleScroll() {
@@ -36,6 +37,26 @@ export function GlobalNav() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    userMenuFirstItemRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [isUserMenuOpen]);
 
   return (
     <>
@@ -89,6 +110,7 @@ export function GlobalNav() {
                   className="global-nav-btn user-avatar-btn"
                   onClick={() => setIsUserMenuOpen((prev) => !prev)}
                   aria-label="ユーザーメニュー"
+                  aria-haspopup="menu"
                   aria-expanded={isUserMenuOpen}
                 >
                   <UserCircle2 size={26} className="user-avatar-placeholder" />
@@ -100,13 +122,15 @@ export function GlobalNav() {
                       className="user-menu-backdrop"
                       onClick={() => setIsUserMenuOpen(false)}
                     />
-                    <div className="user-dropdown">
+                    <div className="user-dropdown" role="menu">
                       <p className="user-dropdown-name">
                         {session?.user?.name ?? session?.user?.email}
                       </p>
                       <Link
+                        ref={userMenuFirstItemRef}
                         href="/mypage"
                         className="user-dropdown-item"
+                        role="menuitem"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <User size={15} />
@@ -114,6 +138,7 @@ export function GlobalNav() {
                       </Link>
                       <button
                         className="user-dropdown-item user-dropdown-logout"
+                        role="menuitem"
                         onClick={() => {
                           setIsUserMenuOpen(false);
                           void signOut();

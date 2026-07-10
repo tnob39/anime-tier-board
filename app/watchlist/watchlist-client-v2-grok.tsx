@@ -16,7 +16,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import StatusBottomSheet from "@/components/StatusBottomSheet";
 import { isOwnerEmail } from "@/lib/owner";
@@ -1006,6 +1006,26 @@ export function EditSheet({
   const hasUnmatchedProvider = flatrateProviders.some(
     (provider) => matchServiceIdByProviderName(provider.name) === null
   );
+  const titleId = useId();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [onClose]);
 
   function dec() {
     const next = Math.max(0, draftWatched - 1);
@@ -1019,10 +1039,21 @@ export function EditSheet({
 
   return (
     <div className="wl2g-sheet-overlay" onClick={onClose}>
-      <div className="wl2g-sheet" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="wl2g-sheet"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div className="wl2g-sheet-head">
-          <h3>{anime.title}</h3>
-          <button className="wl2g-close" onClick={onClose} aria-label="閉じる">
+          <h3 id={titleId}>{anime.title}</h3>
+          <button
+            className="wl2g-close"
+            onClick={onClose}
+            aria-label="閉じる"
+            ref={closeButtonRef}
+          >
             <X size={20} />
           </button>
         </div>

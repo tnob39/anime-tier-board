@@ -106,7 +106,11 @@ export function SharePageClient({
         </div>
       </header>
 
-      {message ? <div className="notice error">{message}</div> : null}
+      {message ? (
+        <div className="notice error" role="alert">
+          {message}
+        </div>
+      ) : null}
 
       <section className="export-surface share-surface" aria-label="Shared tier board">
         <div className="export-heading">

@@ -2,7 +2,7 @@
 
 import { X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 const FIRST_VISIT_KEY = "anime-tier-board:firstVisit";
 
@@ -16,6 +16,8 @@ const features = [
 export function WelcomeModal() {
   const [show, setShow] = useState(false);
   const { status } = useSession();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     if (status === "authenticated") return;
@@ -29,12 +31,38 @@ export function WelcomeModal() {
     setShow(false);
   }
 
+  useEffect(() => {
+    if (!show) return;
+
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        close();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [show]);
+
   if (!show) return null;
 
   return (
     <div className="welcome-backdrop" onClick={close}>
-      <div className="welcome-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="welcome-close-btn" onClick={close} aria-label="閉じる">
+      <div
+        className="welcome-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <button className="welcome-close-btn" onClick={close} aria-label="閉じる" ref={closeButtonRef}>
           <X size={18} />
         </button>
 
@@ -42,7 +70,7 @@ export function WelcomeModal() {
           <div className="welcome-symbol" aria-hidden="true">
             <span>n</span>
           </div>
-          <h2 className="welcome-title">アニメを、自分のものに。</h2>
+          <h2 className="welcome-title" id={titleId}>アニメを、自分のものに。</h2>
           <p className="welcome-subtitle">
             見たアニメをTierで整理して、視聴履歴を積み上げよう
           </p>
