@@ -526,12 +526,17 @@ export function WatchlistClientV2Grok({
       </header>
 
       {message ? (
-        <div className={`notice ${messageKind}`} style={{ margin: "8px 12px" }}>
+        <div
+          className={`notice ${messageKind}`}
+          style={{ margin: "8px 12px" }}
+          role={messageKind === "error" ? "alert" : "status"}
+          aria-live={messageKind === "error" ? undefined : "polite"}
+        >
           {message}
         </div>
       ) : null}
       {shareUrl ? (
-        <div className="notice success" style={{ margin: "0 12px 8px" }}>
+        <div className="notice success" style={{ margin: "0 12px 8px" }} role="status" aria-live="polite">
           {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
           <a href={shareUrl} target="_blank" rel="noreferrer">
             {shareUrl}
