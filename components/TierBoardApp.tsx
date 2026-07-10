@@ -1135,6 +1135,7 @@ export function TierBoardApp({
                 }
                 aria-label="未分類"
                 aria-hidden={!poolDrawerOpen}
+                inert={!poolDrawerOpen}
               >
               <TierLane
                 tier={unrankedTier}
