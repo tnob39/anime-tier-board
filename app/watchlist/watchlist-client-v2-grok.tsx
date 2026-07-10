@@ -6,6 +6,7 @@ import {
   Loader2,
   Megaphone,
   Minus,
+  MoreVertical,
   Plus,
   Share2,
   Star,
@@ -15,8 +16,9 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import StatusBottomSheet from "@/components/StatusBottomSheet";
 import { isOwnerEmail } from "@/lib/owner";
 import { bucketBySeason } from "@/lib/season-bucket";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
@@ -116,6 +118,7 @@ export type WatchlistEditor = {
   removeItem: (record: AnimeStatusRecord) => void;
   createShare: () => void;
   quickSetStatus: (anime: AnimeItem, status: ViewingStatus) => Promise<void>;
+  patchRecord: (animeId: string, patch: Partial<AnimeStatusRecord>) => void;
 };
 
 export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): WatchlistEditor {
@@ -352,6 +355,12 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
     [items]
   );
 
+  const patchRecord = useCallback((animeId: string, patch: Partial<AnimeStatusRecord>) => {
+    setItems((recs) =>
+      recs.map((r) => (r.animeId === animeId ? { ...r, ...patch } : r))
+    );
+  }, []);
+
   // When editing record updates externally, refresh drafts
   useEffect(() => {
     if (!editing) return;
@@ -393,6 +402,7 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
     removeItem,
     createShare,
     quickSetStatus,
+    patchRecord,
   };
 }
 
@@ -432,11 +442,18 @@ export function WatchlistClientV2Grok({
     removeItem,
     createShare,
     quickSetStatus,
+    patchRecord,
   } = editor;
 
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
   const [tierMap, setTierMap] = useState<Record<string, { label: string; color: string }>>({});
+  const [statusSheetRecord, setStatusSheetRecord] = useState<AnimeStatusRecord | null>(null);
+
+  const liveStatusSheetRecord = useMemo(() => {
+    if (!statusSheetRecord) return null;
+    return items.find((r) => r.animeId === statusSheetRecord.animeId) ?? statusSheetRecord;
+  }, [items, statusSheetRecord]);
 
   const visibleItems = items;
 
@@ -578,6 +595,7 @@ export function WatchlistClientV2Grok({
                     key={record.animeId}
                     record={record}
                     onOpen={() => openSheet(record)}
+                    onChangeStatus={() => setStatusSheetRecord(record)}
                     onRemove={() => void removeItem(record)}
                     tier={tier}
                   />
@@ -618,6 +636,18 @@ export function WatchlistClientV2Grok({
           onRemove={() => void removeItem(editing)}
         />
       ) : null}
+
+      <StatusBottomSheet
+        open={Boolean(liveStatusSheetRecord?.anime)}
+        record={liveStatusSheetRecord}
+        onClose={() => setStatusSheetRecord(null)}
+        onStatusSaved={(animeId, nextStatus) => {
+          patchRecord(animeId, { status: nextStatus });
+        }}
+        onEpisodesSaved={(animeId, watchedEpisodes) => {
+          patchRecord(animeId, { watchedEpisodes });
+        }}
+      />
     </div>
   );
 }
@@ -718,11 +748,13 @@ function DiscoveryLane({
 export function PosterCard({
   record,
   onOpen,
+  onChangeStatus,
   onRemove,
   tier,
 }: {
   record: AnimeStatusRecord;
   onOpen: () => void;
+  onChangeStatus?: () => void;
   onRemove?: () => void;
   tier?: { label: string; color: string };
 }) {
@@ -732,6 +764,77 @@ export function PosterCard({
   const badge = getStatusBadgeClass(record.status);
   const label = statusLabels[record.status];
   const provider = anime.streamingProvidersJp?.flatrate?.[0] ?? null;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuElRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDocPointerDown(event: PointerEvent) {
+      const el = menuElRef.current;
+      if (el && !el.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onDocPointerDown);
+    return () => document.removeEventListener("pointerdown", onDocPointerDown);
+  }, [menuOpen]);
+
+  function renderMenu() {
+    if (!onChangeStatus && !onRemove) return null;
+    return (
+      <div
+        className="wl2g-more"
+        ref={menuElRef}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="wl2g-more-trigger"
+          aria-label="その他の操作"
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            setMenuOpen((v) => !v);
+          }}
+        >
+          <MoreVertical size={16} aria-hidden="true" />
+        </button>
+        {menuOpen ? (
+          <div className="wl2g-more-panel" role="menu">
+            {onChangeStatus ? (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onChangeStatus();
+                }}
+              >
+                ステータスを変更
+              </button>
+            ) : null}
+            {onRemove ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="wl2g-more-danger"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  onRemove();
+                }}
+              >
+                マイリストから削除
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="wl2g-poster" onClick={onOpen}>
@@ -749,20 +852,7 @@ export function PosterCard({
               <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
             </span>
           ) : null}
-          {onRemove ? (
-            <button
-              type="button"
-              className="wl2g-del"
-              aria-label="マイリストから削除"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                onRemove();
-              }}
-            >
-              <Trash2 size={14} aria-hidden="true" />
-            </button>
-          ) : null}
+          {renderMenu()}
           {prog && record.status === "watching" ? (
             <div className="wl2g-meta">
               <div className="wl2g-ptitle">{anime.title}</div>
@@ -808,20 +898,7 @@ export function PosterCard({
               <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
             </span>
           ) : null}
-          {onRemove ? (
-            <button
-              type="button"
-              className="wl2g-del"
-              aria-label="マイリストから削除"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                onRemove();
-              }}
-            >
-              <Trash2 size={14} aria-hidden="true" />
-            </button>
-          ) : null}
+          {renderMenu()}
           <div className="wl2g-meta">
             <div className="wl2g-ptitle" style={{ textShadow: "none" }}>{anime.title}</div>
           </div>
