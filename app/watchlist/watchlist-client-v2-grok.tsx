@@ -848,7 +848,20 @@ export function PosterCard({
   }
 
   return (
-    <div className="wl2g-poster" onClick={onOpen}>
+    <div
+      className="wl2g-poster"
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      aria-label={`${anime.title}の詳細を開く`}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+    >
       {anime.proxiedImageUrl ? (
         <div
           className="pic"
