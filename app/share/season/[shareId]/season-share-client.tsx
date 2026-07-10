@@ -31,7 +31,7 @@ export function SeasonShareClient({
               <article className="season-share-card" key={item.animeId}>
                 <a href={anime.siteUrl} target="_blank" rel="noreferrer">
                   {anime.proxiedImageUrl ? (
-                    <img src={anime.proxiedImageUrl} alt="" />
+                    <img src={anime.proxiedImageUrl} alt={anime.title} />
                   ) : (
                     <AnimeCardPlaceholder title={anime.title} />
                   )}
