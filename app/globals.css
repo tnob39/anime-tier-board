@@ -1869,6 +1869,25 @@ button:disabled {
   border: 0;
 }
 
+/* キーボード操作でナビをスキップし本文へ直接移動するリンク。フォーカス時のみ可視化 */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 1000;
+  padding: 0.6rem 1rem;
+  background: var(--surface);
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.12em;
