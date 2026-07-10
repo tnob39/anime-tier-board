@@ -308,7 +308,11 @@ export function ExploreClient({
         </button>
       </section>
 
-      {message ? <div className="notice warning">{message}</div> : null}
+      {message ? (
+        <div className="notice warning" role="status" aria-live="polite">
+          {message}
+        </div>
+      ) : null}
 
       {rankedItems.length ? (
         <section className="explore-grid" aria-label="作品候補">
