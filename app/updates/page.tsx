@@ -27,10 +27,24 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.51",
+    date: "2026-07-10",
+    label: "ホームにタイミング限定の案内カード",
+    isLatest: true,
+    changes: [
+      {
+        icon: Sparkles,
+        iconColor: "#0f766e",
+        title: "期末・月初だけ出るホームカード",
+        description: "今期の終わり頃には「今期Tierを作ろう」、毎月初めには「サブスクを見直す」カードがホームに表示されます。不要なときは閉じるとその期間は再表示しません。",
+        href: "/",
+      },
+    ]
+  },
+  {
     version: "1.50",
     date: "2026-07-10",
     label: "カードからステータス変更がすぐできる",
-    isLatest: true,
     changes: [
       {
         icon: ListChecks,
