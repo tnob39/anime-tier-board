@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { CreditCard, Layers, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  SUBSC_DISMISS_KEY_PREFIX,
+  TIER_DISMISS_KEY_PREFIX,
   shouldShowSubscReviewCard,
   shouldShowTierPromptCard,
   subscDismissStorageKey,
@@ -22,16 +24,44 @@ export type HomeContextCardsProps = {
  * HomeClient はログイン済みのみなのでゲスト flash は発生しない。
  */
 export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps) {
-  const now = useMemo(() => nowProp ?? new Date(), [nowProp]);
+  const [now, setNow] = useState<Date>(() => nowProp ?? new Date());
   const [ready, setReady] = useState(false);
   const [tierDismissed, setTierDismissed] = useState(false);
   const [subscDismissed, setSubscDismissed] = useState(false);
 
+  // 開きっぱなしのタブでも日付跨ぎで表示条件・キーが追従するよう now を更新
+  useEffect(() => {
+    if (nowProp) {
+      setNow(nowProp);
+      return;
+    }
+    const refresh = () => setNow(new Date());
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const intervalId = window.setInterval(refresh, 60 * 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [nowProp]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const tierKey = tierDismissStorageKey(now);
+    const subscKey = subscDismissStorageKey(now);
     try {
-      setTierDismissed(window.localStorage.getItem(tierDismissStorageKey(now)) === "1");
-      setSubscDismissed(window.localStorage.getItem(subscDismissStorageKey(now)) === "1");
+      setTierDismissed(window.localStorage.getItem(tierKey) === "1");
+      setSubscDismissed(window.localStorage.getItem(subscKey) === "1");
+      // 過去シーズン/過去月の dismiss キーを掃除（無期限蓄積を防ぐ）
+      for (let i = window.localStorage.length - 1; i >= 0; i--) {
+        const key = window.localStorage.key(i);
+        if (!key) continue;
+        const isStaleTier = key.startsWith(TIER_DISMISS_KEY_PREFIX) && key !== tierKey;
+        const isStaleSubsc = key.startsWith(SUBSC_DISMISS_KEY_PREFIX) && key !== subscKey;
+        if (isStaleTier || isStaleSubsc) window.localStorage.removeItem(key);
+      }
     } catch {
       // private mode 等で localStorage が使えない場合は dismiss 未読扱い
     }
@@ -42,22 +72,26 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
   const showSubsc = ready && shouldShowSubscReviewCard(now, subscDismissed);
 
   const dismissTier = useCallback(() => {
+    const current = nowProp ?? new Date();
+    setNow(current);
     setTierDismissed(true);
     try {
-      window.localStorage.setItem(tierDismissStorageKey(now), "1");
+      window.localStorage.setItem(tierDismissStorageKey(current), "1");
     } catch {
       // ignore
     }
-  }, [now]);
+  }, [nowProp]);
 
   const dismissSubsc = useCallback(() => {
+    const current = nowProp ?? new Date();
+    setNow(current);
     setSubscDismissed(true);
     try {
-      window.localStorage.setItem(subscDismissStorageKey(now), "1");
+      window.localStorage.setItem(subscDismissStorageKey(current), "1");
     } catch {
       // ignore
     }
-  }, [now]);
+  }, [nowProp]);
 
   if (!showTier && !showSubsc) {
     return null;

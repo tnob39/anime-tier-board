@@ -53,17 +53,20 @@ export function isMonthStartWindow(now: Date): boolean {
   return day >= 1 && day <= 7;
 }
 
+export const TIER_DISMISS_KEY_PREFIX = "numanie:ctx-tier-dismissed:";
+export const SUBSC_DISMISS_KEY_PREFIX = "numanie:ctx-subsc-dismissed:";
+
 /** 今期 Tier プロンプトの dismiss キー（シーズン中有効）。 */
 export function tierDismissStorageKey(now: Date): string {
   const { season, year } = getCurrentAnimeSeason(now);
-  return `numanie:ctx-tier-dismissed:${year}-${season}`;
+  return `${TIER_DISMISS_KEY_PREFIX}${year}-${season}`;
 }
 
 /** サブスク見直しカードの dismiss キー（当月中有効）。 */
 export function subscDismissStorageKey(now: Date): string {
   const { year, month } = getJstYmd(now);
   const mm = String(month).padStart(2, "0");
-  return `numanie:ctx-subsc-dismissed:${year}-${mm}`;
+  return `${SUBSC_DISMISS_KEY_PREFIX}${year}-${mm}`;
 }
 
 export function shouldShowTierPromptCard(now: Date, dismissed: boolean): boolean {
