@@ -61,6 +61,7 @@ export function MobileNav() {
             key={item.href}
             className={active ? "mobile-bottom-nav-link is-active" : "mobile-bottom-nav-link"}
             href={item.href}
+            aria-current={active ? "page" : undefined}
           >
             <span className="mobile-nav-icon-wrap">
               <Icon size={19} />
