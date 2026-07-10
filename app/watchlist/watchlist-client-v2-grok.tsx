@@ -519,6 +519,8 @@ export function WatchlistClientV2Grok({
             <button
               key={f.key}
               type="button"
+              role="tab"
+              aria-selected={filter === f.key}
               className={`wl2g-fchip${filter === f.key ? " on" : ""}`}
               onClick={() => setFilter(f.key)}
             >
