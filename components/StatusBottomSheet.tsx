@@ -204,6 +204,18 @@ export default function StatusBottomSheet({
     setWatched(record.watchedEpisodes ?? 0);
   }, [record?.animeId, record?.status, record?.watchedEpisodes]);
 
+  // Guard async saves against the sheet switching to another anime (or closing)
+  // while a request is in flight: late failures must not touch the new record's UI.
+  const activeAnimeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeAnimeIdRef.current = open ? (record?.animeId ?? null) : null;
+    if (record?.animeId) {
+      setSavingStatus(false);
+      setSavingEpisodes(false);
+      setError(null);
+    }
+  }, [open, record?.animeId]);
+
   const requestClose = useCallback(() => {
     if (closingRef.current || !mounted) return;
     if (reducedMotion || prefersReducedMotion()) {
@@ -383,6 +395,7 @@ export default function StatusBottomSheet({
 
   async function handleStatusSelect(next: ViewingStatus) {
     if (!record?.anime || next === status || savingStatus) return;
+    const animeId = record.animeId;
     const prev = status;
     setStatus(next);
     setSavingStatus(true);
@@ -392,23 +405,25 @@ export default function StatusBottomSheet({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          animeId: record.animeId,
+          animeId,
           status: next,
           anime: record.anime,
         }),
       });
       if (!res.ok) throw new Error("ステータスの保存に失敗しました。");
-      onStatusSaved?.(record.animeId, next);
+      onStatusSaved?.(animeId, next);
     } catch (e) {
+      if (activeAnimeIdRef.current !== animeId) return;
       setStatus(prev);
       setError(e instanceof Error ? e.message : "ステータスの保存に失敗しました。");
     } finally {
-      setSavingStatus(false);
+      if (activeAnimeIdRef.current === animeId) setSavingStatus(false);
     }
   }
 
   async function persistEpisodes(nextWatched: number) {
     if (!record?.anime) return;
+    const animeId = record.animeId;
     const total = record.anime.episodes ?? null;
     const clamped =
       total != null ? Math.max(0, Math.min(total, nextWatched)) : Math.max(0, nextWatched);
@@ -422,7 +437,7 @@ export default function StatusBottomSheet({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          animeId: record.animeId,
+          animeId,
           favoriteLevel: record.favoriteLevel,
           watchSlot: record.watchSlot,
           notes: record.notes,
@@ -430,12 +445,13 @@ export default function StatusBottomSheet({
         }),
       });
       if (!res.ok) throw new Error("視聴話数の保存に失敗しました。");
-      onEpisodesSaved?.(record.animeId, clamped);
+      onEpisodesSaved?.(animeId, clamped);
     } catch (e) {
+      if (activeAnimeIdRef.current !== animeId) return;
       setWatched(prev);
       setError(e instanceof Error ? e.message : "視聴話数の保存に失敗しました。");
     } finally {
-      setSavingEpisodes(false);
+      if (activeAnimeIdRef.current === animeId) setSavingEpisodes(false);
     }
   }
 

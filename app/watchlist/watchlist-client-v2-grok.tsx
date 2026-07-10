@@ -766,17 +766,30 @@ export function PosterCard({
   const provider = anime.streamingProvidersJp?.flatrate?.[0] ?? null;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuElRef = useRef<HTMLDivElement | null>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
+    menuElRef.current?.querySelector<HTMLElement>(".wl2g-more-panel button")?.focus();
     function onDocPointerDown(event: PointerEvent) {
       const el = menuElRef.current;
       if (el && !el.contains(event.target as Node)) {
         setMenuOpen(false);
       }
     }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setMenuOpen(false);
+        menuTriggerRef.current?.focus();
+      }
+    }
     document.addEventListener("pointerdown", onDocPointerDown);
-    return () => document.removeEventListener("pointerdown", onDocPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onDocPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [menuOpen]);
 
   function renderMenu() {
@@ -789,10 +802,10 @@ export function PosterCard({
       >
         <button
           type="button"
+          ref={menuTriggerRef}
           className="wl2g-more-trigger"
           aria-label="その他の操作"
           aria-expanded={menuOpen}
-          aria-haspopup="menu"
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -802,11 +815,10 @@ export function PosterCard({
           <MoreVertical size={16} aria-hidden="true" />
         </button>
         {menuOpen ? (
-          <div className="wl2g-more-panel" role="menu">
+          <div className="wl2g-more-panel">
             {onChangeStatus ? (
               <button
                 type="button"
-                role="menuitem"
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenuOpen(false);
@@ -819,7 +831,6 @@ export function PosterCard({
             {onRemove ? (
               <button
                 type="button"
-                role="menuitem"
                 className="wl2g-more-danger"
                 onClick={(e) => {
                   e.stopPropagation();
