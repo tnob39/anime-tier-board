@@ -161,7 +161,11 @@ export function EvangelistCreateModal({
             </div>
           ) : null}
 
-          {error ? <div className="notice error">{error}</div> : null}
+          {error ? (
+            <div className="notice error" role="alert">
+              {error}
+            </div>
+          ) : null}
         </div>
 
         <div className="evangelist-sheet-actions">
