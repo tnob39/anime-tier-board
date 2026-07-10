@@ -506,6 +506,7 @@ export function WatchlistClientV2Grok({
           <input
             type="text"
             placeholder="作品を検索"
+            aria-label="作品を検索"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
