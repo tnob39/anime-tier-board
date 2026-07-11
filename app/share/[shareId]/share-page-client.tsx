@@ -140,7 +140,7 @@ export function SharePageClient({
                   .map((item) => (
                     <article key={item.id} className="anime-card is-compact" title={item.title}>
                       {item.proxiedImageUrl ? (
-                        <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+                        <img src={item.proxiedImageUrl} alt={item.title} draggable={false} loading="lazy" />
                       ) : (
                         <AnimeCardPlaceholder title={item.title} draggable={false} />
                       )}
