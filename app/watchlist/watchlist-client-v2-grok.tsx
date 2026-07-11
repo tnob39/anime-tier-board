@@ -1127,6 +1127,8 @@ export function EditSheet({
               type="button"
               className={lv <= (draftFavorite ?? 0) ? "active" : ""}
               onClick={() => onFavoriteChange(draftFavorite === lv ? null : lv)}
+              aria-label={`お気に入り度 ${lv}`}
+              aria-pressed={lv <= (draftFavorite ?? 0)}
             >
               <Star size={20} fill="currentColor" />
             </button>
