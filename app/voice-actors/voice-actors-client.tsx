@@ -74,7 +74,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
             <article key={actor.key} className="voice-card">
               <div className="voice-profile">
                 {actor.imageUrl ? (
-                  <img src={actor.imageUrl} alt={actor.name} />
+                  <img src={actor.imageUrl} alt={actor.name} loading="lazy" />
                 ) : (
                   <div className="voice-avatar">
                     <Mic2 size={22} />
@@ -96,7 +96,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
                 {actor.works.map((work) => (
                   <div key={`${actor.key}:${work.anime.id}:${work.characterName ?? ""}`} className="voice-work">
                     {work.anime.proxiedImageUrl ? (
-                      <img src={work.anime.proxiedImageUrl} alt={work.anime.title} />
+                      <img src={work.anime.proxiedImageUrl} alt={work.anime.title} loading="lazy" />
                     ) : (
                       <AnimeCardPlaceholder title={work.anime.title} />
                     )}
