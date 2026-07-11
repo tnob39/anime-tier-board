@@ -34,9 +34,13 @@ export function DisplayModeProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(DISPLAY_MODE_STORAGE_KEY);
-    if (isDisplayMode(stored)) {
-      setModeState(stored);
+    try {
+      const stored = localStorage.getItem(DISPLAY_MODE_STORAGE_KEY);
+      if (isDisplayMode(stored)) {
+        setModeState(stored);
+      }
+    } catch {
+      // Private mode / SecurityError — keep default mode.
     }
     setHydrated(true);
   }, []);
