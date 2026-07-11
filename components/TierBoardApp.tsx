@@ -1534,6 +1534,7 @@ function StatusChips({
       <button
         className={!status ? "status-chip is-active" : "status-chip"}
         type="button"
+        aria-pressed={!status}
         onClick={() => onChange(null)}
       >
         未設定
@@ -1543,6 +1544,7 @@ function StatusChips({
           key={option.value}
           className={status === option.value ? "status-chip is-active" : "status-chip"}
           type="button"
+          aria-pressed={status === option.value}
           onClick={() => onChange(option.value)}
         >
           {option.label}
