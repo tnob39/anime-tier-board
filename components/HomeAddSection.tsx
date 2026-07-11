@@ -66,6 +66,7 @@ export default function HomeAddSection({
           type="button"
           className={`home-add-season-toggle-btn ${seasonScope === "current" ? "is-active" : ""}`}
           onClick={() => onSelectSeasonScope("current")}
+          aria-pressed={seasonScope === "current"}
         >
           今期
         </button>
@@ -73,6 +74,7 @@ export default function HomeAddSection({
           type="button"
           className={`home-add-season-toggle-btn ${seasonScope === "next" ? "is-active" : ""}`}
           onClick={() => onSelectSeasonScope("next")}
+          aria-pressed={seasonScope === "next"}
         >
           来期
         </button>
