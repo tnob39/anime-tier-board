@@ -231,6 +231,7 @@ export function ExploreClient({
               className={sortMode === value ? "status-chip is-active" : "status-chip"}
               type="button"
               onClick={() => setSortMode(value as SortMode)}
+              aria-pressed={sortMode === value}
             >
               {label}
             </button>
