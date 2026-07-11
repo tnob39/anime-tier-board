@@ -85,7 +85,7 @@ export default function HomeAddSection({
           <Loader2 className="spin" size={14} /> 来期のアニメを読み込み中…
         </p>
       ) : error ? (
-        <p className="home-add-status-note home-add-status-note--error">{error}</p>
+        <p className="home-add-status-note home-add-status-note--error" role="alert">{error}</p>
       ) : items.length === 0 ? (
         <p className="home-add-status-note">追加できる作品が見つかりませんでした。</p>
       ) : (
