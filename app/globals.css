@@ -4630,6 +4630,11 @@ a.cl-history-title:hover {
   from { transform: translateX(-100%); }
   to   { transform: translateX(0); }
 }
+@media (prefers-reduced-motion: reduce) {
+  .hamburger-drawer {
+    animation: none;
+  }
+}
 .hamburger-head {
   display: flex;
   align-items: center;
