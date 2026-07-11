@@ -1,0 +1,205 @@
+/* Accessible bottom sheet foundation — scoped under .bottom-sheet* (do not edit globals.css) */
+
+.bottom-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bottom-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.4);
+  pointer-events: auto;
+  animation: bottom-sheet-fade-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.bottom-sheet {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  max-height: min(88vh, 720px);
+  margin: 0;
+  padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px));
+  border: 1px solid var(--line, #e5e3df);
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  background: var(--surface, #ffffff);
+  color: var(--ink, #1a1a1a);
+  box-shadow: 0 -8px 32px rgba(25, 31, 36, 0.14);
+  font-family:
+    Inter, "Hiragino Sans", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+  pointer-events: auto;
+  outline: none;
+  animation: bottom-sheet-slide-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.bottom-sheet:focus-visible {
+  box-shadow:
+    0 -8px 32px rgba(25, 31, 36, 0.14),
+    0 0 0 2px var(--surface, #ffffff),
+    0 0 0 4px var(--focus, #5645d4);
+}
+
+.bottom-sheet__handle {
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  margin: 10px auto 4px;
+  border-radius: 9999px;
+  background: var(--line-strong, #c8c4be);
+}
+
+.bottom-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px 12px;
+  border-bottom: 1px solid var(--line, #e5e3df);
+}
+
+.bottom-sheet__header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.bottom-sheet__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--ink, #1a1a1a);
+}
+
+.bottom-sheet__description {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--muted, #5d5b54);
+}
+
+.bottom-sheet__description--solo {
+  padding: 4px 16px 0;
+}
+
+.bottom-sheet__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: -6px -8px -6px 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-secondary, #5d5b54);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.bottom-sheet__close:hover {
+  background: var(--surface-muted, #f0eeec);
+  color: var(--ink, #1a1a1a);
+}
+
+.bottom-sheet__close:focus {
+  outline: none;
+}
+
+.bottom-sheet__close:focus-visible {
+  outline: 2px solid var(--focus, #5645d4);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.24);
+}
+
+.bottom-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 16px 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+@keyframes bottom-sheet-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bottom-sheet-slide-up {
+  from {
+    opacity: 0.96;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Desktop / large screens: centered dialog presentation */
+@media (min-width: 768px) {
+  .bottom-sheet-root {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .bottom-sheet {
+    width: min(480px, 100%);
+    max-height: min(80vh, 720px);
+    border-radius: 18px;
+    border-bottom: 1px solid var(--line, #e5e3df);
+    box-shadow: 0 16px 48px rgba(25, 31, 36, 0.18);
+    padding-bottom: 16px;
+    animation-name: bottom-sheet-scale-in;
+  }
+
+  .bottom-sheet__handle {
+    display: none;
+  }
+}
+
+@keyframes bottom-sheet-scale-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-sheet__backdrop,
+  .bottom-sheet {
+    animation: none;
+  }
+
+  .bottom-sheet__close {
+    transition-duration: 0.01ms;
+  }
+}
