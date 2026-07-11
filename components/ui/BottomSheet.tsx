@@ -189,6 +189,10 @@ export function BottomSheet({
 
   const hasTitle = title != null && title !== false;
   const hasDescription = description != null && description !== false;
+  // Header hosts description when present; solo only when no header (avoids duplicate id).
+  const showHeader = hasTitle || showCloseButton;
+  const descriptionInHeader = hasDescription && showHeader;
+  const descriptionSolo = hasDescription && !showHeader;
 
   const sheet = (
     <div
@@ -213,7 +217,7 @@ export function BottomSheet({
       >
         <div className="bottom-sheet__handle" aria-hidden="true" />
 
-        {(hasTitle || showCloseButton) && (
+        {showHeader ? (
           <header className="bottom-sheet__header">
             <div className="bottom-sheet__header-text">
               {hasTitle ? (
@@ -221,7 +225,7 @@ export function BottomSheet({
                   {title}
                 </h2>
               ) : null}
-              {hasDescription ? (
+              {descriptionInHeader ? (
                 <p id={descriptionId} className="bottom-sheet__description">
                   {description}
                 </p>
@@ -238,9 +242,9 @@ export function BottomSheet({
               </button>
             ) : null}
           </header>
-        )}
+        ) : null}
 
-        {!hasTitle && hasDescription ? (
+        {descriptionSolo ? (
           <p id={descriptionId} className="bottom-sheet__description bottom-sheet__description--solo">
             {description}
           </p>
