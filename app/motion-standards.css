@@ -1,0 +1,382 @@
+/* ============================================================
+   apple-design motion standards (Issue #387)
+   UX_DIRECTION.md §2 / native-ia-redesign §11.5
+   CSS-only polish — no business logic.
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   1. Instant press feedback (pointer-down → :active scale 0.97)
+   Explicit selector list only (never * / all buttons).
+   Skipped: .sbs-*, .wl2g-del / .wl2g-more-*, steppers, text inputs.
+   ---------------------------------------------------------- */
+
+.lane-card,
+.wl2g-poster,
+.wl2g-discover-card,
+.mobile-bottom-nav-link,
+.filter-chip,
+.status-chip,
+.rhythm-chip,
+.command-button,
+.icon-button,
+.emphasis-button,
+.global-nav-btn,
+.global-nav-link,
+.hamburger-nav-item,
+.hamburger-close-btn,
+.home-add-btn,
+.home-add-card-btn,
+.home-add-season-toggle-btn,
+.explore-load-more,
+.home-add-load-more,
+.hcc-cta,
+.hcc-dismiss,
+.theme-switch-btn,
+.push-toggle-btn,
+.season-page-nav-chip,
+.mypage-tier-chip,
+.save-retry-button,
+.welcome-close-btn {
+  transition:
+    transform 100ms ease-out,
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease;
+}
+
+.lane-card:active,
+.wl2g-poster:active,
+.wl2g-discover-card:active,
+.mobile-bottom-nav-link:active,
+.filter-chip:active,
+.status-chip:active,
+.rhythm-chip:active,
+.command-button:active:not(:disabled),
+.icon-button:active:not(:disabled),
+.emphasis-button:active:not(:disabled),
+.global-nav-btn:active,
+.global-nav-link:active,
+.hamburger-nav-item:active,
+.hamburger-close-btn:active,
+.home-add-btn:active:not(:disabled),
+.home-add-card-btn:active:not(:disabled),
+.home-add-season-toggle-btn:active,
+.explore-load-more:active,
+.home-add-load-more:active,
+.hcc-cta:active,
+.hcc-dismiss:active,
+.theme-switch-btn:active,
+.push-toggle-btn:active,
+.season-page-nav-chip:active,
+.mypage-tier-chip:active,
+.save-retry-button:active:not(:disabled),
+.welcome-close-btn:active {
+  transform: scale(0.97);
+}
+
+/* ----------------------------------------------------------
+   2. prefers-reduced-motion — movement → opacity crossfade
+   End states stay correct; no blanket * { transition: none }.
+   ---------------------------------------------------------- */
+
+@keyframes motion-crossfade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Press scale off — opacity/color feedback only */
+  .lane-card:active,
+  .wl2g-poster:active,
+  .wl2g-discover-card:active,
+  .mobile-bottom-nav-link:active,
+  .filter-chip:active,
+  .status-chip:active,
+  .rhythm-chip:active,
+  .command-button:active:not(:disabled),
+  .icon-button:active:not(:disabled),
+  .emphasis-button:active:not(:disabled),
+  .global-nav-btn:active,
+  .global-nav-link:active,
+  .hamburger-nav-item:active,
+  .hamburger-close-btn:active,
+  .home-add-btn:active:not(:disabled),
+  .home-add-card-btn:active:not(:disabled),
+  .home-add-season-toggle-btn:active,
+  .explore-load-more:active,
+  .home-add-load-more:active,
+  .hcc-cta:active,
+  .hcc-dismiss:active,
+  .theme-switch-btn:active,
+  .push-toggle-btn:active,
+  .season-page-nav-chip:active,
+  .mypage-tier-chip:active,
+  .save-retry-button:active:not(:disabled),
+  .welcome-close-btn:active {
+    transform: none;
+    opacity: 0.88;
+  }
+
+  .lane-card,
+  .wl2g-poster,
+  .wl2g-discover-card,
+  .mobile-bottom-nav-link,
+  .filter-chip,
+  .status-chip,
+  .rhythm-chip,
+  .command-button,
+  .icon-button,
+  .emphasis-button,
+  .global-nav-btn,
+  .global-nav-link,
+  .hamburger-nav-item,
+  .hamburger-close-btn,
+  .home-add-btn,
+  .home-add-card-btn,
+  .home-add-season-toggle-btn,
+  .explore-load-more,
+  .home-add-load-more,
+  .hcc-cta,
+  .hcc-dismiss,
+  .theme-switch-btn,
+  .push-toggle-btn,
+  .season-page-nav-chip,
+  .mypage-tier-chip,
+  .save-retry-button,
+  .welcome-close-btn {
+    transition-property: opacity, background-color, border-color, color;
+    transition-duration: 100ms;
+  }
+
+  /* Hamburger: slide → crossfade (overrides globals animation:none) */
+  .hamburger-drawer {
+    animation: motion-crossfade-in 0.18s ease both !important;
+  }
+
+  /* Toast / confirm: keep opacity-only entrance */
+  .tier-move-toast {
+    animation: motion-crossfade-in 0.15s ease both !important;
+    transform: translateX(-50%);
+  }
+
+  .command-button.copy-confirm,
+  .save-success-check {
+    animation: motion-crossfade-in 0.12s ease both !important;
+  }
+
+  /* Global nav compact height: no size morph */
+  .global-nav {
+    transition: none;
+  }
+
+  /* Welcome modal / popovers that scale */
+  .user-dropdown,
+  .wl2g-more-panel {
+    animation: motion-crossfade-in 0.14s ease both;
+  }
+}
+
+/* ----------------------------------------------------------
+   3. Translucent chrome — blur + saturate, edge fade (not 1px line)
+   Reduced-transparency solid fallbacks live in globals.css and
+   are extended here for new chrome tokens.
+   ---------------------------------------------------------- */
+
+/* Sticky header: glass + bottom edge fade */
+.global-nav {
+  border-bottom: none;
+  overflow: visible;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: none;
+}
+
+.global-nav::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12px;
+  pointer-events: none;
+  transform: translateY(100%);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--background) 55%, transparent),
+    transparent
+  );
+}
+
+/* Bottom nav: glass + top edge fade (replace 1px border feel) */
+@media (max-width: 520px) {
+  .mobile-bottom-nav {
+    border: none;
+    overflow: visible;
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    backdrop-filter: blur(18px) saturate(1.5);
+    box-shadow:
+      0 12px 30px rgba(25, 31, 36, 0.14),
+      0 0 0 0.5px color-mix(in srgb, var(--nav-border) 40%, transparent);
+  }
+
+  .mobile-bottom-nav::before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 0;
+    height: 1px;
+    pointer-events: none;
+    border-radius: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--nav-border) 70%, transparent) 20%,
+      color-mix(in srgb, var(--nav-border) 70%, transparent) 80%,
+      transparent
+    );
+    opacity: 0.9;
+  }
+
+  .mobile-bottom-nav::after {
+    content: "";
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    top: -10px;
+    height: 10px;
+    pointer-events: none;
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--background) 45%, transparent),
+      transparent
+    );
+  }
+}
+
+/* Tier topbar sticky (secondary chrome) */
+.topbar {
+  border-bottom: none;
+  overflow: visible;
+  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+  backdrop-filter: blur(16px) saturate(1.35);
+  box-shadow: none;
+}
+
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  pointer-events: none;
+  transform: translateY(100%);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--background) 50%, transparent),
+    transparent
+  );
+}
+
+/* Solid fallback when backdrop-filter unsupported */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .global-nav,
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .global-nav::after,
+  .topbar::after {
+    display: none;
+  }
+
+  @media (max-width: 520px) {
+    .mobile-bottom-nav {
+      background: var(--surface);
+      border: 1px solid var(--nav-border);
+    }
+
+    .mobile-bottom-nav::before,
+    .mobile-bottom-nav::after {
+      display: none;
+    }
+  }
+}
+
+/* reduced-transparency: no edge-fade glass artifacts */
+@media (prefers-reduced-transparency: reduce) {
+  .global-nav,
+  .topbar {
+    background: var(--surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .global-nav::after,
+  .topbar::after {
+    display: none;
+  }
+
+  @media (max-width: 520px) {
+    .mobile-bottom-nav {
+      background: var(--surface);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: 1px solid var(--nav-border);
+      box-shadow: 0 12px 30px rgba(25, 31, 36, 0.16);
+    }
+
+    .mobile-bottom-nav::before,
+    .mobile-bottom-nav::after {
+      display: none;
+    }
+  }
+}
+
+/* ----------------------------------------------------------
+   4. Menus / popovers — transform-origin at trigger
+   ---------------------------------------------------------- */
+
+/* User menu opens below avatar (top-right of header) */
+.user-dropdown {
+  transform-origin: top right;
+  animation: motion-menu-in 0.16s ease both;
+}
+
+/* Watchlist ⋯ panel: trigger is top-right of poster */
+.wl2g-more-panel {
+  transform-origin: top right;
+  animation: motion-menu-in 0.14s ease both;
+}
+
+/* Hamburger enters from left edge */
+.hamburger-drawer {
+  transform-origin: left center;
+}
+
+@keyframes motion-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-dropdown,
+  .wl2g-more-panel {
+    animation: motion-crossfade-in 0.14s ease both !important;
+    transform: none;
+  }
+}
