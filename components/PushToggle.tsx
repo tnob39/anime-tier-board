@@ -155,6 +155,7 @@ export function PushToggle() {
         <p
           className={`push-toggle-message${isError ? " is-error" : ""}`}
           role={isError ? "alert" : "status"}
+          aria-live={isError ? undefined : "polite"}
         >
           {message}
         </p>
