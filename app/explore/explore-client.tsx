@@ -320,7 +320,7 @@ export function ExploreClient({
           {visibleItems.map((entry, index) => (
             <article key={entry.item.id} className="explore-card">
               {entry.item.proxiedImageUrl ? (
-                <img src={entry.item.proxiedImageUrl} alt={entry.item.title} />
+                <img src={entry.item.proxiedImageUrl} alt={entry.item.title} loading="lazy" />
               ) : (
                 <AnimeCardPlaceholder title={entry.item.title} />
               )}
