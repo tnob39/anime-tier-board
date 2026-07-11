@@ -1191,6 +1191,7 @@ function MoveItemSheet({
   onClose: () => void;
 }) {
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const previousActiveElement =
@@ -1200,6 +1201,22 @@ function MoveItemSheet({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -1213,6 +1230,7 @@ function MoveItemSheet({
   return (
     <div className="move-sheet-backdrop" role="presentation" onClick={onClose}>
       <section
+        ref={panelRef}
         className="move-sheet"
         role="dialog"
         aria-modal="true"
