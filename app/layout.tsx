@@ -3,6 +3,7 @@ import { Providers } from "@/app/providers";
 import { AppShell } from "@/components/AppShell";
 import { SWRegister } from "@/app/sw-register";
 import "./globals.css";
+import "./motion-standards.css";
 
 export const metadata: Metadata = {
   title: "numanie",
