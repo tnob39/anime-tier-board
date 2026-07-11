@@ -52,6 +52,16 @@
   --nav-badge-border: rgba(24,28,31,0.92);
 }
 
+@media (prefers-reduced-transparency: reduce) {
+  .topbar,
+  .pool-drawer-trigger,
+  .mobile-bottom-nav,
+  .global-nav {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
