@@ -1045,7 +1045,7 @@ export function TierBoardApp({
           </div>
         ) : null}
         {shareUrl ? (
-          <div className="notice success">
+          <div className="notice success" role="status" aria-live="polite">
             {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
             <a href={shareUrl} target="_blank" rel="noreferrer">
               {shareUrl}
