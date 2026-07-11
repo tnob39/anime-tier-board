@@ -14,7 +14,11 @@ export default function Error({
   }, [error]);
 
   return (
-    <main className="page-shell" style={{ padding: "2rem 1rem", maxWidth: 480, margin: "0 auto" }}>
+    <main
+      className="page-shell"
+      role="alert"
+      style={{ padding: "2rem 1rem", maxWidth: 480, margin: "0 auto" }}
+    >
       <h1 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.75rem" }}>
         表示中にエラーが発生しました
       </h1>
