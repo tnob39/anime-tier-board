@@ -220,7 +220,11 @@ export function WatchlistShareClient({
               record.anime ? (
                 <article key={record.animeId} className="shared-watchlist-card">
                   {record.anime.proxiedImageUrl ? (
-                    <img src={record.anime.proxiedImageUrl} alt={record.anime.title} />
+                    <img
+                      src={record.anime.proxiedImageUrl}
+                      alt={record.anime.title}
+                      loading="lazy"
+                    />
                   ) : (
                     <AnimeCardPlaceholder title={record.anime.title} />
                   )}
