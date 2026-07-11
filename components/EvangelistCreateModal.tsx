@@ -23,6 +23,7 @@ export function EvangelistCreateModal({
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const commentFieldId = useId();
   const providers = getStreamingProviders(anime);
   const trimmedComment = comment.trim();
@@ -42,6 +43,22 @@ export function EvangelistCreateModal({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -116,6 +133,7 @@ export function EvangelistCreateModal({
   return (
     <div className="evangelist-sheet-backdrop" role="presentation" onClick={onClose}>
       <section
+        ref={panelRef}
         className="evangelist-sheet"
         role="dialog"
         aria-modal="true"
