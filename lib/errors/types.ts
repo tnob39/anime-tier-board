@@ -1,6 +1,7 @@
 export type ErrorCode =
   | "UNAUTHORIZED"
   | "VALIDATION"
+  | "CONFLICT"
   | "UPSTREAM"
   | "DATABASE"
   | "INTERNAL";
