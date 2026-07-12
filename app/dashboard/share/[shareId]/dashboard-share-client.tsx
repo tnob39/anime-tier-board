@@ -231,7 +231,7 @@ export function DashboardShareClient({
             comments.map((comment) => (
               <article key={comment.id} className="comment-card">
                 {comment.userImage ? (
-                  <img src={comment.userImage} alt="" />
+                  <img src={comment.userImage} alt="" loading="lazy" />
                 ) : (
                   <div className="comment-avatar" />
                 )}
