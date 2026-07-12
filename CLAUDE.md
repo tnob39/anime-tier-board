@@ -4,9 +4,10 @@ You are working on **anime-tier-board** inside Orca ADE (or a linked worktree).
 
 ## Required reading (before any action)
 
-1. **[ORCA_GUIDE.md](./ORCA_GUIDE.md)** — Orca worktrees, terminals, diff review, multi-agent rules
-2. **[AGENTS.md](./AGENTS.md)** — Project structure, conventions, APIs, verification
-3. **[docs/GITHUB_ISSUES.md](./docs/GITHUB_ISSUES.md)** — Task tracking (GitHub Issues)
+1. **[docs/orchestration/AGENT_EXECUTION_CONTRACT.md](./docs/orchestration/AGENT_EXECUTION_CONTRACT.md)** — Contract v1.0; canonical roles, ACK, handoffs, proof and recovery
+2. **[ORCA_GUIDE.md](./ORCA_GUIDE.md)** — Orca worktrees, terminals, diff review, multi-agent rules
+3. **[AGENTS.md](./AGENTS.md)** — Project structure, conventions, APIs, verification
+4. **[docs/GITHUB_ISSUES.md](./docs/GITHUB_ISSUES.md)** — Task tracking (GitHub Issues)
 
 For the active task, also read the relevant file under `plans/` or `HERMES_GROK_HANDOFF.md`.
 
@@ -21,6 +22,8 @@ multi-agent work, use orchestration (not ad-hoc terminal polling).
 
 ## Quick constraints
 
+- Before claim or edits, return the contract v1.0 ACK JSON and validate it with `python scripts/validate-orchestration-ack.py --agent <agent> <ack-file>`.
+- Fable is the non-coding Architect/Reviewer; Grok 4.5 is the bounded Implementer; Hermes independently collects proof. Do not collapse these roles into one self-reviewing conversation.
 - Do not commit the untracked `Hermes` file unless the user explicitly asks.
 - Run `npx tsc --noEmit` and `npm run build` before finishing implementation work.
 - Update the GitHub Issue and worktree comment when task status changes.
