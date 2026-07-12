@@ -374,7 +374,11 @@ export function ExploreClient({
         </section>
       ) : (
         <section className="watchlist-empty">
-          <p>年代を選んで「さがす」を押すと、作品が表示されます。</p>
+          <p>
+            {items.length > 0
+              ? "条件に一致する作品が見つかりませんでした。検索キーワードやフィルタを見直してください。"
+              : "年代を選んで「さがす」を押すと、作品が表示されます。"}
+          </p>
         </section>
       )}
 
