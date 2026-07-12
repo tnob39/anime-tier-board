@@ -488,6 +488,11 @@
 }
 
 .wl2g-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   background: transparent;
   border: none;
   color: var(--muted);
