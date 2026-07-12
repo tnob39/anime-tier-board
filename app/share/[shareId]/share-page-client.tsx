@@ -37,7 +37,7 @@ export function SharePageClient({
     fetch(`/api/shares/${initialShare.shareId}/comments`, { cache: "no-store" })
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Failed to load comments.");
+          throw new Error("コメントの取得に失敗しました。");
         }
 
         return response.json();
@@ -49,7 +49,7 @@ export function SharePageClient({
       })
       .catch((error) => {
         if (!cancelled) {
-          setMessage(error instanceof Error ? error.message : "Failed to load comments.");
+          setMessage(error instanceof Error ? error.message : "コメントの取得に失敗しました。");
         }
       });
 
@@ -82,14 +82,14 @@ export function SharePageClient({
       });
 
       if (!response.ok) {
-        throw new Error("Comment failed.");
+        throw new Error("コメント投稿に失敗しました。");
       }
 
       const payload = (await response.json()) as { comment: ShareComment };
       setComments((current) => [...current, payload.comment]);
       setCommentBody("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Comment failed.");
+      setMessage(error instanceof Error ? error.message : "コメント投稿に失敗しました。");
     } finally {
       setCommenting(false);
     }
