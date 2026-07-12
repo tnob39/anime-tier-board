@@ -95,7 +95,7 @@ function LaneCard({
         ) : null}
       </div>
       <div className="lane-card-body">
-        <p className="lane-card-title">{item.title}</p>
+        <p className="lane-card-title" title={item.title}>{item.title}</p>
         {item.noteLabel ? <span className="lane-card-note">{item.noteLabel}</span> : null}
         <StatusBadge status={item.status} variant={item.statusVariant} />
       </div>
