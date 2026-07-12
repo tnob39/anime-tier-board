@@ -19,6 +19,7 @@ import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import StatusBottomSheet from "@/components/StatusBottomSheet";
+import { track } from "@/lib/analytics";
 import { isOwnerEmail } from "@/lib/owner";
 import { bucketBySeason } from "@/lib/season-bucket";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
@@ -179,6 +180,12 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
           }),
         });
         if (!res.ok) throw new Error("ステータス保存に失敗しました。");
+        track({
+          name: "status_update",
+          from: prev.status,
+          to: next,
+          source: "edit_sheet",
+        });
       } catch (e) {
         setItems((recs) =>
           recs.map((r) => (r.animeId === record.animeId ? prev : r))
@@ -246,6 +253,10 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
         });
         if (!tres.ok) throw new Error("視聴管理の保存に失敗しました。");
 
+        if (nextWatched !== (current.watchedEpisodes ?? 0)) {
+          track({ name: "episode_update", source: "edit_sheet" });
+        }
+
         setMessageKind("success");
         setMessage("保存しました。");
         // keep sheet open with latest
@@ -302,6 +313,7 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
       if (!res.ok || !payload.shareId) {
         throw new Error(payload.error ?? "共有URLの作成に失敗しました。");
       }
+      track({ name: "watchlist_share_create" });
       const url = `${window.location.origin}/watchlist/share/${payload.shareId}`;
       setShareUrl(url);
       const outcome = await shareOrCopyUrl({
@@ -321,6 +333,7 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
   const quickSetStatus = useCallback(
     async (anime: AnimeItem, status: ViewingStatus) => {
       const previousItems = items;
+      const priorStatus = items.find((record) => record.animeId === anime.id)?.status ?? status;
       const optimisticRecord: AnimeStatusRecord = {
         animeId: anime.id,
         status,
@@ -348,6 +361,12 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
         if (!response.ok) {
           throw new Error("ステータスの保存に失敗しました。");
         }
+        track({
+          name: "status_update",
+          from: priorStatus,
+          to: status,
+          source: "quick_add",
+        });
       } catch (e) {
         setItems(previousItems);
         setMessageKind("error");

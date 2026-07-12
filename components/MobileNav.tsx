@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { track } from "@/lib/analytics";
 import { isOwnerEmail } from "@/lib/owner";
 import { useNavV5 } from "@/lib/nav-flag";
 
@@ -62,6 +63,7 @@ export function MobileNav() {
             className={active ? "mobile-bottom-nav-link is-active" : "mobile-bottom-nav-link"}
             href={item.href}
             aria-current={active ? "page" : undefined}
+            onClick={() => track({ name: "tab_switch", to: item.href })}
           >
             <span className="mobile-nav-icon-wrap">
               <Icon size={19} />

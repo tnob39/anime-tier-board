@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CreditCard, Layers, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { track } from "@/lib/analytics";
 import {
   SUBSC_DISMISS_KEY_PREFIX,
   TIER_DISMISS_KEY_PREFIX,
@@ -72,6 +73,7 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
   const showSubsc = ready && shouldShowSubscReviewCard(now, subscDismissed);
 
   const dismissTier = useCallback(() => {
+    track({ name: "context_card_dismiss", card_type: "tier" });
     const current = nowProp ?? new Date();
     setNow(current);
     setTierDismissed(true);
@@ -83,6 +85,7 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
   }, [nowProp]);
 
   const dismissSubsc = useCallback(() => {
+    track({ name: "context_card_dismiss", card_type: "subsc" });
     const current = nowProp ?? new Date();
     setNow(current);
     setSubscDismissed(true);
@@ -122,7 +125,11 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
               <X size={18} strokeWidth={2} />
             </button>
           </div>
-          <Link href="/tier" className="hcc-cta">
+          <Link
+            href="/tier"
+            className="hcc-cta"
+            onClick={() => track({ name: "home_card_tap", card_type: "context_tier" })}
+          >
             Tier表をつくる
           </Link>
         </article>
@@ -151,7 +158,11 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
               <X size={18} strokeWidth={2} />
             </button>
           </div>
-          <Link href="/dashboard?section=subscriptions" className="hcc-cta">
+          <Link
+            href="/dashboard?section=subscriptions"
+            className="hcc-cta"
+            onClick={() => track({ name: "home_card_tap", card_type: "context_subsc" })}
+          >
             カバー率を見る
           </Link>
         </article>

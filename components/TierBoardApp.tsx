@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { track } from "@/lib/analytics";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import { getAnimePopularity } from "@/lib/anime-popularity";
 import {
@@ -796,6 +797,7 @@ export function TierBoardApp({
         throw new Error(payload.error ?? "Failed to create share.");
       }
 
+      track({ name: "tier_share_create" });
       const nextShareUrl = `${window.location.origin}/share/${payload.shareId}`;
       setShareUrl(nextShareUrl);
       const outcome = await shareOrCopyUrl({
