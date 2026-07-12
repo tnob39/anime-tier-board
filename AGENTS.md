@@ -1,5 +1,31 @@
 ---
 
+## マルチエージェント実行契約（最優先・必読）
+
+コード変更、Issue claim、エージェント委任の前に、必ず
+**[docs/orchestration/AGENT_EXECUTION_CONTRACT.md](./docs/orchestration/AGENT_EXECUTION_CONTRACT.md)**
+（Contract version 1.0）を読む。
+
+- Fable / Grok / Hermes / Codex / vmes / loher の役割とhandoffは同契約が唯一の正本。
+- 実行前に同契約のACK JSONを返し、`scripts/validate-orchestration-ack.py`で検証する。
+- ACKが不正な場合は、ファイル編集・Issue claim・実装を開始しない。
+- 本書と契約が矛盾する場合は、実行役割・handoff・証拠条件について同契約を優先する。
+
+Contract version: `1.0`
+
+以下は自動読込runtime向けの最小スナップショット。変更時は正本・バリデータ・本表を同一PRで更新し、配布ドリフトテストを通す。
+
+| agent | role | previous_handoff | next_handoff |
+|---|---|---|---|
+| `fable` | `ARCHITECT_REVIEWER` | `HERMES_INTAKE_OR_PROOF` | `HERMES_CLAIM_OR_DECISION` |
+| `grok` | `PURE_IMPLEMENTER` | `FABLE_SPEC` | `HERMES_PROOF` |
+| `hermes` | `PROOF_COLLECTOR` | `GROK_RESULT` | `FABLE_REVIEW` |
+| `codex` | `SELECTIVE_REVIEWER` | `HERMES_PROOF` | `FABLE_FINAL_DECISION` |
+| `vmes` | `MASTER_HUB` | `GITHUB_ISSUE` | `LOHER_DISPATCH` |
+| `loher` | `LOCAL_OPERATOR` | `VMES_DISPATCH` | `VMES_STATE_RETURN` |
+
+ACKには小文字の`agent`識別子、上表の完全一致値、task scope、停止条件、必要証拠、`acknowledged: true`を含める。
+
 ## プロジェクト概要
 
 AniList / Jikan から季節アニメを取得し、Tier 表を作成・共有する Next.js アプリ。
