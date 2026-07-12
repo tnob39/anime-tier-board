@@ -120,6 +120,57 @@ export async function updateWatchRhythm({
   });
 }
 
+export type PatchStatusOutcome =
+  | { kind: "updated"; item: AnimeStatusRecord }
+  | { kind: "not_found" }
+  | { kind: "conflict" };
+
+export async function patchStatusAndWatchedEpisodes({
+  userId,
+  animeId,
+  status,
+  watchedEpisodes,
+  expectedUpdatedAt
+}: {
+  userId: string;
+  animeId: string;
+  status: ViewingStatus;
+  watchedEpisodes: number | null;
+  expectedUpdatedAt: string;
+}): Promise<PatchStatusOutcome> {
+  await ensureStatusSchema();
+
+  const now = new Date().toISOString();
+  const updateResult = await getTursoClient().execute({
+    sql: `update user_anime_statuses
+          set status = ?,
+              watched_episodes = ?,
+              updated_at = ?
+          where user_id = ? and anime_id = ? and updated_at = ?`,
+    args: [status, watchedEpisodes, now, userId, animeId, expectedUpdatedAt]
+  });
+
+  if ((updateResult.rowsAffected ?? 0) > 0) {
+    const item = await getStatusRecord(userId, animeId);
+    if (!item) {
+      return { kind: "not_found" };
+    }
+
+    return { kind: "updated", item };
+  }
+
+  const existing = await getTursoClient().execute({
+    sql: "select 1 from user_anime_statuses where user_id = ? and anime_id = ? limit 1",
+    args: [userId, animeId]
+  });
+
+  if (existing.rows.length === 0) {
+    return { kind: "not_found" };
+  }
+
+  return { kind: "conflict" };
+}
+
 export async function updateTrackingDetails({
   userId,
   animeId,
@@ -231,6 +282,38 @@ export function ensureStatusSchema() {
   })();
 
   return statusSchemaReady;
+}
+
+async function getStatusRecord(userId: string, animeId: string): Promise<AnimeStatusRecord | null> {
+  const result = await getTursoClient().execute({
+    sql: `select anime_id, status, anime_json, favorite_level, watch_slot, notes, watch_rhythm, watched_episodes, updated_at
+          from user_anime_statuses
+          where user_id = ? and anime_id = ?
+          limit 1`,
+    args: [userId, animeId]
+  });
+
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+
+  const recordStatus = String(row.status);
+  if (!isViewingStatus(recordStatus)) {
+    return null;
+  }
+
+  return {
+    animeId: String(row.anime_id),
+    status: recordStatus,
+    anime: parseAnime(row.anime_json),
+    favoriteLevel: normalizeFavoriteLevel(row.favorite_level),
+    watchSlot: row.watch_slot ? String(row.watch_slot) : null,
+    notes: row.notes ? String(row.notes) : null,
+    watchRhythm: normalizeWatchRhythm(row.watch_rhythm),
+    watchedEpisodes: normalizeWatchedEpisodes(row.watched_episodes),
+    updatedAt: String(row.updated_at)
+  };
 }
 
 function createEmptyStatusCounts(): Record<ViewingStatus, number> {
