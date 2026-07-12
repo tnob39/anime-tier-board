@@ -289,6 +289,7 @@ export function WatchlistShareClient({
               aria-label="コメントを書く"
               maxLength={1000}
             />
+            <p className="comment-counter">{commentBody.length}/1000文字</p>
             <button
               className="command-button emphasis-button"
               type="button"
