@@ -1757,16 +1757,34 @@ button:disabled {
 .comment-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-rows: auto auto;
+  gap: 4px 10px;
 }
 
 .comment-form textarea {
+  grid-column: 1;
+  grid-row: 1;
   min-height: 76px;
   resize: vertical;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px;
   font: inherit;
+}
+
+.comment-counter {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.comment-form button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: end;
 }
 
 .login-comment-button {
