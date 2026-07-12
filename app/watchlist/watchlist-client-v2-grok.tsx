@@ -1197,6 +1197,7 @@ export function EditSheet({
             maxLength={500}
             placeholder="メモを入力（500文字まで）"
           />
+          <p className="wl2g-char-counter">{draftNotes.length}/500文字</p>
         </div>
 
         <div className="wl2g-actions">
