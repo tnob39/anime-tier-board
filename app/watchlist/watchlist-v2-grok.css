@@ -568,6 +568,13 @@
   resize: vertical;
 }
 
+.wl2g-char-counter {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
 .wl2g-episodes {
   display: flex;
   align-items: center;
