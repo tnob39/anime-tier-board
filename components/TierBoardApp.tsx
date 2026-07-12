@@ -1390,7 +1390,15 @@ function TierLane({
             <button
               className="icon-button"
               type="button"
-              onClick={() => onDelete(tier.id)}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `「${tier.label}」を削除しますか？含まれるアニメは未分類に移動します。`
+                  )
+                ) {
+                  onDelete(tier.id);
+                }
+              }}
               title="Tierを削除"
               aria-label="Tierを削除"
             >
