@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { track } from "@/lib/analytics";
 import { isOwnerEmail } from "@/lib/owner";
 import type { ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
@@ -40,6 +41,7 @@ export default function HomeAddSection({
   const [savingStatus, setSavingStatus] = useState<ViewingStatus | null>(null);
 
   async function handleStatus(anime: AnimeItem, status: ViewingStatus) {
+    track({ name: "home_card_tap", card_type: "add_section" });
     setSavingId(anime.id);
     setSavingStatus(status);
     try {

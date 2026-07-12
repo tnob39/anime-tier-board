@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
+import { track } from "@/lib/analytics";
 
 type GuideStep = {
   key: string;
@@ -158,7 +159,11 @@ export function GuideClient() {
             戻る
           </button>
           {isLastStep ? (
-            <Link className="guide-action-button guide-action-primary" href="/">
+            <Link
+              className="guide-action-button guide-action-primary"
+              href="/"
+              onClick={() => track({ name: "tutorial_complete" })}
+            >
               はじめる
             </Link>
           ) : (

@@ -3,7 +3,8 @@
 import { Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { track } from "@/lib/analytics";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 import type { PublicSubscriptionDiagnosis } from "@/lib/subscription-stats";
@@ -34,6 +35,7 @@ export function DashboardClient({
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
   const [message, setMessage] = useState<string | null>(null);
   const [analysisOpen, setAnalysisOpen] = useState(false);
+  const diagnosisTrackedRef = useRef(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -42,6 +44,14 @@ export function DashboardClient({
     }
     document.getElementById("subscriptions")?.scrollIntoView({ block: "start" });
   }, [searchParams]);
+
+  useEffect(() => {
+    if (diagnosisTrackedRef.current || !hasSubscriptions || subscriptionDiagnosis.watchlistCount === 0) {
+      return;
+    }
+    diagnosisTrackedRef.current = true;
+    track({ name: "subsc_diagnosis_complete" });
+  }, [hasSubscriptions, subscriptionDiagnosis.watchlistCount]);
 
   async function createShare() {
     setSharing(true);

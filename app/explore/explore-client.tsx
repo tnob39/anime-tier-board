@@ -4,6 +4,7 @@ import { Loader2, PlayCircle, Plus, Search, Star, TrendingUp } from "lucide-reac
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { track } from "@/lib/analytics";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import { getAnimePopularity as getPopularity } from "@/lib/home-seasonal-add";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
@@ -216,6 +217,11 @@ export function ExploreClient({
           <input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && searchQuery.trim()) {
+                track({ name: "search", query_type: "explore" });
+              }
+            }}
             placeholder="タイトルで検索"
             aria-label="タイトルで検索"
           />

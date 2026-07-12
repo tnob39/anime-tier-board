@@ -10,6 +10,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { track } from "@/lib/analytics";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import { matchServiceIdByProviderName } from "@/lib/streaming-services";
 
@@ -414,6 +415,7 @@ export default function StatusBottomSheet({
         }),
       });
       if (!res.ok) throw new Error("ステータスの保存に失敗しました。");
+      track({ name: "status_update", from: prev, to: next, source: "bottom_sheet" });
       onStatusSaved?.(animeId, next);
     } catch (e) {
       if (activeAnimeIdRef.current !== animeId) return;
@@ -448,6 +450,7 @@ export default function StatusBottomSheet({
         }),
       });
       if (!res.ok) throw new Error("視聴話数の保存に失敗しました。");
+      track({ name: "episode_update", source: "bottom_sheet" });
       onEpisodesSaved?.(animeId, clamped);
     } catch (e) {
       if (activeAnimeIdRef.current !== animeId) return;

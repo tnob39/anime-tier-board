@@ -7,6 +7,7 @@ import HomeAddSection, { type SeasonScope } from "@/components/HomeAddSection";
 import HomeContextCards from "@/components/HomeContextCards";
 import StatusBottomSheet from "@/components/StatusBottomSheet";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
+import { track } from "@/lib/analytics";
 import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
 import { bucketBySeason } from "@/lib/season-bucket";
 import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
@@ -223,7 +224,11 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
       {hasCalendar ? (
         <WeeklyBroadcastCalendar
           grouped={grouped}
-          onItemClick={(record) => setStatusSheetRecord(record)}
+          onItemClick={(record) => {
+            track({ name: "home_card_tap", card_type: "calendar" });
+            track({ name: "calendar_item_tap" });
+            setStatusSheetRecord(record);
+          }}
         />
       ) : (
         <section className="home-calendar-empty">
