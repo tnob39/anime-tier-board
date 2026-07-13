@@ -757,9 +757,10 @@ function DiscoveryLane({
                 type="button"
                 className="wl2g-discover-button"
                 disabled={isSaving}
+                aria-label={isSaving ? "保存中" : "見たい"}
                 onClick={() => void handleAdd(anime)}
               >
-                {isSaving ? <Loader2 className="spin" size={12} /> : "見たい"}
+                {isSaving ? <Loader2 className="spin" size={12} aria-hidden="true" /> : "見たい"}
               </button>
             </div>
           );
