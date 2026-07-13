@@ -342,7 +342,6 @@ export function ExploreClient({
                     <Star size={13} fill="currentColor" />
                     {formatScore(entry.item)}
                   </span>
-                  <span>Fit {entry.fitScore}</span>
                 </div>
                 <StreamingPlatformPills item={entry.item} />
                 <p>{entry.reason}</p>
