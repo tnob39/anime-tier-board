@@ -29,7 +29,7 @@ export const POST = withApiRoute("subscriptions.POST", async (request: Request) 
     payload = (await request.json()) as SubscriptionPayload;
   } catch {
     throw new AppError({
-      message: "Invalid JSON",
+      message: "リクエストの形式が正しくありません。",
       status: 400,
       code: "VALIDATION",
       expose: true
@@ -41,7 +41,7 @@ export const POST = withApiRoute("subscriptions.POST", async (request: Request) 
     : [];
 
   if (serviceIds.some((serviceId) => !isValidServiceId(serviceId))) {
-    return NextResponse.json({ error: "Invalid service id" }, { status: 400 });
+    return NextResponse.json({ error: "無効なサービスIDが含まれています。" }, { status: 400 });
   }
 
   await replaceSubscriptions({
