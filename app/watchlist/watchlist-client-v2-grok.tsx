@@ -1102,6 +1102,7 @@ export function EditSheet({
               type="button"
               className={`wl2g-status-chip${draftStatus === s ? " active" : ""}`}
               onClick={() => onStatusChange(s)}
+              disabled={saving}
             >
               {statusLabels[s]}
             </button>
