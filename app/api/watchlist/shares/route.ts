@@ -8,13 +8,13 @@ export async function POST() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "ログインが必要です。" }, { status: 401 });
   }
 
   const items = (await listStatuses(userId)).filter((item) => item.anime);
 
   if (!items.length) {
-    return NextResponse.json({ error: "No watchlist items to share" }, { status: 400 });
+    return NextResponse.json({ error: "共有できる視聴管理データがありません。" }, { status: 400 });
   }
 
   const shareId = await createWatchlistShare(userId, items);
