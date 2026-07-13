@@ -114,7 +114,13 @@ export default function HomeAddSection({
                   )}
                   {provider?.logoUrl ? (
                     <span className="card-provider-badge" title={provider.name}>
-                      <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
+                      <img
+                        src={provider.logoUrl}
+                        alt={provider.name}
+                        width={16}
+                        height={16}
+                        loading="lazy"
+                      />
                     </span>
                   ) : null}
                 </div>
