@@ -73,6 +73,7 @@ export function GlobalNav() {
                   key={item.href}
                   href={item.href}
                   className={active ? "global-nav-link is-active" : "global-nav-link"}
+                  aria-current={active ? "page" : undefined}
                 >
                   {item.label}
                 </Link>
