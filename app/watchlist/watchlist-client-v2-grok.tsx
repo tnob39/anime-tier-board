@@ -1045,6 +1045,7 @@ export function EditSheet({
   );
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const previousActiveElement =
@@ -1054,6 +1055,22 @@ export function EditSheet({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -1082,6 +1099,7 @@ export function EditSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        ref={panelRef}
       >
         <div className="wl2g-sheet-head">
           <h3 id={titleId}>{anime.title}</h3>
