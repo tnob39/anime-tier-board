@@ -748,7 +748,7 @@ function DiscoveryLane({
                 )}
                 {provider?.logoUrl ? (
                   <span className="wl2g-provider" title={provider.name}>
-                    <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
+                    <img src={provider.logoUrl} alt={provider.name} width={16} height={16} loading="lazy" />
                   </span>
                 ) : null}
               </div>
@@ -897,7 +897,7 @@ export function PosterCard({
           ) : null}
           {provider?.logoUrl ? (
             <span className={tier ? "wl2g-provider wl2g-provider--below" : "wl2g-provider"} title={provider.name}>
-              <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
+              <img src={provider.logoUrl} alt={provider.name} width={16} height={16} loading="lazy" />
             </span>
           ) : null}
           {renderMenu()}
@@ -943,7 +943,7 @@ export function PosterCard({
           ) : null}
           {provider?.logoUrl ? (
             <span className={tier ? "wl2g-provider wl2g-provider--below" : "wl2g-provider"} title={provider.name}>
-              <img src={provider.logoUrl} alt={provider.name} width={16} height={16} />
+              <img src={provider.logoUrl} alt={provider.name} width={16} height={16} loading="lazy" />
             </span>
           ) : null}
           {renderMenu()}
@@ -1119,7 +1119,7 @@ export function EditSheet({
                 className="wl2g-watch-chip"
               >
                 {provider.logoUrl ? (
-                  <img src={provider.logoUrl} alt="" width={16} height={16} />
+                  <img src={provider.logoUrl} alt="" width={16} height={16} loading="lazy" />
                 ) : null}
                 {provider.name}
                 <ExternalLink size={12} aria-hidden="true" />
