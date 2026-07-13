@@ -17,6 +17,7 @@ export function WelcomeModal() {
   const [show, setShow] = useState(false);
   const { status } = useSession();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
   useEffect(() => {
@@ -41,6 +42,22 @@ export function WelcomeModal() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         close();
+        return;
+      }
+      if (event.key !== "Tab" || !modalRef.current) return;
+      const focusables = modalRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -61,6 +78,7 @@ export function WelcomeModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        ref={modalRef}
       >
         <button className="welcome-close-btn" onClick={close} aria-label="閉じる" ref={closeButtonRef}>
           <X size={18} />
