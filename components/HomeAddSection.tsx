@@ -130,10 +130,11 @@ export default function HomeAddSection({
                     className="home-add-card-btn home-add-card-btn--planned"
                     type="button"
                     disabled={isSaving}
+                    aria-label={isSaving && savingStatus === "planned" ? "保存中" : "見たい"}
                     onClick={() => void handleStatus(item, "planned")}
                   >
                     {isSaving && savingStatus === "planned" ? (
-                      <Loader2 className="spin" size={12} />
+                      <Loader2 className="spin" size={12} aria-hidden="true" />
                     ) : (
                       "見たい"
                     )}
@@ -143,10 +144,11 @@ export default function HomeAddSection({
                       className="home-add-card-btn home-add-card-btn--watching"
                       type="button"
                       disabled={isSaving}
+                      aria-label={isSaving && savingStatus === "watching" ? "保存中" : "視聴中"}
                       onClick={() => void handleStatus(item, "watching")}
                     >
                       {isSaving && savingStatus === "watching" ? (
-                        <Loader2 className="spin" size={12} />
+                        <Loader2 className="spin" size={12} aria-hidden="true" />
                       ) : (
                         "視聴中"
                       )}
