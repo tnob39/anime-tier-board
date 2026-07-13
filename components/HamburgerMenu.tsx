@@ -37,6 +37,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
   const { status } = useSession();
   const isLoggedOut = status === "unauthenticated";
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -59,6 +60,22 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -75,7 +92,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
     <div className="hamburger-overlay" aria-modal="true" role="dialog" aria-labelledby="hamburger-menu-title">
       <div className="hamburger-backdrop" onClick={onClose} aria-hidden="true" />
 
-      <aside className="hamburger-drawer">
+      <aside className="hamburger-drawer" ref={panelRef}>
         <div className="hamburger-head">
           <span className="hamburger-title" id="hamburger-menu-title">設定</span>
           <button
