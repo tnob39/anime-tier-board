@@ -90,7 +90,13 @@ function LaneCard({
         )}
         {item.providerLogoUrl ? (
           <span className="card-provider-badge" title={item.providerName ?? undefined}>
-            <img src={item.providerLogoUrl} alt={item.providerName ?? ""} width={16} height={16} />
+            <img
+              src={item.providerLogoUrl}
+              alt={item.providerName ?? ""}
+              width={16}
+              height={16}
+              loading="lazy"
+            />
           </span>
         ) : null}
       </div>
