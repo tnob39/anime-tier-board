@@ -1475,6 +1475,12 @@ function AnimeCard({
   status?: ViewingStatus | null;
   onStatusChange?: (item: AnimeItem, status: ViewingStatus | null) => void;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [item.proxiedImageUrl]);
+
   return (
     <article
       className={[
@@ -1485,8 +1491,14 @@ function AnimeCard({
         .filter(Boolean)
         .join(" ")}
     >
-      {item.proxiedImageUrl ? (
-        <img src={item.proxiedImageUrl} alt={item.title} draggable={false} loading="lazy" />
+      {item.proxiedImageUrl && !imageFailed ? (
+        <img
+          src={item.proxiedImageUrl}
+          alt={item.title}
+          draggable={false}
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+        />
       ) : (
         <AnimeCardPlaceholder title={item.title} draggable={false} />
       )}
