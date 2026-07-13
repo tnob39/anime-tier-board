@@ -720,7 +720,7 @@ export function TierBoardApp({
           });
 
       if (!response.ok) {
-        throw new Error("Failed to save status.");
+        throw new Error("視聴ステータスの保存に失敗しました。");
       }
     } catch (statusError) {
       setError(statusError instanceof Error ? statusError.message : String(statusError));
@@ -794,7 +794,7 @@ export function TierBoardApp({
       const payload = (await response.json()) as ShareApiResponse;
 
       if (!response.ok || !payload.shareId) {
-        throw new Error(payload.error ?? "Failed to create share.");
+        throw new Error(payload.error ?? "シェアの作成に失敗しました。");
       }
 
       track({ name: "tier_share_create" });
