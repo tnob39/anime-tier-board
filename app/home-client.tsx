@@ -77,6 +77,8 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
     removeItem,
     quickSetStatus,
     patchRecord,
+    message,
+    messageKind,
   } = editor;
 
   // Status bottom sheet (calendar card tap — no page navigation)
@@ -131,14 +133,26 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   );
 
   const addSection = (
-    <HomeAddSection
-      items={addSectionItems}
-      onQuickStatus={quickSetStatus}
-      seasonScope={seasonScope}
-      onSelectSeasonScope={handleSelectSeasonScope}
-      loading={seasonScope === "next" && nextSeasonLoading}
-      error={seasonScope === "next" ? nextSeasonError : null}
-    />
+    <>
+      {message ? (
+        <div
+          className={`notice ${messageKind}`}
+          style={{ margin: "8px 12px" }}
+          role={messageKind === "error" ? "alert" : "status"}
+          aria-live={messageKind === "error" ? undefined : "polite"}
+        >
+          {message}
+        </div>
+      ) : null}
+      <HomeAddSection
+        items={addSectionItems}
+        onQuickStatus={quickSetStatus}
+        seasonScope={seasonScope}
+        onSelectSeasonScope={handleSelectSeasonScope}
+        loading={seasonScope === "next" && nextSeasonLoading}
+        error={seasonScope === "next" ? nextSeasonError : null}
+      />
+    </>
   );
   const handleDismissOnboarding = useCallback(() => {
     setIsOnboardingDismissed(true);
