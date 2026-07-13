@@ -147,8 +147,9 @@ export function PushToggle() {
           onClick={() => void (isOn ? unsubscribe() : subscribe())}
           disabled={working}
           aria-pressed={isOn}
+          aria-label={working ? "保存中" : isOn ? "無効にする" : "有効にする"}
         >
-          {working ? <Loader2 size={14} className="spin" /> : isOn ? "無効にする" : "有効にする"}
+          {working ? <Loader2 size={14} className="spin" aria-hidden="true" /> : isOn ? "無効にする" : "有効にする"}
         </button>
       </div>
       {message ? (
