@@ -28,6 +28,7 @@ export function GlobalNav() {
   const navV5 = useNavV5();
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.ownerOnly || isOwner);
   const userMenuFirstItemRef = useRef<HTMLAnchorElement>(null);
+  const userMenuPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleScroll() {
@@ -48,6 +49,22 @@ export function GlobalNav() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsUserMenuOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !userMenuPanelRef.current) return;
+      const focusables = userMenuPanelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -123,7 +140,7 @@ export function GlobalNav() {
                       className="user-menu-backdrop"
                       onClick={() => setIsUserMenuOpen(false)}
                     />
-                    <div className="user-dropdown" role="menu">
+                    <div className="user-dropdown" role="menu" ref={userMenuPanelRef}>
                       <p className="user-dropdown-name">
                         {session?.user?.name ?? session?.user?.email}
                       </p>
