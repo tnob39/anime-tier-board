@@ -35,6 +35,8 @@ export function WelcomeModal() {
   useEffect(() => {
     if (!show) return;
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const previousActiveElement =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeButtonRef.current?.focus();
@@ -64,6 +66,7 @@ export function WelcomeModal() {
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
       previousActiveElement?.focus();
     };
   }, [show]);
