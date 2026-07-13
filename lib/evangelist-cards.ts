@@ -61,7 +61,7 @@ export async function createEvangelistCard({
 
   const normalizedComment = normalizeComment(comment);
   if (!normalizedComment) {
-    throw new Error("Comment is required.");
+    throw new Error("コメントを入力してください。");
   }
 
   const cardId = createCardId();

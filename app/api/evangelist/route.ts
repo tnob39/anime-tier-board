@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "ログインが必要です。" }, { status: 401 });
   }
 
   let payload: CreatePayload;
@@ -24,11 +24,11 @@ export async function POST(request: Request) {
   try {
     payload = (await request.json()) as CreatePayload;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "リクエストの形式が不正です。" }, { status: 400 });
   }
 
   if (!payload.animeId || !payload.comment || !isValidComment(payload.comment)) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return NextResponse.json({ error: "入力内容が不正です。" }, { status: 400 });
   }
 
   const watchlistItem = (await listStatuses(userId)).find(
@@ -36,7 +36,10 @@ export async function POST(request: Request) {
   );
 
   if (!watchlistItem?.anime) {
-    return NextResponse.json({ error: "Anime not found in watchlist" }, { status: 400 });
+    return NextResponse.json(
+      { error: "対象作品がマイリストに見つかりません。" },
+      { status: 400 }
+    );
   }
 
   try {
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
       url: `/share/evangelist/${cardId}`
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to create card";
+    const message = error instanceof Error ? error.message : "布教カードの作成に失敗しました。";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
