@@ -141,7 +141,10 @@ export function GlobalNav() {
                       onClick={() => setIsUserMenuOpen(false)}
                     />
                     <div className="user-dropdown" role="menu" ref={userMenuPanelRef}>
-                      <p className="user-dropdown-name">
+                      <p
+                        className="user-dropdown-name"
+                        title={session?.user?.name ?? session?.user?.email ?? undefined}
+                      >
                         {session?.user?.name ?? session?.user?.email}
                       </p>
                       <Link
