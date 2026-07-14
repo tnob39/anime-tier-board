@@ -611,7 +611,7 @@ export default function StatusBottomSheet({
                     className="sbs-stream-chip"
                   >
                     {provider.logoUrl ? (
-                      <img src={provider.logoUrl} alt="" />
+                      <img src={provider.logoUrl} alt="" loading="lazy" />
                     ) : null}
                     {provider.name}
                     <ExternalLink size={12} aria-hidden="true" />
