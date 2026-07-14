@@ -518,6 +518,7 @@ export function WatchlistClientV2Grok({
     <div className="wl2g-root">
       <header className="wl2g-header">
         <div className="wl2g-top">
+          <h1 className="sr-only">マイリスト</h1>
           <div className="wl2g-title">マイリスト</div>
           <div className="wl2g-avatar" aria-hidden />
         </div>
