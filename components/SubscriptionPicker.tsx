@@ -127,7 +127,7 @@ export function SubscriptionPicker({
             onClick={() => void handleSave()}
             disabled={saving}
           >
-            {saving ? <Loader2 className="spin" size={18} /> : null}
+            {saving ? <Loader2 className="spin" size={18} aria-hidden="true" /> : null}
             <span>{submitLabel}</span>
           </button>
         </div>

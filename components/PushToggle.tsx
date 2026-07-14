@@ -107,7 +107,7 @@ export function PushToggle() {
   if (state === "loading") {
     return (
       <div className="push-toggle-row">
-        <Loader2 size={16} className="spin" />
+        <Loader2 size={16} className="spin" aria-hidden="true" />
         <span className="push-toggle-label">確認中...</span>
       </div>
     );

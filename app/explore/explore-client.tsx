@@ -310,7 +310,7 @@ export function ExploreClient({
           onClick={() => void loadYear()}
           disabled={loading}
         >
-          {loading ? <Loader2 className="spin" size={18} /> : <Search size={18} />}
+          {loading ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Search size={18} />}
           <span>さがす</span>
         </button>
       </section>
@@ -356,7 +356,7 @@ export function ExploreClient({
                       disabled={savingId === entry.item.id}
                     >
                       {savingId === entry.item.id ? (
-                        <Loader2 className="spin" size={16} />
+                        <Loader2 className="spin" size={16} aria-hidden="true" />
                       ) : (
                         <Plus size={16} />
                       )}

@@ -902,7 +902,7 @@ export function TierBoardApp({
             disabled={loading}
             title="再取得"
           >
-            {loading ? <Loader2 className="spin" size={18} /> : <RefreshCw size={18} />}
+            {loading ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <RefreshCw size={18} />}
             <span>再取得</span>
           </button>
 
@@ -914,7 +914,7 @@ export function TierBoardApp({
             title="共有URLを作成"
           >
             {sharing ? (
-              <Loader2 className="spin" size={18} />
+              <Loader2 className="spin" size={18} aria-hidden="true" />
             ) : copyConfirm ? (
               <Check size={18} />
             ) : (
