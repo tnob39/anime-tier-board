@@ -25,6 +25,7 @@ export function EvangelistCreateModal({
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const commentFieldId = useId();
+  const errorId = useId();
   const providers = getStreamingProviders(anime);
   const trimmedComment = comment.trim();
   const canSubmit = trimmedComment.length > 0 && trimmedComment.length <= MAX_COMMENT_LENGTH;
@@ -162,6 +163,8 @@ export function EvangelistCreateModal({
               placeholder="例: 音楽好きなら絶対刺さる。1話だけ見てみて。"
               maxLength={MAX_COMMENT_LENGTH}
               rows={3}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
             />
           </label>
           <p className="evangelist-sheet-counter">
@@ -180,7 +183,7 @@ export function EvangelistCreateModal({
           ) : null}
 
           {error ? (
-            <div className="notice error" role="alert">
+            <div className="notice error" role="alert" id={errorId}>
               {error}
             </div>
           ) : null}
