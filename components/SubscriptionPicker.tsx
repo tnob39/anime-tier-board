@@ -96,7 +96,7 @@ export function SubscriptionPicker({
                 onChange={() => toggleService(service.id)}
                 disabled={saving}
               />
-              <img src={service.logoUrl} alt="" aria-hidden="true" />
+              <img src={service.logoUrl} alt="" aria-hidden="true" loading="lazy" />
               <span>{service.name}</span>
             </label>
           );
