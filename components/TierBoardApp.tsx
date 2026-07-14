@@ -1241,7 +1241,7 @@ function MoveItemSheet({
       >
         <div className="move-sheet-preview">
           {item.proxiedImageUrl ? (
-            <img src={item.proxiedImageUrl} alt={item.title} draggable={false} />
+            <img src={item.proxiedImageUrl} alt={item.title} draggable={false} loading="lazy" />
           ) : (
             <AnimeCardPlaceholder title={item.title} draggable={false} />
           )}
