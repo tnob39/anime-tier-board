@@ -234,7 +234,7 @@ function SubscriptionAnalyticsSection({
           return (
             <article key={entry.serviceId} className="subscription-diagnosis-row">
               <div className="subscription-diagnosis-label">
-                <img src={entry.logoUrl} alt="" aria-hidden="true" />
+                <img src={entry.logoUrl} alt="" aria-hidden="true" loading="lazy" />
                 <strong>{entry.serviceName}</strong>
                 {exclusive ? (
                   <span className="subscription-exclusive-badge">ここだけ {exclusive.exclusiveAnime.length}本</span>
