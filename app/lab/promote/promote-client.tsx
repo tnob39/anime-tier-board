@@ -20,6 +20,7 @@ export function PromoteClient({
   const [selectedKey, setSelectedKey] = useState(defaultKey);
   const [shareUrl, setShareUrl] = useState("");
   const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   async function createShare() {
@@ -30,6 +31,7 @@ export function PromoteClient({
 
     setIsCreating(true);
     setMessage("");
+    setIsError(false);
     try {
       const response = await fetch("/api/share/season", {
         method: "POST",
@@ -58,6 +60,7 @@ export function PromoteClient({
             : "共有URLを作成しました。"
       );
     } catch (error) {
+      setIsError(true);
       setMessage(
         error instanceof Error ? error.message : "共有リンクを作成できませんでした。"
       );
@@ -81,6 +84,7 @@ export function PromoteClient({
             setSelectedKey(event.target.value);
             setShareUrl("");
             setMessage("");
+            setIsError(false);
           }}
         >
           {options.map((option) => {
@@ -107,7 +111,15 @@ export function PromoteClient({
             {shareUrl}
           </a>
         ) : null}
-        {message ? <p role="status">{message}</p> : null}
+        {message ? (
+          <p
+            className={isError ? "notice error" : "notice success"}
+            role={isError ? "alert" : "status"}
+            aria-live={isError ? undefined : "polite"}
+          >
+            {message}
+          </p>
+        ) : null}
       </section>
     </main>
   );
