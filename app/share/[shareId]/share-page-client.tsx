@@ -151,6 +151,7 @@ export function SharePageClient({
                             alt={item.streamingProvidersJp.flatrate[0].name}
                             width={16}
                             height={16}
+                            loading="lazy"
                           />
                         </span>
                       ) : null}
