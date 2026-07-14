@@ -59,7 +59,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
       </header>
 
       <section className="voice-search">
-        <Search size={18} />
+        <Search size={18} aria-hidden="true" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
