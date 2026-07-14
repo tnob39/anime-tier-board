@@ -174,6 +174,7 @@ export function DashboardShareClient({
                 key={option.kind}
                 className={active ? "command-button reaction-button is-active" : "command-button reaction-button"}
                 type="button"
+                aria-pressed={active}
                 onClick={() => void handleReaction(option.kind)}
                 disabled={active || reactingKind === option.kind}
               >
