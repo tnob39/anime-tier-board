@@ -84,7 +84,7 @@ export default function HomeAddSection({
 
       {loading ? (
         <p className="home-add-status-note">
-          <Loader2 className="spin" size={14} /> 来期のアニメを読み込み中…
+          <Loader2 className="spin" size={14} aria-hidden="true" /> 来期のアニメを読み込み中…
         </p>
       ) : error ? (
         <p className="home-add-status-note home-add-status-note--error" role="alert">{error}</p>

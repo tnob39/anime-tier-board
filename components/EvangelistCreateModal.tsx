@@ -202,7 +202,7 @@ export function EvangelistCreateModal({
             onClick={() => void handleCreate()}
             disabled={!canSubmit || creating}
           >
-            {creating ? <Loader2 className="spin" size={16} /> : null}
+            {creating ? <Loader2 className="spin" size={16} aria-hidden="true" /> : null}
             <span>作ってシェア</span>
           </button>
         </div>

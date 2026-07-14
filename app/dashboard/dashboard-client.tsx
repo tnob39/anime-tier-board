@@ -98,7 +98,7 @@ export function DashboardClient({
               title="分析を共有"
               aria-label="分析を共有"
             >
-              {sharing ? <Loader2 className="spin" size={18} /> : <Share2 size={18} />}
+              {sharing ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Share2 size={18} />}
             </button>
           </div>
         </header>

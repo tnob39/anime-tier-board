@@ -560,7 +560,7 @@ export function WatchlistClientV2Grok({
             disabled={sharing || count === 0}
             style={{ flex: 1 }}
           >
-            {sharing ? <Loader2 className="spin" size={16} /> : <Share2 size={16} />}
+            {sharing ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Share2 size={16} />}
             <span style={{ marginLeft: 6 }}>共有</span>
           </button>
         </div>
@@ -1227,7 +1227,7 @@ export function EditSheet({
             disabled={saving}
             onClick={onSave}
           >
-            {saving ? <Loader2 className="spin" size={16} /> : null}
+            {saving ? <Loader2 className="spin" size={16} aria-hidden="true" /> : null}
             <span>{saving ? "保存中" : "保存する"}</span>
           </button>
           <button
