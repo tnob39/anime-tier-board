@@ -118,8 +118,17 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
         </section>
       ) : (
         <section className="watchlist-empty">
-          <h2>声優情報がまだありません</h2>
-          <p>声優情報を含む作品をStatus保存すると、このページに表示されます。</p>
+          {actors.length > 0 ? (
+            <>
+              <h2>該当する声優が見つかりませんでした</h2>
+              <p>検索キーワードを変えてお試しください。</p>
+            </>
+          ) : (
+            <>
+              <h2>声優情報がまだありません</h2>
+              <p>声優情報を含む作品をStatus保存すると、このページに表示されます。</p>
+            </>
+          )}
         </section>
       )}
     </main>
