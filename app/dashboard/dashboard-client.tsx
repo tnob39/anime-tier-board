@@ -82,6 +82,7 @@ export function DashboardClient({
 
   return (
     <main className="app-main dashboard-main">
+      {!isOwner ? <h1 className="sr-only">好み分析ダッシュボード</h1> : null}
       {isOwner ? (
         <header className="dashboard-header">
           <div>
