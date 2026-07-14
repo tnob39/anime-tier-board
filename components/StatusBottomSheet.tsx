@@ -534,7 +534,7 @@ export default function StatusBottomSheet({
           <div className="sbs-header">
             <div className="sbs-thumb">
               {cover ? (
-                <img src={cover} alt="" />
+                <img src={cover} alt="" loading="lazy" />
               ) : (
                 <div className="sbs-thumb-fallback">No Image</div>
               )}
