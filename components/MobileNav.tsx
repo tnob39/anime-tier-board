@@ -66,7 +66,7 @@ export function MobileNav() {
             onClick={() => track({ name: "tab_switch", to: item.href })}
           >
             <span className="mobile-nav-icon-wrap">
-              <Icon size={19} />
+              <Icon size={19} aria-hidden="true" />
             </span>
             <span>{item.label}</span>
           </Link>
