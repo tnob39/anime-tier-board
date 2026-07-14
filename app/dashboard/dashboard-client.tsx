@@ -137,12 +137,13 @@ export function DashboardClient({
             className="pref-analysis-accordion-header"
             onClick={() => setAnalysisOpen(!analysisOpen)}
             aria-expanded={analysisOpen}
+            aria-controls="pref-analysis-accordion-body"
           >
             好み分析ダッシュボード
             <span aria-hidden="true">{analysisOpen ? "−" : "+"}</span>
           </button>
           {analysisOpen ? (
-            <div className="pref-analysis-accordion-body">
+            <div className="pref-analysis-accordion-body" id="pref-analysis-accordion-body">
               <DashboardSummary dashboard={dashboard} maxStatus={maxStatus} />
             </div>
           ) : null}
