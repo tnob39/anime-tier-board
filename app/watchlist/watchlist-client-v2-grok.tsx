@@ -395,6 +395,13 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
     }
   }, [items, editing?.animeId]);
 
+  // Success toasts auto-dismiss; errors stay until the user acts again.
+  useEffect(() => {
+    if (!message || messageKind !== "success") return;
+    const timer = window.setTimeout(() => setMessage(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [message, messageKind]);
+
   return {
     items,
     openSheet,
