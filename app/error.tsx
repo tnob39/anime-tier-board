@@ -26,31 +26,10 @@ export default function Error({
         ページの読み込みに失敗しました。再試行するか、トップに戻ってください。
       </p>
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-        <button
-          type="button"
-          onClick={() => reset()}
-          style={{
-            padding: "0.5rem 1rem",
-            borderRadius: 8,
-            border: "1px solid var(--line)",
-            background: "var(--surface)",
-            color: "var(--ink)",
-            cursor: "pointer",
-          }}
-        >
+        <button type="button" className="command-button emphasis-button" onClick={() => reset()}>
           再試行
         </button>
-        <a
-          href="/"
-          style={{
-            padding: "0.5rem 1rem",
-            borderRadius: 8,
-            border: "1px solid var(--line)",
-            background: "var(--surface)",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
+        <a href="/" className="command-button">
           トップへ
         </a>
       </div>
