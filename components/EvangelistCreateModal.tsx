@@ -124,7 +124,7 @@ export function EvangelistCreateModal({
       >
         <div className="evangelist-sheet-preview">
           {anime.proxiedImageUrl ? (
-            <img src={anime.proxiedImageUrl} alt={anime.title} draggable={false} />
+            <img src={anime.proxiedImageUrl} alt={anime.title} draggable={false} loading="lazy" />
           ) : (
             <AnimeCardPlaceholder title={anime.title} draggable={false} />
           )}
