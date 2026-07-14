@@ -975,14 +975,14 @@ export function PosterLane({
   return (
     <div>
       <div className="wl2g-sec">
-        <h3>
+        <h2>
           {title}
           {hint ? (
             <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--muted)" }}>
               {hint}
             </span>
           ) : null}
-        </h3>
+        </h2>
         <span style={{ fontSize: 11, color: "var(--muted)" }}>{n}件</span>
       </div>
       <div className="wl2g-lane">
