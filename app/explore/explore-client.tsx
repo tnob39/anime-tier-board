@@ -213,7 +213,7 @@ export function ExploreClient({
           </select>
         </label>
         <div className="explore-search">
-          <Search size={18} />
+          <Search size={18} aria-hidden="true" />
           <input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
