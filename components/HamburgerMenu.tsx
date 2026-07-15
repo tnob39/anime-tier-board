@@ -101,7 +101,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
             onClick={onClose}
             aria-label="閉じる"
           >
-            <X size={20} />
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 

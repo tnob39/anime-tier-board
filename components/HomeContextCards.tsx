@@ -122,7 +122,7 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
               aria-label="閉じる"
               onClick={dismissTier}
             >
-              <X size={18} strokeWidth={2} />
+              <X size={18} strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
           <Link
@@ -155,7 +155,7 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
               aria-label="閉じる"
               onClick={dismissSubsc}
             >
-              <X size={18} strokeWidth={2} />
+              <X size={18} strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
           <Link
