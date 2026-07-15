@@ -83,7 +83,7 @@ export function WelcomeModal() {
         aria-labelledby={titleId}
         ref={modalRef}
       >
-        <button className="welcome-close-btn" onClick={close} aria-label="閉じる" ref={closeButtonRef}>
+        <button className="welcome-close-btn" type="button" onClick={close} aria-label="閉じる" ref={closeButtonRef}>
           <X size={18} aria-hidden="true" />
         </button>
 
@@ -107,7 +107,7 @@ export function WelcomeModal() {
         </ul>
 
         <div className="welcome-actions">
-          <button className="command-button emphasis-button" onClick={close}>
+          <button className="command-button emphasis-button" type="button" onClick={close}>
             始める
           </button>
         </div>
@@ -115,6 +115,7 @@ export function WelcomeModal() {
         {status !== "authenticated" && (
           <button
             className="welcome-login-link"
+            type="button"
             onClick={() => void signIn("google")}
           >
             Googleでログイン →
