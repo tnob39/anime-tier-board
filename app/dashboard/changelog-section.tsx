@@ -215,7 +215,7 @@ export function ChangelogSection() {
       </ul>
 
       {expanded ? (
-        <div className="cl-history">
+        <div className="cl-history" id="dashboard-changelog-history">
           {history.map((release) => (
             <article key={release.version} className="cl-history-release">
               <div className="cl-history-meta">
@@ -255,6 +255,7 @@ export function ChangelogSection() {
         className="cl-toggle"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
+        aria-controls="dashboard-changelog-history"
       >
         {expanded ? "▲ 閉じる" : `▼ 過去 ${history.length} バージョンを見る`}
       </button>
