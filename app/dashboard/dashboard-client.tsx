@@ -96,8 +96,8 @@ export function DashboardClient({
               type="button"
               onClick={() => void createShare()}
               disabled={sharing || !hasData}
-              title="分析を共有"
-              aria-label="分析を共有"
+              title={hasData ? "分析を共有" : "共有できる視聴データがありません"}
+              aria-label={hasData ? "分析を共有" : "共有できる視聴データがありません"}
             >
               {sharing ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Share2 size={18} />}
             </button>
