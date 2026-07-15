@@ -1118,7 +1118,7 @@ export function EditSheet({
             aria-label="閉じる"
             ref={closeButtonRef}
           >
-            <X size={20} />
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 

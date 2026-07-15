@@ -84,7 +84,7 @@ export function WelcomeModal() {
         ref={modalRef}
       >
         <button className="welcome-close-btn" onClick={close} aria-label="閉じる" ref={closeButtonRef}>
-          <X size={18} />
+          <X size={18} aria-hidden="true" />
         </button>
 
         <div className="welcome-hero">
