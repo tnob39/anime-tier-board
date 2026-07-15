@@ -99,7 +99,7 @@ export function SharePageClient({
     <main className="app-main share-main">
       <header className="share-header">
         <div>
-          <h1>Anime Tier Share</h1>
+          <h1>Tier表シェア</h1>
           <p>
             {initialShare.board.seasonYear} {SEASON_LABELS[initialShare.board.season]}
           </p>
@@ -112,7 +112,7 @@ export function SharePageClient({
         </div>
       ) : null}
 
-      <section className="export-surface share-surface" aria-label="Shared tier board">
+      <section className="export-surface share-surface" aria-label="共有されたTier表">
         <div className="export-heading">
           <strong>
             {initialShare.board.seasonYear} {SEASON_LABELS[initialShare.board.season]}
@@ -169,7 +169,7 @@ export function SharePageClient({
         href="/tier?from=share"
       />
 
-      <section className="comment-panel" aria-label="Share comments">
+      <section className="comment-panel" aria-label="コメント">
         <div className="comment-heading">
           <MessageCircle size={18} />
           <h2>コメント</h2>
