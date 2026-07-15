@@ -1185,7 +1185,7 @@ export function EditSheet({
         {totalEps != null ? (
           <div className="wl2g-field">
             <label>視聴済み話数</label>
-            <div className="wl2g-episodes">
+            <div className="wl2g-episodes" role="group" aria-label="視聴済み話数">
               <button type="button" onClick={dec} disabled={saving} aria-label="視聴済み話数を減らす">
                 <Minus size={18} />
               </button>
