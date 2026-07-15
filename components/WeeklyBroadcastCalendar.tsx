@@ -87,13 +87,14 @@ export function WeeklyBroadcastCalendar({
           className="broadcast-lanes-info-toggle"
           aria-label="放映カレンダーの表示ルール"
           aria-expanded={showInfo}
+          aria-controls="broadcast-lanes-info-text"
           onClick={() => setShowInfo((value) => !value)}
         >
           <Info size={16} aria-hidden="true" />
         </button>
       </div>
       {showInfo ? (
-        <p className="broadcast-lanes-info-text" role="note">
+        <p id="broadcast-lanes-info-text" className="broadcast-lanes-info-text" role="note">
           「視聴中」「見たい」に登録した作品を放送曜日ごとに表示しています。放送中（次回放送が約1週間以内）の作品が先頭、まだ放送が先の作品は薄め＋放送開始日（例: 4/10〜）でその後に並びます。放送スケジュールは最新の情報に自動更新され、今日の曜日は🔴で示しています。
         </p>
       ) : null}
