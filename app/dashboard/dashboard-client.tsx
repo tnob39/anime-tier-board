@@ -115,6 +115,7 @@ export function DashboardClient({
           {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
           <a href={shareUrl} target="_blank" rel="noreferrer">
             {shareUrl}
+            <span className="sr-only">（新しいタブで開きます）</span>
           </a>
         </div>
       ) : null}
