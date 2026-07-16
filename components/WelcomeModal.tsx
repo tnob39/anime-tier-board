@@ -74,7 +74,7 @@ export function WelcomeModal() {
   if (!show) return null;
 
   return (
-    <div className="welcome-backdrop" onClick={close}>
+    <div className="welcome-backdrop" role="presentation" onClick={close}>
       <div
         className="welcome-modal"
         onClick={(e) => e.stopPropagation()}
