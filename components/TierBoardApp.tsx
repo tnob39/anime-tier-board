@@ -1051,6 +1051,7 @@ export function TierBoardApp({
             {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
             <a href={shareUrl} target="_blank" rel="noreferrer">
               {shareUrl}
+              <span className="sr-only">（新しいタブで開きます）</span>
             </a>
           </div>
         ) : null}
@@ -1516,7 +1517,7 @@ function AnimeCard({
             target="_blank"
             rel="noreferrer"
             title="外部リンク"
-            aria-label={`${item.title}の外部リンク`}
+            aria-label={`${item.title}の外部リンク（新しいタブで開きます）`}
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
           >
@@ -1662,6 +1663,7 @@ function StreamingLinks({ item }: { item: AnimeItem }) {
         >
           <PlayCircle size={11} />
           <span>{episode.site ?? episode.title ?? "配信"}</span>
+          <span className="sr-only">（新しいタブで開きます）</span>
         </a>
       ))}
     </div>
@@ -1691,6 +1693,7 @@ function StreamingPlatformLinks({ item }: { item: AnimeItem }) {
         >
           <PlayCircle size={11} />
           <span>{platform.name}</span>
+          <span className="sr-only">（新しいタブで開きます）</span>
         </a>
       ))}
       {remainingCount ? <span className="streaming-more">+{remainingCount}</span> : null}
