@@ -87,6 +87,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
                     <a href={actor.siteUrl} target="_blank" rel="noreferrer">
                       <ExternalLink size={14} />
                       詳細
+                      <span className="sr-only">（新しいタブで開きます）</span>
                     </a>
                   ) : null}
                 </div>
