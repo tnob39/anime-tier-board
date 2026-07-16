@@ -89,6 +89,7 @@ export function GlobalNav() {
             </Link>
           ) : (
             <button
+              type="button"
               className="global-nav-btn"
               onClick={() => setIsDrawerOpen(true)}
               aria-label="メニューを開く"
@@ -125,6 +126,7 @@ export function GlobalNav() {
             isAuthenticated ? (
               <div className="user-menu-wrap">
                 <button
+                  type="button"
                   className="global-nav-btn user-avatar-btn"
                   onClick={() => setIsUserMenuOpen((prev) => !prev)}
                   aria-label="ユーザーメニュー"
@@ -158,6 +160,7 @@ export function GlobalNav() {
                         <span>マイページ</span>
                       </Link>
                       <button
+                        type="button"
                         className="user-dropdown-item user-dropdown-logout"
                         role="menuitem"
                         onClick={() => {
@@ -174,6 +177,7 @@ export function GlobalNav() {
               </div>
             ) : (
               <button
+                type="button"
                 className="global-nav-btn user-avatar-btn"
                 onClick={() => void signIn("google")}
                 aria-label="Googleでログイン"

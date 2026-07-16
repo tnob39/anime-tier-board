@@ -27,6 +27,7 @@ export function HomeGuest({ loginRequired = false }: HomeGuestProps) {
         )}
         <div className="home-guest-actions">
           <button
+            type="button"
             className="command-button emphasis-button"
             onClick={() => void signIn("google")}
           >

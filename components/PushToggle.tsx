@@ -143,6 +143,7 @@ export function PushToggle() {
           {isOn ? "今日の放送を通知する（ON）" : "今日の放送を通知する（OFF）"}
         </span>
         <button
+          type="button"
           className={`push-toggle-btn${isOn ? " is-on" : ""}`}
           onClick={() => void (isOn ? unsubscribe() : subscribe())}
           disabled={working}
