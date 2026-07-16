@@ -589,6 +589,7 @@ export function WatchlistClientV2Grok({
           {shareOutcome === "copied" ? "共有URLをコピーしました:" : "共有URL:"}{" "}
           <a href={shareUrl} target="_blank" rel="noreferrer">
             {shareUrl}
+            <span className="sr-only">（新しいタブで開きます）</span>
           </a>
         </div>
       ) : null}
@@ -1151,6 +1152,7 @@ export function EditSheet({
                 ) : null}
                 {provider.name}
                 <ExternalLink size={12} aria-hidden="true" />
+                <span className="sr-only">（新しいタブで開きます）</span>
               </a>
             ))}
             {hasUnmatchedProvider && anime.streamingProvidersJp?.providerLink ? (
@@ -1162,6 +1164,7 @@ export function EditSheet({
               >
                 配信情報を見る
                 <ExternalLink size={12} aria-hidden="true" />
+                <span className="sr-only">（新しいタブで開きます）</span>
               </a>
             ) : null}
           </div>
