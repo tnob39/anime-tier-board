@@ -3147,6 +3147,8 @@ button:disabled {
   outline: 0;
   background: transparent;
   color: var(--ink);
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .voice-card {
@@ -6082,6 +6084,8 @@ a.cl-history-title:hover {
   color: var(--ink);
   font-size: 14px;
   min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .explore-search input::placeholder {

@@ -533,7 +533,7 @@ export function WatchlistClientV2Grok({
         <div className="wl2g-search">
           <span aria-hidden="true">🔍</span>
           <input
-            type="text"
+            type="search"
             placeholder="作品を検索"
             aria-label="作品を検索"
             value={search}

@@ -84,6 +84,8 @@
   color: var(--ink);
   font-size: 14px;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .wl2g-filters {
