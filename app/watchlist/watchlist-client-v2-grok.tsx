@@ -1180,7 +1180,7 @@ export function EditSheet({
               aria-label={`お気に入り度 ${lv}`}
               aria-pressed={lv <= (draftFavorite ?? 0)}
             >
-              <Star size={20} fill="currentColor" />
+              <Star size={20} fill="currentColor" aria-hidden="true" />
             </button>
           ))}
         </div>
@@ -1190,13 +1190,13 @@ export function EditSheet({
             <label>視聴済み話数</label>
             <div className="wl2g-episodes" role="group" aria-label="視聴済み話数">
               <button type="button" onClick={dec} disabled={saving} aria-label="視聴済み話数を減らす">
-                <Minus size={18} />
+                <Minus size={18} aria-hidden="true" />
               </button>
               <span className="num">
                 {curW} / {totalEps}
               </span>
               <button type="button" onClick={inc} disabled={saving} aria-label="視聴済み話数を増やす">
-                <Plus size={18} />
+                <Plus size={18} aria-hidden="true" />
               </button>
             </div>
           </div>
