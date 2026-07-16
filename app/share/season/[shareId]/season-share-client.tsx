@@ -48,6 +48,7 @@ export function SeasonShareClient({
                           rel="noreferrer"
                         >
                           {provider.name}
+                          <span className="sr-only">（新しいタブで開きます）</span>
                         </a>
                       ))}
                     </div>
