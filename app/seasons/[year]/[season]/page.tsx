@@ -231,6 +231,7 @@ export default async function SeasonPage({
                 ) : (
                   <span className="season-page-cover-placeholder">{title}</span>
                 )}
+                <span className="sr-only">（新しいタブで開きます）</span>
               </a>
 
               <div className="season-page-card-body">
@@ -258,6 +259,7 @@ export default async function SeasonPage({
                               <img src={provider.logoUrl} alt="" loading="lazy" />
                             ) : null}
                             {provider.name}
+                            <span className="sr-only">（新しいタブで開きます）</span>
                           </a>
                         ) : (
                           <span key={provider.id}>
@@ -279,6 +281,7 @@ export default async function SeasonPage({
                           rel="noreferrer"
                         >
                           {platform.name}
+                          <span className="sr-only">（新しいタブで開きます）</span>
                         </a>
                       ))}
                     </div>
