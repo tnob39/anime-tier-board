@@ -56,6 +56,7 @@ export function EvangelistShareClient({
                 >
                   <Play size={18} />
                   <span>{provider.name} で見る</span>
+                  <span className="sr-only">（新しいタブで開きます）</span>
                 </a>
               ))}
             </section>
