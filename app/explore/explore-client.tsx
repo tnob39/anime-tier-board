@@ -365,6 +365,7 @@ export function ExploreClient({
                   )}
                   <a className="command-button" href={entry.item.siteUrl} target="_blank" rel="noreferrer">
                     詳細
+                    <span className="sr-only">（新しいタブで開きます）</span>
                   </a>
                 </div>
               </div>
@@ -414,6 +415,7 @@ function StreamingPlatformPills({ item }: { item: AnimeItem }) {
         >
           <PlayCircle size={11} />
           <span>{platform.name}</span>
+          <span className="sr-only">（新しいタブで開きます）</span>
         </a>
       ))}
       {remainingCount ? <span className="streaming-more">+{remainingCount}</span> : null}
