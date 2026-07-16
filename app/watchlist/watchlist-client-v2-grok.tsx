@@ -1102,7 +1102,7 @@ export function EditSheet({
   }
 
   return (
-    <div className="wl2g-sheet-overlay" onClick={onClose}>
+    <div className="wl2g-sheet-overlay" role="presentation" onClick={onClose}>
       <div
         className="wl2g-sheet"
         onClick={(e) => e.stopPropagation()}
