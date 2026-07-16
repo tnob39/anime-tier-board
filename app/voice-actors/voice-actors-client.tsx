@@ -61,6 +61,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
       <section className="voice-search">
         <Search size={18} aria-hidden="true" />
         <input
+          type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="声優名・作品名で検索"

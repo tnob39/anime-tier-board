@@ -215,6 +215,7 @@ export function ExploreClient({
         <div className="explore-search">
           <Search size={18} aria-hidden="true" />
           <input
+            type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             onKeyDown={(event) => {
