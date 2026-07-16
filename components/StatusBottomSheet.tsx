@@ -615,6 +615,7 @@ export default function StatusBottomSheet({
                     ) : null}
                     {provider.name}
                     <ExternalLink size={12} aria-hidden="true" />
+                    <span className="sr-only">（新しいタブで開きます）</span>
                   </a>
                 ))}
                 {hasUnmatched && anime.streamingProvidersJp?.providerLink ? (
@@ -626,6 +627,7 @@ export default function StatusBottomSheet({
                   >
                     配信情報を見る
                     <ExternalLink size={12} aria-hidden="true" />
+                    <span className="sr-only">（新しいタブで開きます）</span>
                   </a>
                 ) : null}
                 {platformLinks.slice(0, 4).map((platform) => (
@@ -638,6 +640,7 @@ export default function StatusBottomSheet({
                   >
                     {platform.name}
                     <ExternalLink size={12} aria-hidden="true" />
+                    <span className="sr-only">（新しいタブで開きます）</span>
                   </a>
                 ))}
                 {streamingEpisodes.slice(0, 3).map((ep) => (
@@ -650,6 +653,7 @@ export default function StatusBottomSheet({
                   >
                     {ep.site || ep.title || "配信エピソード"}
                     <ExternalLink size={12} aria-hidden="true" />
+                    <span className="sr-only">（新しいタブで開きます）</span>
                   </a>
                 ))}
               </div>
