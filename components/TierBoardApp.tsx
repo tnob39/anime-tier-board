@@ -1128,10 +1128,12 @@ export function TierBoardApp({
                 className="pool-drawer-trigger"
                 onClick={() => setPoolDrawerOpen((current) => !current)}
                 aria-expanded={poolDrawerOpen}
+                aria-controls="pool-drawer-section"
               >
                 未分類 {unrankedTier.itemIds.length}件 {poolDrawerOpen ? "▼" : "▲"}
               </button>
               <section
+                id="pool-drawer-section"
                 className={
                   poolDrawerOpen ? "pool-section pool-drawer is-open" : "pool-section pool-drawer"
                 }
