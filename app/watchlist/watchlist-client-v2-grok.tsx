@@ -559,7 +559,7 @@ export function WatchlistClientV2Grok({
 
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <Link href="/lab/promote" className="command-button" style={{ flex: 1 }}>
-            <Megaphone size={16} />
+            <Megaphone size={16} aria-hidden="true" />
             <span style={{ marginLeft: 6 }}>期まとめ布教</span>
           </Link>
           <button
@@ -569,7 +569,7 @@ export function WatchlistClientV2Grok({
             disabled={sharing || count === 0}
             style={{ flex: 1 }}
           >
-            {sharing ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Share2 size={16} />}
+            {sharing ? <Loader2 className="spin" size={16} aria-hidden="true" /> : <Share2 size={16} aria-hidden="true" />}
             <span style={{ marginLeft: 6 }}>共有</span>
           </button>
         </div>
