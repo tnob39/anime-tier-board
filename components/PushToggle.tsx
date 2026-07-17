@@ -138,7 +138,7 @@ export function PushToggle() {
   return (
     <div className="push-toggle-wrap">
       <div className="push-toggle-row">
-        {isOn ? <Bell size={18} /> : <BellOff size={18} />}
+        {isOn ? <Bell size={18} aria-hidden="true" /> : <BellOff size={18} aria-hidden="true" />}
         <span className="push-toggle-label">
           {isOn ? "今日の放送を通知する（ON）" : "今日の放送を通知する（OFF）"}
         </span>
