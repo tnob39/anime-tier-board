@@ -157,7 +157,7 @@ export function GlobalNav() {
                         role="menuitem"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
-                        <User size={15} />
+                        <User size={15} aria-hidden="true" />
                         <span>マイページ</span>
                       </Link>
                       <button
@@ -169,7 +169,7 @@ export function GlobalNav() {
                           void signOut();
                         }}
                       >
-                        <LogOut size={15} />
+                        <LogOut size={15} aria-hidden="true" />
                         <span>ログアウト</span>
                       </button>
                     </div>
