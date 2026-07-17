@@ -840,6 +840,7 @@ export function PosterCard({
           ref={menuTriggerRef}
           className="wl2g-more-trigger"
           aria-label="その他の操作"
+          aria-haspopup="menu"
           aria-expanded={menuOpen}
           onClick={(e) => {
             e.stopPropagation();
@@ -850,10 +851,11 @@ export function PosterCard({
           <MoreVertical size={16} aria-hidden="true" />
         </button>
         {menuOpen ? (
-          <div className="wl2g-more-panel">
+          <div className="wl2g-more-panel" role="menu">
             {onChangeStatus ? (
               <button
                 type="button"
+                role="menuitem"
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenuOpen(false);
@@ -866,6 +868,7 @@ export function PosterCard({
             {onRemove ? (
               <button
                 type="button"
+                role="menuitem"
                 className="wl2g-more-danger"
                 onClick={(e) => {
                   e.stopPropagation();
