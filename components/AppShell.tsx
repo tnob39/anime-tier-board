@@ -17,14 +17,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isPublic = PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (isPublic) {
-    return <main id="main-content">{children}</main>;
+    return (
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
+    );
   }
 
   return (
     <>
       <GlobalNav />
       <AppBadgeUpdater />
-      <main id="main-content">{children}</main>
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
       <MobileNav />
     </>
   );
