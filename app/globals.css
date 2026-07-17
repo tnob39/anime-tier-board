@@ -6027,14 +6027,14 @@ a.cl-history-title:hover {
   flex: 1;
   font-size: 9px;
   font-weight: 700;
-  padding: 2px 3px;
+  padding: 6px 3px;
   border-radius: 5px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
   white-space: nowrap;
-  min-height: 20px;
+  min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
