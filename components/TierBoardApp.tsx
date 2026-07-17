@@ -902,7 +902,11 @@ export function TierBoardApp({
             disabled={loading}
             title="再取得"
           >
-            {loading ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <RefreshCw size={18} />}
+            {loading ? (
+              <Loader2 className="spin" size={18} aria-hidden="true" />
+            ) : (
+              <RefreshCw size={18} aria-hidden="true" />
+            )}
             <span>再取得</span>
           </button>
 
@@ -916,9 +920,9 @@ export function TierBoardApp({
             {sharing ? (
               <Loader2 className="spin" size={18} aria-hidden="true" />
             ) : copyConfirm ? (
-              <Check size={18} />
+              <Check size={18} aria-hidden="true" />
             ) : (
-              <Share2 size={18} />
+              <Share2 size={18} aria-hidden="true" />
             )}
             <span>{copyConfirm ? "コピーしました" : "共有"}</span>
           </button>
@@ -933,7 +937,7 @@ export function TierBoardApp({
               aria-expanded={toolbarMenuOpen}
               title="その他の操作"
             >
-              <MoreHorizontal size={18} />
+              <MoreHorizontal size={18} aria-hidden="true" />
               <span>その他</span>
             </button>
 
