@@ -48,6 +48,7 @@ export function CacheControls({ emptyCount }: { emptyCount: number }) {
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
         <button
+          type="button"
           onClick={() => void clearEmptyCache()}
           disabled={loading || emptyCount === 0}
           style={{
@@ -65,6 +66,7 @@ export function CacheControls({ emptyCount }: { emptyCount: number }) {
         </button>
 
         <button
+          type="button"
           onClick={() => void prefetchAll()}
           disabled={loading}
           style={{

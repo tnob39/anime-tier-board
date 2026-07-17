@@ -1114,6 +1114,7 @@ export function EditSheet({
         <div className="wl2g-sheet-head">
           <h3 id={titleId}>{anime.title}</h3>
           <button
+            type="button"
             className="wl2g-close"
             onClick={onClose}
             aria-label="閉じる"
