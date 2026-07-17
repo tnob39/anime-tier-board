@@ -102,7 +102,7 @@ export function WeeklyBroadcastCalendar({
         {activeDays.map((day) => (
           <div key={day} ref={day === today ? todayLaneRef : undefined}>
             <CardLane
-              heading={`${DAY_LABELS[day]}${day === today ? " 🔴" : ""}`}
+              heading={`${DAY_LABELS[day]}${day === today ? " 🔴（本日）" : ""}`}
               count={grouped[day].length}
               items={grouped[day].map(toCardData)}
               className={day === today ? "card-lane--today" : undefined}
