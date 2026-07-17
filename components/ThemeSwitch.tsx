@@ -32,9 +32,9 @@ export function ThemeSwitch() {
             className={active ? "theme-switch-btn is-active" : "theme-switch-btn"}
             onClick={() => setThemePref(opt.pref)}
           >
-            <Icon size={16} className="theme-switch-icon" />
+            <Icon size={16} className="theme-switch-icon" aria-hidden="true" />
             <span>{opt.label}</span>
-            {active && <Check size={15} className="theme-switch-check" />}
+            {active && <Check size={15} className="theme-switch-check" aria-hidden="true" />}
           </button>
         );
       })}
