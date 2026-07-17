@@ -42,6 +42,7 @@ export default function AnimeCardPlaceholder({
     <div
       className={["anime-card-placeholder", className].filter(Boolean).join(" ")}
       style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+      role="img"
       aria-label={title}
       draggable={draggable}
     >
