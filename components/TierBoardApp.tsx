@@ -980,7 +980,7 @@ export function TierBoardApp({
                     disabled={!board || loading || !items.length}
                     title="人気順で自動的にTier配置"
                   >
-                    <Sparkles size={16} />
+                    <Sparkles size={16} aria-hidden="true" />
                     <span>自動配置</span>
                   </button>
 
@@ -994,7 +994,7 @@ export function TierBoardApp({
                     disabled={!board}
                     title="Tier表をリセット"
                   >
-                    <RotateCcw size={16} />
+                    <RotateCcw size={16} aria-hidden="true" />
                     <span>リセット</span>
                   </button>
                 </div>
