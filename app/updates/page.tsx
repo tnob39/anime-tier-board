@@ -1239,14 +1239,14 @@ export default function UpdatesPage() {
                         className="updates-icon-wrap"
                         style={{ background: `${change.iconColor}1a` }}
                       >
-                        <Icon size={22} color={change.iconColor} />
+                        <Icon size={22} color={change.iconColor} aria-hidden="true" />
                       </span>
                       <div className="updates-change-text">
                         <strong>{change.title}</strong>
                         <p>{change.description}</p>
                       </div>
                       {change.href ? (
-                        <span className="updates-arrow">›</span>
+                        <span className="updates-arrow" aria-hidden="true">›</span>
                       ) : null}
                     </>
                   );
