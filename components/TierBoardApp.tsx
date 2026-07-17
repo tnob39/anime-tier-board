@@ -859,7 +859,7 @@ export function TierBoardApp({
             {isAuthenticated && saveSuccessVisible ? (
               <span className="save-success-check" role="status" aria-live="polite">
                 {" / "}
-                <Check size={12} strokeWidth={3} />
+                <Check size={12} strokeWidth={3} aria-hidden="true" />
                 保存済み
               </span>
             ) : null}
@@ -1113,7 +1113,7 @@ export function TierBoardApp({
               disabled={!board}
               title="Tierを追加"
             >
-              <Plus size={18} />
+              <Plus size={18} aria-hidden="true" />
               <span>Tierを追加</span>
             </button>
           </section>
