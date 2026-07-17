@@ -1253,7 +1253,7 @@ export function EditSheet({
               if (anime.siteUrl) window.open(anime.siteUrl, "_blank");
             }}
           >
-            <ExternalLink size={16} style={{ marginRight: 4 }} /> 詳細
+            <ExternalLink size={16} aria-hidden="true" style={{ marginRight: 4 }} /> 詳細
           </button>
         </div>
 
@@ -1264,7 +1264,7 @@ export function EditSheet({
           onClick={onRemove}
           disabled={saving}
         >
-          <Trash2 size={16} style={{ marginRight: 6 }} /> 視聴解除（削除）
+          <Trash2 size={16} aria-hidden="true" style={{ marginRight: 6 }} /> 視聴解除（削除）
         </button>
 
         <div className="wl2g-notice">変更は保存ボタンで確定します（ステータスは即時保存）。</div>
