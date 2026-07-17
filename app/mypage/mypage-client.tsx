@@ -130,14 +130,14 @@ export function MyPageClient({
             </div>
           ) : null}
           <Link href="/watchlist" className="hamburger-nav-item">
-            <ListChecks size={18} className="hamburger-nav-icon" />
+            <ListChecks size={18} className="hamburger-nav-icon" aria-hidden="true" />
             <span>マイリストを見る（全{total}件）</span>
-            <ChevronRight size={18} className="mypage-link-arrow" />
+            <ChevronRight size={18} className="mypage-link-arrow" aria-hidden="true" />
           </Link>
           <Link href="/dashboard" className="hamburger-nav-item">
-            <BarChart3 size={18} className="hamburger-nav-icon" />
+            <BarChart3 size={18} className="hamburger-nav-icon" aria-hidden="true" />
             <span>分析で詳細を見る</span>
-            <ChevronRight size={18} className="mypage-link-arrow" />
+            <ChevronRight size={18} className="mypage-link-arrow" aria-hidden="true" />
           </Link>
         </section>
       ) : null}
@@ -157,9 +157,9 @@ export function MyPageClient({
                 href="/dashboard?section=subscriptions"
                 className="hamburger-nav-item"
               >
-                <CreditCard size={18} className="hamburger-nav-icon" />
+                <CreditCard size={18} className="hamburger-nav-icon" aria-hidden="true" />
                 <span>サブスク管理</span>
-                <ChevronRight size={18} className="mypage-link-arrow" />
+                <ChevronRight size={18} className="mypage-link-arrow" aria-hidden="true" />
               </Link>
             </>
           ) : (
@@ -167,9 +167,9 @@ export function MyPageClient({
               href="/dashboard?section=subscriptions"
               className="hamburger-nav-item"
             >
-              <CreditCard size={18} className="hamburger-nav-icon" />
+              <CreditCard size={18} className="hamburger-nav-icon" aria-hidden="true" />
               <span>サブスクを登録してカバー率をチェック</span>
-              <ChevronRight size={18} className="mypage-link-arrow" />
+              <ChevronRight size={18} className="mypage-link-arrow" aria-hidden="true" />
             </Link>
           )}
         </section>
@@ -182,9 +182,9 @@ export function MyPageClient({
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href} className="hamburger-nav-item">
-                <Icon size={18} className="hamburger-nav-icon" />
+                <Icon size={18} className="hamburger-nav-icon" aria-hidden="true" />
                 <span>{item.label}</span>
-                <ChevronRight size={18} className="mypage-link-arrow" />
+                <ChevronRight size={18} className="mypage-link-arrow" aria-hidden="true" />
               </Link>
             );
           })}
