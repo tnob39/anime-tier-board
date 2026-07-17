@@ -256,7 +256,7 @@ export function WatchlistShareClient({
 
       <section className="comment-panel" aria-label="コメント">
         <div className="comment-heading">
-          <MessageCircle size={18} />
+          <MessageCircle size={18} aria-hidden="true" />
           <h2>コメント</h2>
           <span>{comments.length}</span>
         </div>
