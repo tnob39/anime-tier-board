@@ -193,13 +193,13 @@ export function ChangelogSection() {
           const inner = (
             <>
               <span className="cl-icon-wrap" style={{ background: `${change.iconColor}1a` }}>
-                <Icon size={20} color={change.iconColor} />
+                <Icon size={20} color={change.iconColor} aria-hidden="true" />
               </span>
               <div className="cl-icon-text">
                 <strong>{change.title}</strong>
                 <p>{change.description}</p>
               </div>
-              {change.href ? <span className="cl-icon-arrow">›</span> : null}
+              {change.href ? <span className="cl-icon-arrow" aria-hidden="true">›</span> : null}
             </>
           );
           return (
