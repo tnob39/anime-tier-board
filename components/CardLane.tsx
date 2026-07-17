@@ -68,11 +68,15 @@ function LaneCard({
   item: LaneCardData;
   onClick?: (item: LaneCardData) => void;
 }) {
+  const statusLabel = item.status ?? (item.statusVariant ? STATUS_LABEL[item.statusVariant] : "");
+  const ariaMeta = [item.noteLabel, statusLabel].filter(Boolean);
+  const ariaLabel = ariaMeta.length ? `${item.title}（${ariaMeta.join("、")}）` : item.title;
+
   return (
     <button
       className={["lane-card", item.dimmed ? "lane-card--dimmed" : ""].filter(Boolean).join(" ")}
       onClick={() => onClick?.(item)}
-      aria-label={item.noteLabel ? `${item.title}（${item.noteLabel}）` : item.title}
+      aria-label={ariaLabel}
       type="button"
     >
       <div className="lane-card-poster">
