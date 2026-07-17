@@ -99,7 +99,7 @@ export function DashboardClient({
               title={hasData ? "分析を共有" : "共有できる視聴データがありません"}
               aria-label={hasData ? "分析を共有" : "共有できる視聴データがありません"}
             >
-              {sharing ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Share2 size={18} />}
+              {sharing ? <Loader2 className="spin" size={18} aria-hidden="true" /> : <Share2 size={18} aria-hidden="true" />}
             </button>
           </div>
         </header>
