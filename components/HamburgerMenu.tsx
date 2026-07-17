@@ -96,6 +96,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
         <div className="hamburger-head">
           <span className="hamburger-title" id="hamburger-menu-title">設定</span>
           <button
+            type="button"
             ref={closeButtonRef}
             className="hamburger-close-btn"
             onClick={onClose}
