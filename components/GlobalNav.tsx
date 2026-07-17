@@ -141,6 +141,7 @@ export function GlobalNav() {
                     <div
                       className="user-menu-backdrop"
                       onClick={() => setIsUserMenuOpen(false)}
+                      role="presentation"
                     />
                     <div className="user-dropdown" role="menu" ref={userMenuPanelRef}>
                       <p
