@@ -125,7 +125,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
                     className="hamburger-nav-item"
                     onClick={() => signIn("google")}
                   >
-                    <Icon size={18} className="hamburger-nav-icon" />
+                    <Icon size={18} className="hamburger-nav-icon" aria-hidden="true" />
                     <span>{item.label}</span>
                     <Lock size={14} className="hamburger-locked-icon" aria-hidden="true" />
                   </button>
@@ -138,7 +138,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
                   className="hamburger-nav-item"
                   onClick={onClose}
                 >
-                  <Icon size={18} className="hamburger-nav-icon" />
+                  <Icon size={18} className="hamburger-nav-icon" aria-hidden="true" />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -155,7 +155,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
 
         <section className="hamburger-section">
           <Link href="/updates" className="hamburger-nav-item" onClick={onClose}>
-            <Megaphone size={18} className="hamburger-nav-icon" />
+            <Megaphone size={18} className="hamburger-nav-icon" aria-hidden="true" />
             <span>更新情報</span>
           </Link>
         </section>
