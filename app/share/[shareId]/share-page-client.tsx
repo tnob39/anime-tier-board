@@ -22,6 +22,7 @@ export function SharePageClient({
   const [commentBody, setCommentBody] = useState("");
   const [commenting, setCommenting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const itemMap = useMemo(
     () => new Map(initialShare.items.map((item) => [item.id, item])),
     [initialShare.items]
@@ -66,7 +67,7 @@ export function SharePageClient({
     }
 
     if (!isAuthenticated) {
-      void signIn("google");
+      setLoginPromptOpen(true);
       return;
     }
 
@@ -109,6 +110,28 @@ export function SharePageClient({
         <div className="notice error" role="alert">
           {message}
         </div>
+      ) : null}
+
+      {loginPromptOpen ? (
+        <section className="notice share-login-prompt" aria-label="ログインの確認">
+          <p>コメントを送るにはログインが必要です。</p>
+          <div className="share-login-prompt-actions">
+            <button
+              className="command-button emphasis-button"
+              type="button"
+              onClick={() => void signIn("google")}
+            >
+              Googleでログイン
+            </button>
+            <button
+              className="command-button"
+              type="button"
+              onClick={() => setLoginPromptOpen(false)}
+            >
+              閉じる
+            </button>
+          </div>
+        </section>
       ) : null}
 
       <section className="export-surface share-surface" aria-label="共有されたTier表">
@@ -217,7 +240,7 @@ export function SharePageClient({
           <button
             className="command-button emphasis-button login-comment-button"
             type="button"
-            onClick={() => void signIn("google")}
+            onClick={() => setLoginPromptOpen(true)}
           >
             Google ログインしてコメント
           </button>

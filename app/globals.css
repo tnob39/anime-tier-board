@@ -1791,6 +1791,26 @@ button:disabled {
   justify-self: flex-start;
 }
 
+.share-login-prompt {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.share-login-prompt p {
+  margin: 0;
+}
+
+.share-login-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.share-login-prompt-actions .command-button {
+  min-height: 44px;
+}
+
 .dashboard-main {
   display: grid;
   gap: 18px;
