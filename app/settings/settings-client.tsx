@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { PushToggle } from "@/components/PushToggle";
 import { SubscriptionPicker } from "@/components/SubscriptionPicker";
 import { readNavV5, setNavV5 } from "@/lib/nav-flag";
 
 export function SettingsClient({ initialServiceIds }: { initialServiceIds: string[] }) {
+  const { data: session, status } = useSession();
   const [serviceIds, setServiceIds] = useState(initialServiceIds);
   const [message, setMessage] = useState<string | null>(null);
   const [navV5, setNavV5State] = useState(false);
@@ -53,6 +55,23 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
           分析へ
         </Link>
       </header>
+
+      <section className="settings-panel">
+        <h2>アカウント</h2>
+        <div className="mypage-account">
+          {status === "loading" ? (
+            <span>ログイン情報を読み込み中...</span>
+          ) : (
+            <>
+              <strong>{session?.user?.name ?? "Googleアカウント"}</strong>
+              {session?.user?.email ? <span>{session.user.email}</span> : null}
+            </>
+          )}
+        </div>
+        <button type="button" className="command-button" onClick={() => void signOut()}>
+          ログアウト
+        </button>
+      </section>
 
       <section className="settings-panel">
         <h2>ベータ機能</h2>
