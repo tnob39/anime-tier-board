@@ -22,6 +22,7 @@ export function SharePageClient({
   const [commentBody, setCommentBody] = useState("");
   const [commenting, setCommenting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const itemMap = useMemo(
     () => new Map(initialShare.items.map((item) => [item.id, item])),
     [initialShare.items]
@@ -30,6 +31,7 @@ export function SharePageClient({
     (tier) => tier.id !== UNRANKED_TIER_ID
   );
   const isAuthenticated = authStatus === "authenticated";
+  const seasonLabel = `${initialShare.board.seasonYear}年${SEASON_LABELS[initialShare.board.season]}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +67,7 @@ export function SharePageClient({
     }
 
     if (!isAuthenticated) {
-      void signIn("google");
+      setLoginPromptOpen(true);
       return;
     }
 
@@ -99,10 +101,8 @@ export function SharePageClient({
     <main className="app-main share-main">
       <header className="share-header">
         <div>
-          <h1>Tier表シェア</h1>
-          <p>
-            {initialShare.board.seasonYear} {SEASON_LABELS[initialShare.board.season]}
-          </p>
+          <h1>今期アニメTier表</h1>
+          <p>{seasonLabel}</p>
         </div>
       </header>
 
@@ -112,11 +112,31 @@ export function SharePageClient({
         </div>
       ) : null}
 
+      {loginPromptOpen ? (
+        <section className="notice share-login-prompt" aria-label="ログインの確認">
+          <p>コメントを送るにはログインが必要です。</p>
+          <div className="share-login-prompt-actions">
+            <button
+              className="command-button emphasis-button"
+              type="button"
+              onClick={() => void signIn("google")}
+            >
+              Googleでログイン
+            </button>
+            <button
+              className="command-button"
+              type="button"
+              onClick={() => setLoginPromptOpen(false)}
+            >
+              閉じる
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       <section className="export-surface share-surface" aria-label="共有されたTier表">
         <div className="export-heading">
-          <strong>
-            {initialShare.board.seasonYear} {SEASON_LABELS[initialShare.board.season]}
-          </strong>
+          <strong>{seasonLabel}</strong>
         </div>
         <div className="tier-list">
           {visibleTiers.map((tier) => (
@@ -222,7 +242,7 @@ export function SharePageClient({
           <button
             className="command-button emphasis-button login-comment-button"
             type="button"
-            onClick={() => void signIn("google")}
+            onClick={() => setLoginPromptOpen(true)}
           >
             Google ログインしてコメント
           </button>

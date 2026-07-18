@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: light;
   --background: #f6f7f8;
   --surface: #ffffff;
@@ -1809,6 +1809,26 @@ button:disabled {
 
 .login-comment-button {
   justify-self: flex-start;
+}
+
+.share-login-prompt {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.share-login-prompt p {
+  margin: 0;
+}
+
+.share-login-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.share-login-prompt-actions .command-button {
+  min-height: 44px;
 }
 
 .dashboard-main {
@@ -5604,6 +5624,11 @@ a.cl-history-title:hover {
   color: var(--ink-2);
   margin: 0 0 24px;
   line-height: 1.6;
+}
+
+.home-guest-seasonal {
+  margin: 0 0 24px;
+  text-align: left;
 }
 
 .home-guest-actions {
