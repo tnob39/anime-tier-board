@@ -135,7 +135,7 @@ export function SharePageClient({
                   .map((itemId) => itemMap.get(itemId))
                   .filter((item): item is AnimeItem => Boolean(item))
                   .map((item) => (
-                    <article key={item.id} className="anime-card is-compact" title={item.title}>
+                    <article key={item.id} className="anime-card" title={item.title}>
                       {item.proxiedImageUrl ? (
                         <img src={item.proxiedImageUrl} alt={item.title} draggable={false} loading="lazy" />
                       ) : (
@@ -152,6 +152,7 @@ export function SharePageClient({
                           />
                         </span>
                       ) : null}
+                      <p className="anime-title">{item.title}</p>
                     </article>
                   ))}
               </div>
