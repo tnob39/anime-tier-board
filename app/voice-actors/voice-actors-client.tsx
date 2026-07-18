@@ -79,7 +79,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
                   <img src={actor.imageUrl} alt={actor.name} loading="lazy" />
                 ) : (
                   <div className="voice-avatar">
-                    <Mic2 size={22} />
+                    <Mic2 size={22} aria-hidden="true" />
                   </div>
                 )}
                 <div>
@@ -87,7 +87,7 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
                   {actor.nativeName ? <span>{actor.nativeName}</span> : null}
                   {actor.siteUrl ? (
                     <a href={actor.siteUrl} target="_blank" rel="noreferrer">
-                      <ExternalLink size={14} />
+                      <ExternalLink size={14} aria-hidden="true" />
                       詳細
                       <span className="sr-only">（新しいタブで開きます）</span>
                     </a>
