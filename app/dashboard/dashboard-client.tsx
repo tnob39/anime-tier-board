@@ -124,8 +124,8 @@ export function DashboardClient({
         <div className="tutorial-empty-callout">
           <strong>まだ集計データがありません</strong>
           <span>作品にステータスを付けると、ジャンル・声優の傾向が見えます。</span>
-          <Link className="command-button emphasis-button" href="/watchlist">
-            視聴管理へ
+          <Link className="command-button emphasis-button" href="/explore">
+            作品を探す
           </Link>
         </div>
       ) : null}
@@ -208,8 +208,8 @@ function SubscriptionAnalyticsSection({
           <h2>サブスク診断</h2>
           <p>作品にステータスを付けると、見放題カバー率を計算できます。</p>
         </div>
-        <Link className="command-button emphasis-button" href="/watchlist">
-          視聴管理へ
+        <Link className="command-button emphasis-button" href="/explore">
+          作品を探す
         </Link>
       </section>
     );
