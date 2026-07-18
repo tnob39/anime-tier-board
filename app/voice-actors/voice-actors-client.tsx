@@ -53,9 +53,6 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
           <h1>声優別の参加作品</h1>
           <p>{actors.length}人の声優を保存済み作品から集計</p>
         </div>
-        <Link className="command-button" href="/">
-          ボードに戻る
-        </Link>
       </header>
 
       <section className="voice-search">
@@ -129,7 +126,10 @@ export function VoiceActorsClient({ statuses }: { statuses: AnimeStatusRecord[] 
           ) : (
             <>
               <h2>声優情報がまだありません</h2>
-              <p>声優情報を含む作品をStatus保存すると、このページに表示されます。</p>
+              <p>作品に「見たい」を付けると、声優ごとの出演作がここに集まります。</p>
+              <Link className="command-button emphasis-button" href="/#home-add-section">
+                作品を探す
+              </Link>
             </>
           )}
         </section>
