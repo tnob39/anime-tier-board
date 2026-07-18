@@ -534,7 +534,7 @@ export default function StatusBottomSheet({
           <div className="sbs-header">
             <div className="sbs-thumb">
               {cover ? (
-                <img src={cover} alt="" loading="lazy" />
+                <img src={cover} alt="" aria-hidden="true" loading="lazy" />
               ) : (
                 <div className="sbs-thumb-fallback">No Image</div>
               )}
@@ -611,7 +611,7 @@ export default function StatusBottomSheet({
                     className="sbs-stream-chip"
                   >
                     {provider.logoUrl ? (
-                      <img src={provider.logoUrl} alt="" loading="lazy" />
+                      <img src={provider.logoUrl} alt="" aria-hidden="true" loading="lazy" />
                     ) : null}
                     {provider.name}
                     <ExternalLink size={12} aria-hidden="true" />

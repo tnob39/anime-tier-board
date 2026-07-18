@@ -1153,7 +1153,7 @@ export function EditSheet({
                 className="wl2g-watch-chip"
               >
                 {provider.logoUrl ? (
-                  <img src={provider.logoUrl} alt="" width={16} height={16} loading="lazy" />
+                  <img src={provider.logoUrl} alt="" aria-hidden="true" width={16} height={16} loading="lazy" />
                 ) : null}
                 {provider.name}
                 <ExternalLink size={12} aria-hidden="true" />

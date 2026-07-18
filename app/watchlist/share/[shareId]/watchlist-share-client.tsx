@@ -266,7 +266,7 @@ export function WatchlistShareClient({
             comments.map((comment) => (
               <article key={comment.id} className="comment-card">
                 {comment.userImage ? (
-                  <img src={comment.userImage} alt="" loading="lazy" />
+                  <img src={comment.userImage} alt="" aria-hidden="true" loading="lazy" />
                 ) : (
                   <div className="comment-avatar" />
                 )}

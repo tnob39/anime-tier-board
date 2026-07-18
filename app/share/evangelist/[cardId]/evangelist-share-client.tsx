@@ -33,7 +33,7 @@ export function EvangelistShareClient({
           <section className="evangelist-share-recommendation" aria-label="おすすめコメント">
             <div className="evangelist-share-author">
               {initialCard.authorImage ? (
-                <img src={initialCard.authorImage} alt="" loading="lazy" />
+                <img src={initialCard.authorImage} alt="" aria-hidden="true" loading="lazy" />
               ) : (
                 <span className="evangelist-share-author-fallback" aria-hidden="true">
                   {authorLabel.slice(0, 1)}

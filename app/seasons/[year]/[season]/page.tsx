@@ -256,7 +256,7 @@ export default async function SeasonPage({
                             rel="noreferrer"
                           >
                             {provider.logoUrl ? (
-                              <img src={provider.logoUrl} alt="" loading="lazy" />
+                              <img src={provider.logoUrl} alt="" aria-hidden="true" loading="lazy" />
                             ) : null}
                             {provider.name}
                             <span className="sr-only">（新しいタブで開きます）</span>
@@ -264,7 +264,7 @@ export default async function SeasonPage({
                         ) : (
                           <span key={provider.id}>
                             {provider.logoUrl ? (
-                              <img src={provider.logoUrl} alt="" loading="lazy" />
+                              <img src={provider.logoUrl} alt="" aria-hidden="true" loading="lazy" />
                             ) : null}
                             {provider.name}
                           </span>
