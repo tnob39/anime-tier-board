@@ -54,7 +54,7 @@ export function EvangelistShareClient({
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <Play size={18} />
+                  <Play size={18} aria-hidden="true" />
                   <span>{provider.name} で見る</span>
                   <span className="sr-only">（新しいタブで開きます）</span>
                 </a>
@@ -63,7 +63,7 @@ export function EvangelistShareClient({
           ) : null}
 
           <p className="evangelist-share-views">
-            <Eye size={16} />
+            <Eye size={16} aria-hidden="true" />
             <span>{initialCard.viewCount}人が見ました</span>
           </p>
         </div>
