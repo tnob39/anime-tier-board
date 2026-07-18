@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, PlayCircle, Plus, Search, Star, TrendingUp } from "lucide-react";
+import { ExternalLink, Loader2, PlayCircle, Plus, Search, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
@@ -366,6 +366,7 @@ export function ExploreClient({
                     </button>
                   )}
                   <a className="command-button" href={entry.item.siteUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink size={14} aria-hidden="true" />
                     詳細
                     <span className="sr-only">（新しいタブで開きます）</span>
                   </a>
