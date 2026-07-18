@@ -967,7 +967,13 @@ export function TierBoardApp({
                     type="button"
                     onClick={() => {
                       setToolbarMenuOpen(false);
-                      handleAutoPublicTier();
+                      if (
+                        window.confirm(
+                          "現在の配置を人気順で上書きします。よろしいですか？"
+                        )
+                      ) {
+                        handleAutoPublicTier();
+                      }
                     }}
                     disabled={!board || loading || !items.length}
                     title="人気順で自動的にTier配置"
