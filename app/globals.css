@@ -5656,6 +5656,37 @@ a.cl-history-title:hover {
   color: var(--accent);
 }
 
+/* ホーム: 期まとめ共有 CTA */
+.home-share-cta {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin: 12px 12px 4px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.home-share-cta-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.home-share-cta-note {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.home-share-cta .command-button {
+  min-height: 44px;
+  margin-top: 4px;
+}
+
 .home-calendar-empty {
   padding: 20px 0;
 }

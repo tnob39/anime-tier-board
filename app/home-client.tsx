@@ -231,6 +231,19 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
         />
       ) : null}
 
+      {/* 期まとめ共有 CTA — 期別レーン直後・追加候補/放映カレンダー前。0件時は非表示 */}
+      {items.length > 0 ? (
+        <section className="home-share-cta" aria-labelledby="home-share-cta-heading">
+          <h2 id="home-share-cta-heading" className="home-share-cta-title">
+            今期のアニメをまとめて共有
+          </h2>
+          <p className="home-share-cta-note">期を選んで共有リンクを作れます</p>
+          <Link href="/lab/promote?from=home" className="command-button">
+            共有リンクを作る
+          </Link>
+        </section>
+      ) : null}
+
       {/* 発見レーン（今期新着おすすめ） — preserved as-is */}
       {addSection}
 
