@@ -30,6 +30,7 @@ export function SharePageClient({
     (tier) => tier.id !== UNRANKED_TIER_ID
   );
   const isAuthenticated = authStatus === "authenticated";
+  const seasonLabel = `${initialShare.board.seasonYear}年${SEASON_LABELS[initialShare.board.season]}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -99,10 +100,8 @@ export function SharePageClient({
     <main className="app-main share-main">
       <header className="share-header">
         <div>
-          <h1>Tier表シェア</h1>
-          <p>
-            {initialShare.board.seasonYear} {SEASON_LABELS[initialShare.board.season]}
-          </p>
+          <h1>今期アニメTier表</h1>
+          <p>{seasonLabel}</p>
         </div>
       </header>
 
@@ -114,9 +113,7 @@ export function SharePageClient({
 
       <section className="export-surface share-surface" aria-label="共有されたTier表">
         <div className="export-heading">
-          <strong>
-            {initialShare.board.seasonYear} {SEASON_LABELS[initialShare.board.season]}
-          </strong>
+          <strong>{seasonLabel}</strong>
         </div>
         <div className="tier-list">
           {visibleTiers.map((tier) => (
