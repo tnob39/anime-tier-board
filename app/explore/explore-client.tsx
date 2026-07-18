@@ -39,7 +39,7 @@ export function ExploreClient({
   initialSubscriptions: UserSubscription[];
 }) {
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear - 10);
+  const [year, setYear] = useState(currentYear);
   const [sortMode, setSortMode] = useState<SortMode>("fit");
   const [items, setItems] = useState<AnimeItem[]>([]);
   const [statusMap, setStatusMap] = useState<Record<string, ViewingStatus>>(() =>
@@ -154,6 +154,12 @@ export function ExploreClient({
       setLoading(false);
     }
   }
+
+  // 開いた直後・年代を変更した直後に自動的に読み込む（「さがす」ボタンは手動再取得用に残す）
+  useEffect(() => {
+    void loadYear();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
 
   async function addToWatchlist(item: AnimeItem) {
     setSavingId(item.id);
