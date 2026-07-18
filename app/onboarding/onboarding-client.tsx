@@ -23,7 +23,7 @@ export function OnboardingClient({ initialServiceIds }: { initialServiceIds: str
       throw new Error(payload.error ?? "保存に失敗しました。");
     }
 
-    router.replace("/dashboard");
+    router.replace("/");
   }
 
   async function skipOnboarding() {
@@ -43,7 +43,7 @@ export function OnboardingClient({ initialServiceIds }: { initialServiceIds: str
       throw new Error(payload.error ?? "処理に失敗しました。");
     }
 
-    router.replace("/dashboard");
+    router.replace("/");
   }
 
   return (
