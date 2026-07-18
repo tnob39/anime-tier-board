@@ -222,16 +222,7 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
         />
       ))}
 
-      {/* 見たい — planned */}
-      {plannedItems.length > 0 ? (
-        <PosterLane
-          title="見たい"
-          records={plannedItems}
-          onOpenCard={openSheet}
-        />
-      ) : null}
-
-      {/* 期まとめ共有 CTA — 期別レーン直後・追加候補/放映カレンダー前。0件時は非表示 */}
+      {/* 期まとめ共有 CTA — 期別レーン直後・「見たい」レーン/追加候補/放映カレンダー前。0件時は非表示 */}
       {items.length > 0 ? (
         <section className="home-share-cta" aria-labelledby="home-share-cta-heading">
           <h2 id="home-share-cta-heading" className="home-share-cta-title">
@@ -242,6 +233,15 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
             共有リンクを作る
           </Link>
         </section>
+      ) : null}
+
+      {/* 見たい — planned */}
+      {plannedItems.length > 0 ? (
+        <PosterLane
+          title="見たい"
+          records={plannedItems}
+          onOpenCard={openSheet}
+        />
       ) : null}
 
       {/* 発見レーン（今期新着おすすめ） — preserved as-is */}
