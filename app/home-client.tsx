@@ -222,6 +222,18 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
         />
       ))}
 
+      {/* 期まとめ共有CTA — 今期視聴作品がある場合のみ表示 (#595) */}
+      {(seasonBuckets.find((bucket) => bucket.key === "current")?.items.length ?? 0) > 0 ? (
+        <section className="home-season-share" aria-labelledby="home-season-share-title">
+          <h2 className="sr-only" id="home-season-share-title">
+            今期のアニメを共有
+          </h2>
+          <Link href="/lab/promote?from=home" className="home-season-share-link">
+            今期のアニメをまとめて共有
+          </Link>
+        </section>
+      ) : null}
+
       {/* 見たい — planned */}
       {plannedItems.length > 0 ? (
         <PosterLane

@@ -158,25 +158,27 @@ export function SharePageClient({
                   .map((itemId) => itemMap.get(itemId))
                   .filter((item): item is AnimeItem => Boolean(item))
                   .map((item) => (
-                    <article key={item.id} className="anime-card" title={item.title}>
-                      {item.proxiedImageUrl ? (
-                        <img src={item.proxiedImageUrl} alt={item.title} draggable={false} loading="lazy" />
-                      ) : (
-                        <AnimeCardPlaceholder title={item.title} draggable={false} />
-                      )}
-                      {item.streamingProvidersJp?.flatrate?.[0]?.logoUrl ? (
-                        <span className="share-tier-provider-badge" title={item.streamingProvidersJp.flatrate[0].name}>
-                          <img
-                            src={item.streamingProvidersJp.flatrate[0].logoUrl}
-                            alt={item.streamingProvidersJp.flatrate[0].name}
-                            width={16}
-                            height={16}
-                            loading="lazy"
-                          />
-                        </span>
-                      ) : null}
-                      <p className="anime-title">{item.title}</p>
-                    </article>
+                    <div key={item.id} className="share-tier-card">
+                      <article className="anime-card is-compact" title={item.title}>
+                        {item.proxiedImageUrl ? (
+                          <img src={item.proxiedImageUrl} alt={item.title} draggable={false} loading="lazy" />
+                        ) : (
+                          <AnimeCardPlaceholder title={item.title} draggable={false} />
+                        )}
+                        {item.streamingProvidersJp?.flatrate?.[0]?.logoUrl ? (
+                          <span className="share-tier-provider-badge" title={item.streamingProvidersJp.flatrate[0].name}>
+                            <img
+                              src={item.streamingProvidersJp.flatrate[0].logoUrl}
+                              alt={item.streamingProvidersJp.flatrate[0].name}
+                              width={16}
+                              height={16}
+                              loading="lazy"
+                            />
+                          </span>
+                        ) : null}
+                      </article>
+                      <p className="share-tier-card-title">{item.title}</p>
+                    </div>
                   ))}
               </div>
             </div>
