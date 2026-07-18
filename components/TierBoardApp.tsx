@@ -54,7 +54,7 @@ import {
 import { getCurrentAnimeSeason } from "@/lib/season";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
-import type { AnimeItem, AnimeSeason, AnimeSourceName } from "@/lib/types";
+import type { AnimeItem, AnimeSeason } from "@/lib/types";
 import { SEASON_LABELS, SEASONS } from "@/lib/types";
 
 const STORAGE_VERSION = 1;
@@ -176,8 +176,6 @@ export function TierBoardApp({
     hasValidSeed && initialSeasonalAnime ? initialSeasonalAnime : []
   );
   const [board, setBoard] = useState<BoardState | null>(null);
-  const [source, setSource] = useState<AnimeSourceName | null>(null);
-  const [cached, setCached] = useState(() => hasValidSeed);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(() => !hasValidSeed);
@@ -349,15 +347,11 @@ export function TierBoardApp({
 
       setItems(nextItems);
       setBoard(nextBoard);
-      setSource(payload.source);
-      setCached(payload.cached);
       setWarning(payload.warning ?? payload.enrichWarning ?? null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
       setItems([]);
       setBoard(createDefaultBoard(seasonYear, season, []));
-      setSource(null);
-      setCached(false);
     } finally {
       setLoading(false);
     }
@@ -365,7 +359,7 @@ export function TierBoardApp({
 
   useEffect(() => {
     // For the very first load of the seeded current season, fetch will hit cache instantly.
-    // We still invoke loadAnime to populate source/cached/warning/board consistently.
+    // We still invoke loadAnime to populate warning/board consistently.
     void loadAnime();
   }, [loadAnime]);
 
@@ -973,7 +967,13 @@ export function TierBoardApp({
                     type="button"
                     onClick={() => {
                       setToolbarMenuOpen(false);
-                      handleAutoPublicTier();
+                      if (
+                        window.confirm(
+                          "現在の配置を人気順で上書きします。よろしいですか？"
+                        )
+                      ) {
+                        handleAutoPublicTier();
+                      }
                     }}
                     disabled={!board || loading || !items.length}
                     title="人気順で自動的にTier配置"
@@ -2188,9 +2188,9 @@ async function saveRemoteBoard(board: BoardState, signal: AbortSignal): Promise<
 
 function getSaveStateLabel(state: "local" | "saving" | "saved" | "error"): string {
   if (state === "saving") return "保存中";
-  if (state === "saved") return "Turso保存済み";
+  if (state === "saved") return "保存済み";
   if (state === "error") return "保存失敗";
-  return "ローカル保存";
+  return "この端末に保存中";
 }
 
 function readStoredBoard(storageKey: string): BoardState | null {

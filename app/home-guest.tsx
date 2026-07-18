@@ -31,7 +31,7 @@ export function HomeGuest({ loginRequired = false }: HomeGuestProps) {
             className="command-button emphasis-button"
             onClick={() => void signIn("google")}
           >
-            Googleでログイン
+            ログインして始める
           </button>
           <Link href="/tier" className="command-button">
             今すぐTier表を作る
