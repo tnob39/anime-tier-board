@@ -209,7 +209,7 @@ function SubscriptionAnalyticsSection({
           <p>作品にステータスを付けると、見放題カバー率を計算できます。</p>
         </div>
         <Link className="command-button emphasis-button" href="/watchlist">
-          視聴管理へ
+          マイリストへ
         </Link>
       </section>
     );

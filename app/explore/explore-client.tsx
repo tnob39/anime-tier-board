@@ -169,12 +169,12 @@ export function ExploreClient({
       });
 
       if (!response.ok) {
-        throw new Error("視聴管理への追加に失敗しました。");
+        throw new Error("マイリストへの追加に失敗しました。");
       }
 
       setStatusMap((current) => ({ ...current, [item.id]: "planned" }));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "視聴管理への追加に失敗しました。");
+      setMessage(error instanceof Error ? error.message : "マイリストへの追加に失敗しました。");
     } finally {
       setSavingId(null);
     }
