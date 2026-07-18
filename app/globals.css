@@ -5651,6 +5651,35 @@ a.cl-history-title:hover {
   color: var(--accent);
 }
 
+.home-season-share {
+  margin: 4px 0 8px;
+}
+
+.home-season-share-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-season-share-link:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+.home-season-share-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .home-calendar-empty {
   padding: 20px 0;
 }
