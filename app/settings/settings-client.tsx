@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { LogOut } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import { PushToggle } from "@/components/PushToggle";
 import { SubscriptionPicker } from "@/components/SubscriptionPicker";
 import { readNavV5, setNavV5 } from "@/lib/nav-flag";
 
 export function SettingsClient({ initialServiceIds }: { initialServiceIds: string[] }) {
+  const { data: session } = useSession();
   const [serviceIds, setServiceIds] = useState(initialServiceIds);
   const [message, setMessage] = useState<string | null>(null);
   const [navV5, setNavV5State] = useState(false);
@@ -53,6 +56,17 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
           ダッシュボードへ
         </Link>
       </header>
+
+      <section className="settings-panel">
+        <h2>アカウント</h2>
+        <p title={session?.user?.name ?? session?.user?.email ?? undefined}>
+          {session?.user?.name ?? session?.user?.email ?? "ログイン中"}
+        </p>
+        <button type="button" className="command-button" onClick={() => void signOut()}>
+          <LogOut size={15} aria-hidden="true" />
+          <span>ログアウト</span>
+        </button>
+      </section>
 
       <section className="settings-panel">
         <h2>ベータ機能</h2>
