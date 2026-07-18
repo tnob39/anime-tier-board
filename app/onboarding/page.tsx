@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
   const state = await getSubscriptionState(userId);
 
   if (state.onboardingDone) {
-    redirect("/dashboard");
+    redirect("/");
   }
 
   return (
