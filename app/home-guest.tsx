@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { CalendarDays, Table2, Tv } from "lucide-react";
+import CardLane, { type LaneCardData } from "@/components/CardLane";
+import { fetchSeasonalAnimeClient } from "@/lib/seasonal-anime-client-cache";
+import { getCurrentAnimeSeason } from "@/lib/season";
+import type { AnimeItem } from "@/lib/types";
 import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
 
 type HomeGuestProps = {
@@ -10,7 +15,36 @@ type HomeGuestProps = {
 };
 
 export function HomeGuest({ loginRequired = false }: HomeGuestProps) {
+  const [seasonalAnime, setSeasonalAnime] = useState<AnimeItem[]>([]);
   useSeasonalPrefetch();
+
+  useEffect(() => {
+    let cancelled = false;
+    const { year, season } = getCurrentAnimeSeason();
+
+    void fetchSeasonalAnimeClient(year, season)
+      .then(({ items }) => {
+        if (!cancelled) setSeasonalAnime(items);
+      })
+      .catch(() => {
+        if (!cancelled) setSeasonalAnime([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const seasonalLaneItems: LaneCardData[] = seasonalAnime.slice(0, 12).map((item) => {
+    const provider = item.streamingProvidersJp?.flatrate?.[0];
+    return {
+      id: item.id,
+      title: item.title,
+      coverImage: item.proxiedImageUrl || item.imageUrl,
+      providerLogoUrl: provider?.logoUrl ?? null,
+      providerName: provider?.name ?? null
+    };
+  });
 
   return (
     <main className="app-main home-guest">
@@ -18,13 +52,18 @@ export function HomeGuest({ loginRequired = false }: HomeGuestProps) {
         <p className="home-guest-symbol" aria-hidden="true">n</p>
         <h1 className="home-guest-title">アニメを、自分のものに。</h1>
         <p className="home-guest-desc">
-          Tier表で整理して、視聴履歴を積み上げよう
+          見たいアニメをメモして、どこで配信中かすぐわかる
         </p>
         {loginRequired && (
           <p className="home-guest-login-notice">
             このページの利用にはログインが必要です。Googleでログインしてください。
           </p>
         )}
+        {seasonalLaneItems.length > 0 ? (
+          <div className="home-guest-seasonal">
+            <CardLane heading="🔥 今期の注目" items={seasonalLaneItems} />
+          </div>
+        ) : null}
         <div className="home-guest-actions">
           <button
             type="button"

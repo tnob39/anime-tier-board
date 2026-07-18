@@ -5606,6 +5606,11 @@ a.cl-history-title:hover {
   line-height: 1.6;
 }
 
+.home-guest-seasonal {
+  margin: 0 0 24px;
+  text-align: left;
+}
+
 .home-guest-actions {
   display: flex;
   flex-direction: column;
