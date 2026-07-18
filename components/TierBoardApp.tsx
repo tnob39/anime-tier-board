@@ -836,8 +836,6 @@ export function TierBoardApp({
           <h1>今期アニメTier表</h1>
           <div className="status-line">
             {items.length}作品
-            {source ? ` / ${source === "anilist" ? "AniList" : "Jikan"}` : ""}
-            {cached ? " / キャッシュ" : ""}
             {isAuthenticated && saveState === "saving" ? (
               <span role="status" aria-live="polite">
                 {" / 保存中..."}
