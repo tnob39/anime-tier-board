@@ -989,7 +989,13 @@ export function TierBoardApp({
                     type="button"
                     onClick={() => {
                       setToolbarMenuOpen(false);
-                      handleReset();
+                      if (
+                        window.confirm(
+                          "Tier表を最初からやり直しますか？この操作は取り消せません。"
+                        )
+                      ) {
+                        handleReset();
+                      }
                     }}
                     disabled={!board}
                     title="Tier表をリセット"
