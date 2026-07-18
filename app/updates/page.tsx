@@ -726,7 +726,7 @@ const RELEASES: Release[] = [
         icon: Compass,
         iconColor: "#0ea5e9",
         title: "探索ページの案内を統合",
-        description: "「ボードに戻る」ボタンを削除し、重複していたページタイトルとから文言案内を一本化しました。",
+        description: "「ボードに戻る」ボタンを削除し、重複していたページタイトルと文言案内を一本化しました。",
         href: "/explore",
       },
     ]
@@ -820,7 +820,7 @@ const RELEASES: Release[] = [
       {
         icon: Layers,
         iconColor: "#6366f1",
-        title: "ホームをモード別（シンプル S3 / プロ P3）に刷新",
+        title: "ホームをモード別（シンプル／プロ）に刷新",
         description: "アンケート結果（サブスク派メイン、C案最多）を反映。シンプルは「今すぐ見られる／これから配信／見たい」、プロは進捗バー＋未視聴キャッチアップ＋最近の記録＋Tierリンク。watchedEpisodes未入力時の未視聴過大表示を調整。",
         href: "/",
       },
@@ -884,7 +884,7 @@ const RELEASES: Release[] = [
       {
         icon: Bookmark,
         iconColor: "#f59e0b",
-        title: "アプリバッジ通知（Badging API）",
+        title: "アプリバッジ通知",
         description: "ウォッチリストを開くと、今日放送の視聴中アニメ数がホーム画面のアプリアイコン上にバッジ表示されます（対応ブラウザ・OS のみ）。",
         href: "/watchlist",
       }
