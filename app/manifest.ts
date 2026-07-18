@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "numanie",
     short_name: "numanie",
-    description: "アニメ視聴を自分のものに — ティア表・ウォッチリスト・サブスク管理",
+    description: "アニメ視聴を自分のものに — Tier表・ウォッチリスト・サブスク管理",
     start_url: "/",
     display: "standalone",
     background_color: "#f5f3ff",
@@ -18,10 +18,10 @@ export default function manifest(): MetadataRoute.Manifest {
         description: "放送日が近い視聴中アニメを確認",
       },
       {
-        name: "ティア表",
+        name: "Tier表",
         short_name: "ティア",
         url: "/tier",
-        description: "アニメをティア表で評価",
+        description: "アニメをTier表で評価",
       },
       {
         name: "サブスク診断",

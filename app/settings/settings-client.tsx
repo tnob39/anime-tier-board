@@ -50,7 +50,7 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
           <p>加入中のストリーミングサービスを管理します。</p>
         </div>
         <Link className="command-button" href="/dashboard">
-          ダッシュボードへ
+          分析へ
         </Link>
       </header>
 

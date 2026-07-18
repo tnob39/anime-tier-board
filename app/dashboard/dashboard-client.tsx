@@ -82,12 +82,12 @@ export function DashboardClient({
 
   return (
     <main className="app-main dashboard-main">
-      {!isOwner ? <h1 className="sr-only">好み分析ダッシュボード</h1> : null}
+      {!isOwner ? <h1 className="sr-only">分析</h1> : null}
       {isOwner ? (
         <header className="dashboard-header">
           <div>
-            <p className="eyebrow">集計</p>
-            <h1>好み分析ダッシュボード</h1>
+            <p className="eyebrow">分析</p>
+            <h1>分析</h1>
             <p>{dashboard.totalStatuses}件の視聴ステータスを保存中</p>
           </div>
           <div className="dashboard-actions">
@@ -141,7 +141,7 @@ export function DashboardClient({
             aria-expanded={analysisOpen}
             aria-controls="pref-analysis-accordion-body"
           >
-            好み分析ダッシュボード
+            分析
             <span aria-hidden="true">{analysisOpen ? "−" : "+"}</span>
           </button>
           {analysisOpen ? (
