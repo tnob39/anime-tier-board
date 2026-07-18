@@ -337,11 +337,11 @@ export function ExploreClient({
                 <h2>{entry.item.title}</h2>
                 <div className="explore-badges">
                   <span>
-                    <TrendingUp size={13} />
+                    <TrendingUp size={13} aria-hidden="true" />
                     {formatNumber(entry.item.popularity ?? entry.item.reputation?.popularity)}
                   </span>
                   <span>
-                    <Star size={13} fill="currentColor" />
+                    <Star size={13} fill="currentColor" aria-hidden="true" />
                     {formatScore(entry.item)}
                   </span>
                 </div>
@@ -415,7 +415,7 @@ function StreamingPlatformPills({ item }: { item: AnimeItem }) {
           target="_blank"
           rel="noreferrer"
         >
-          <PlayCircle size={11} />
+          <PlayCircle size={11} aria-hidden="true" />
           <span>{platform.name}</span>
           <span className="sr-only">（新しいタブで開きます）</span>
         </a>
