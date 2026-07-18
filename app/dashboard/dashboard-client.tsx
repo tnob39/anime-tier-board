@@ -122,10 +122,10 @@ export function DashboardClient({
 
       {isOwner && !hasData ? (
         <div className="tutorial-empty-callout">
-          <strong>まだ集計データがありません</strong>
-          <span>作品にステータスを付けると、ジャンル・声優の傾向が見えます。</span>
-          <Link className="command-button emphasis-button" href="/watchlist">
-            視聴管理へ
+          <strong>まだ分析データがありません</strong>
+          <span>作品に「見たい」を付けると、ここに好みの傾向が表示されます。</span>
+          <Link className="command-button emphasis-button" href="/#home-add-section">
+            今期のアニメを見てみる
           </Link>
         </div>
       ) : null}
