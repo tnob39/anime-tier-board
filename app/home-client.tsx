@@ -305,7 +305,6 @@ export function HomeEmptyGuide({ addSection, showOnboarding, onDismiss }: HomeEm
       <h1 className="sr-only">ホーム</h1>
       {showOnboarding ? (
         <section className="home-guide" aria-labelledby="home-guide-title">
-        <p className="home-guide-step-label">STEP 1 / 3</p>
         <h2 className="home-guide-title" id="home-guide-title">
           まずは視聴中を1本だけ追加
         </h2>
