@@ -711,22 +711,22 @@ const RELEASES: Release[] = [
       {
         icon: BarChart3,
         iconColor: "#6366f1",
-        title: "分析タブを整理してスッキリ",
-        description: "「今夜何見る」「最近更新した作品」「更新情報リンク」を削除。ジャンルと声優を横棒グラフで表示し、制作会社欄を廃止。ジャンル名も日本語に変換しました。",
+        title: "ジャンルや声優の傾向が見やすく",
+        description: "ジャンルや声優の傾向を、見やすいグラフで確認できるようになりました。",
         href: "/dashboard",
       },
       {
         icon: Layers,
         iconColor: "#10b981",
-        title: "Tierツールバーを整理",
-        description: "使われにくい「表出力（PNG）」ボタンを削除。「Tier追加」ボタンをリスト末尾に移動し、「リセット」ボタンに文字ラベルを追加しました。",
+        title: "Tier表の操作を見つけやすく",
+        description: "Tier表でよく使う操作を見つけやすく整理しました。",
         href: "/tier",
       },
       {
         icon: Compass,
         iconColor: "#0ea5e9",
-        title: "探索ページの案内を統合",
-        description: "「ボードに戻る」ボタンを削除し、重複していたページタイトルとから文言案内を一本化しました。",
+        title: "探索ページの案内を整理",
+        description: "ページの案内を整理し、作品を探しやすくしました。",
         href: "/explore",
       },
     ]
@@ -770,15 +770,15 @@ const RELEASES: Release[] = [
       {
         icon: ListChecks,
         iconColor: "#10b981",
-        title: "視聴済み話数の手入力を廃止",
-        description: "視聴管理の「何話まで見た？」ステッパーを削除しました。ホームは視聴中の作品を手入力なしで一覧表示するシンプルな構成に戻しています。",
+        title: "視聴中の作品を手入力なしで見渡せる",
+        description: "視聴中の作品を手入力なしで見渡せるようになりました。話数の細かい入力なしでも、続きがすぐわかります。",
         href: "/watchlist",
       },
       {
         icon: Tv2,
         iconColor: "#6366f1",
-        title: "ホームを視聴中ベースに簡素化",
-        description: "シンプル・プロ両モードで「今すぐ見られる」を「視聴中」に変更。未視聴話数の計算に依存せず、ステータスが視聴中の作品をそのまま表示します。",
+        title: "ホームで続きを見つけやすく",
+        description: "ホームで視聴中の作品をそのまま表示し、続きを見つけやすくしました。",
         href: "/",
       },
     ]
@@ -792,21 +792,21 @@ const RELEASES: Release[] = [
       {
         icon: Smartphone,
         iconColor: "#6366f1",
-        title: "下部ナビをモード別に出し分け",
-        description: "シンプルはホーム／視聴中／さがす／サブスク、プロはホーム／Tier／分析／探索の4本に。HOME_DESIGN_OPTIONS の宿題を反映。",
+        title: "よく使うページへ移動しやすく",
+        description: "よく使うページへ、下部ナビからすぐ移動できるようになりました。",
       },
       {
         icon: Bookmark,
         iconColor: "#f59e0b",
-        title: "PWAバッジを未視聴最新話の作品数に変更",
-        description: "今日放送の本数ではなく、視聴中で未視聴話が残っている作品数をホーム画面アイコンに表示します（watchedEpisodes 入力済みのみ）。",
+        title: "未視聴の作品数をホーム画面で確認",
+        description: "未視聴の作品数を、ホーム画面のアイコンから確認できるようになりました。",
         href: "/watchlist",
       },
       {
         icon: ListChecks,
         iconColor: "#10b981",
-        title: "視聴リズム設定を廃止",
-        description: "ペルソナ議論で不要と判断された「毎週リアタイ／まとめて見る／ゆっくり見る」の選択UIを削除しました。",
+        title: "自分のペースで管理しやすく",
+        description: "視聴の進め方を自分のペースで管理しやすくしました。",
         href: "/watchlist",
       },
     ]
@@ -820,8 +820,8 @@ const RELEASES: Release[] = [
       {
         icon: Layers,
         iconColor: "#6366f1",
-        title: "ホームをモード別（シンプル S3 / プロ P3）に刷新",
-        description: "アンケート結果（サブスク派メイン、C案最多）を反映。シンプルは「今すぐ見られる／これから配信／見たい」、プロは進捗バー＋未視聴キャッチアップ＋最近の記録＋Tierリンク。watchedEpisodes未入力時の未視聴過大表示を調整。",
+        title: "ホームを自分の視聴状況に合わせて刷新",
+        description: "今夜見られる作品・これから配信の作品・気になる作品が一目で分かるホームになりました。",
         href: "/",
       },
     ]
@@ -884,8 +884,8 @@ const RELEASES: Release[] = [
       {
         icon: Bookmark,
         iconColor: "#f59e0b",
-        title: "アプリバッジ通知（Badging API）",
-        description: "ウォッチリストを開くと、今日放送の視聴中アニメ数がホーム画面のアプリアイコン上にバッジ表示されます（対応ブラウザ・OS のみ）。",
+        title: "ホーム画面で未視聴の作品数を確認",
+        description: "対応端末では、ホーム画面のアイコンから未視聴の作品数を確認できます。",
         href: "/watchlist",
       }
     ]
