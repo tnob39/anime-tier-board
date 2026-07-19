@@ -27,10 +27,44 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.53",
+    date: "2026-07-19",
+    label: "ホームの次アクション表示とサブスク登録の画面内完結",
+    isLatest: true,
+    changes: [
+      {
+        icon: Zap,
+        iconColor: "#f59e0b",
+        title: "ホームに「次はこれ」カードを表示",
+        description: "視聴中の作品から次に見る1本をホーム上部で提案するカードを追加しました。",
+        href: "/",
+      },
+      {
+        icon: CreditCard,
+        iconColor: "#10b981",
+        title: "分析画面内でサブスク登録が完結",
+        description: "これまで設定画面への遷移が必須だったサブスク登録・編集を、分析画面のボトムシートから直接行えるようにしました。",
+        href: "/dashboard",
+      },
+      {
+        icon: UserCheck,
+        iconColor: "#3b82f6",
+        title: "ログイン後に元のページへ復帰",
+        description: "未ログインで分析・マイリスト・設定・声優ページへアクセスした際、ログイン完了後に自動でそのページへ戻るようにしました。",
+      },
+      {
+        icon: Layers,
+        iconColor: "#8b5cf6",
+        title: "初回案内モーダルの誤タップ対策",
+        description: "背景タップだけで初回案内が閉じて二度と表示されなくなる問題を修正しました。閉じるボタンなどの明示的な操作でのみ閉じます。",
+      },
+    ]
+  },
+  {
     version: "1.52",
     date: "2026-07-19",
     label: "呼称の統一とさがす・共有導線の改善",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: ListChecks,
