@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useDisplayMode } from "@/components/display-mode/DisplayModeProvider";
 import HomeAddSection, { type SeasonScope } from "@/components/HomeAddSection";
 import HomeContextCards from "@/components/HomeContextCards";
 import StatusBottomSheet from "@/components/StatusBottomSheet";
 import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { track } from "@/lib/analytics";
 import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
+import type { HomeNextAction } from "@/lib/home-next-actions";
 import { bucketBySeason } from "@/lib/season-bucket";
 import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
 import { getNextAnimeSeason } from "@/lib/season";
 import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
-import type { AnimeStatusRecord } from "@/lib/statuses";
+import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 import { EditSheet, PosterLane, useWatchlistV2Editor } from "./watchlist/watchlist-client-v2-grok";
 
@@ -25,7 +27,95 @@ type HomeClientProps = {
   initialSeasonalAnime: AnimeItem[];
 };
 
+type HomeNextActionViewState =
+  | { kind: "loading" }
+  | { kind: "success"; action: HomeNextAction }
+  | { kind: "empty" }
+  | { kind: "error" };
+
 const ONBOARDING_DISMISSED_KEY = "anime-tier-board:onboarding:n2-dismissed";
+
+const STATUS_LABEL: Record<ViewingStatus, string> = {
+  planned: "見たい",
+  watching: "視聴中",
+  completed: "視聴済",
+  paused: "一時停止",
+  dropped: "中断",
+};
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
+  );
+}
+
+function hasNextActions(value: unknown): value is { nextActions: unknown[] } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as { nextActions?: unknown }).nextActions)
+  );
+}
+
+function isNullableFiniteNumber(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isHomeNextAction(value: unknown): value is HomeNextAction {
+  if (typeof value !== "object" || value === null) return false;
+
+  const action = value as {
+    anime?: unknown;
+    reasonLabel?: unknown;
+    status?: unknown;
+    watchedEpisodes?: unknown;
+    latestAvailableEpisode?: unknown;
+    unwatchedEpisodes?: unknown;
+  };
+  if (
+    typeof action.reasonLabel !== "string" ||
+    typeof action.status !== "string" ||
+    !Object.hasOwn(STATUS_LABEL, action.status) ||
+    typeof action.anime !== "object" ||
+    action.anime === null ||
+    !isNullableFiniteNumber(action.watchedEpisodes) ||
+    !isNullableFiniteNumber(action.latestAvailableEpisode) ||
+    !isNullableFiniteNumber(action.unwatchedEpisodes)
+  ) {
+    return false;
+  }
+
+  return typeof (action.anime as { title?: unknown }).title === "string";
+}
+
+function resolveNextActionImageUrl(action: HomeNextAction): string | null {
+  const proxied =
+    typeof action.anime.proxiedImageUrl === "string" ? action.anime.proxiedImageUrl.trim() : "";
+  if (proxied) return proxied;
+  const original =
+    typeof action.anime.imageUrl === "string" ? action.anime.imageUrl.trim() : "";
+  if (original) return original;
+  return null;
+}
+
+function formatNextActionMeta(action: HomeNextAction): string | null {
+  const parts: string[] = [];
+  const statusLabel = STATUS_LABEL[action.status];
+  if (statusLabel) {
+    parts.push(statusLabel);
+  }
+  if (action.watchedEpisodes !== null && action.latestAvailableEpisode !== null) {
+    parts.push(`${action.watchedEpisodes}/${action.latestAvailableEpisode}話`);
+  } else if (action.unwatchedEpisodes !== null && action.unwatchedEpisodes > 0) {
+    parts.push(`未視聴 ${action.unwatchedEpisodes}話`);
+  } else if (action.watchedEpisodes !== null) {
+    parts.push(`${action.watchedEpisodes}話まで記録`);
+  } else if (action.latestAvailableEpisode !== null) {
+    parts.push(`最新 ${action.latestAvailableEpisode}話`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
 
 /**
  * ホームのクライアントエントリ（方針③ N1c）。
@@ -34,13 +124,69 @@ const ONBOARDING_DISMISSED_KEY = "anime-tier-board:onboarding:n2-dismissed";
  */
 export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientProps) {
   const router = useRouter();
+  const { mode, hydrated } = useDisplayMode();
   const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
   const [seasonScope, setSeasonScope] = useState<SeasonScope>("current");
   const [nextSeasonAnime, setNextSeasonAnime] = useState<AnimeItem[] | null>(null);
   const [nextSeasonLoading, setNextSeasonLoading] = useState(false);
   const [nextSeasonError, setNextSeasonError] = useState<string | null>(null);
+  const [nextActionState, setNextActionState] = useState<HomeNextActionViewState>({ kind: "loading" });
+  const nextActionAbortRef = useRef<AbortController | null>(null);
   useSeasonalPrefetch(initialSeasonalAnime);
+
+  const fetchNextAction = useCallback(() => {
+    nextActionAbortRef.current?.abort();
+    const controller = new AbortController();
+    nextActionAbortRef.current = controller;
+    setNextActionState({ kind: "loading" });
+
+    fetch("/api/home", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (controller.signal.aborted) return;
+
+        if (!response.ok) {
+          setNextActionState({ kind: "error" });
+          return;
+        }
+
+        let payload: unknown;
+        try {
+          payload = await response.json();
+        } catch {
+          if (controller.signal.aborted) return;
+          setNextActionState({ kind: "error" });
+          return;
+        }
+
+        if (controller.signal.aborted) return;
+
+        if (!hasNextActions(payload)) {
+          setNextActionState({ kind: "error" });
+          return;
+        }
+
+        const first = payload.nextActions[0];
+        if (first === undefined) {
+          setNextActionState({ kind: "empty" });
+        } else if (isHomeNextAction(first)) {
+          setNextActionState({ kind: "success", action: first });
+        } else {
+          setNextActionState({ kind: "error" });
+        }
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted || isAbortError(error)) return;
+        setNextActionState({ kind: "error" });
+      });
+  }, []);
+
+  useEffect(() => {
+    fetchNextAction();
+    return () => {
+      nextActionAbortRef.current?.abort();
+    };
+  }, [fetchNextAction]);
 
   // Prefetch targets from home broadcast-calendar card taps (and general nav)
   // Ensures tapping cards has destination and /tier data paths warmed.
@@ -188,9 +334,19 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
 
   const seasonBuckets = useMemo(() => bucketBySeason(items), [items]);
 
+  const nextActionPanel = (
+    <HomeNextActionPanel
+      state={nextActionState}
+      hydrated={hydrated}
+      mode={mode}
+      onRetry={fetchNextAction}
+    />
+  );
+
   if (items.length === 0) {
     return (
       <HomeEmptyGuide
+        nextActionPanel={nextActionPanel}
         addSection={addSection}
         showOnboarding={hasCheckedOnboarding && !isOnboardingDismissed}
         onDismiss={handleDismissOnboarding}
@@ -201,6 +357,8 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   return (
     <main className="app-main home-main">
       <h1 className="sr-only">ホーム</h1>
+
+      {nextActionPanel}
 
       {/* 続きを見る — watching, updatedAt desc */}
       {watchingItems.length > 0 ? (
@@ -304,17 +462,97 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
   );
 }
 
+type HomeNextActionPanelProps = {
+  state: HomeNextActionViewState;
+  hydrated: boolean;
+  mode: "visual" | "simple";
+  onRetry: () => void;
+};
+
+function HomeNextActionPanel({ state, hydrated, mode, onRetry }: HomeNextActionPanelProps) {
+  if (state.kind === "loading") {
+    return (
+      <section className="home-next-action" aria-label="次にやること">
+        <p className="home-next-action-loading" aria-live="polite">
+          読み込み中…
+        </p>
+      </section>
+    );
+  }
+
+  if (state.kind === "error") {
+    return (
+      <section className="home-next-action" aria-label="次にやること">
+        <div className="home-next-action-error" role="alert">
+          <p className="home-next-action-error-text">次のアクションを取得できませんでした。</p>
+          <button
+            type="button"
+            className="home-next-action-retry"
+            onClick={onRetry}
+          >
+            再試行
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  if (state.kind === "empty") {
+    return (
+      <section className="home-next-action" aria-label="次にやること">
+        <p className="home-next-action-empty">今すぐやることがありません</p>
+      </section>
+    );
+  }
+
+  const { action } = state;
+  const imageUrl = resolveNextActionImageUrl(action);
+  const showImage = hydrated && mode === "visual" && Boolean(imageUrl);
+  const meta = formatNextActionMeta(action);
+
+  return (
+    <section className="home-next-action" aria-label="次にやること">
+      <article className="home-next-action-card">
+        {showImage && imageUrl ? (
+          <img
+            className="home-next-action-img"
+            src={imageUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        ) : null}
+        <div className="home-next-action-body">
+          <h2 className="home-next-action-title">{action.anime.title}</h2>
+          <p className="home-next-action-reason">{action.reasonLabel}</p>
+          {meta ? <p className="home-next-action-meta">{meta}</p> : null}
+          <Link href="/watchlist" className="home-next-action-link">
+            視聴管理を見る
+          </Link>
+        </div>
+      </article>
+    </section>
+  );
+}
+
 /** ログイン済み・未登録ユーザー向けのインラインガイド。 */
 type HomeEmptyGuideProps = {
+  nextActionPanel?: ReactNode;
   addSection: ReactNode;
   showOnboarding: boolean;
   onDismiss: () => void;
 };
 
-export function HomeEmptyGuide({ addSection, showOnboarding, onDismiss }: HomeEmptyGuideProps) {
+export function HomeEmptyGuide({
+  nextActionPanel,
+  addSection,
+  showOnboarding,
+  onDismiss,
+}: HomeEmptyGuideProps) {
   return (
     <main className="app-main home-main">
       <h1 className="sr-only">ホーム</h1>
+      {nextActionPanel}
       {showOnboarding ? (
         <section className="home-guide" aria-labelledby="home-guide-title">
         <h2 className="home-guide-title" id="home-guide-title">
