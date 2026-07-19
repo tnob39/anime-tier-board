@@ -166,8 +166,8 @@ export function WatchlistShareClient({
     <main className="app-main share-main">
       <header className="share-header">
         <div>
-          <h1>追ってるアニメ共有</h1>
-          <p>{initialShare.items.length}件の視聴管理リスト</p>
+          <h1>マイリスト共有</h1>
+          <p>{initialShare.items.length}件のマイリスト</p>
         </div>
         <div className="share-actions">
           {reactionOptions.map((option) => {
@@ -202,7 +202,7 @@ export function WatchlistShareClient({
         <section
           key={bucket.key}
           className={`watchlist-season-section watchlist-season-${bucket.key}`}
-          aria-label={`共有された追ってる作品（${bucket.label}）`}
+          aria-label={`共有されたマイリスト（${bucket.label}）`}
         >
           <header className="watchlist-season-header">
             <h2>{bucket.label}</h2>

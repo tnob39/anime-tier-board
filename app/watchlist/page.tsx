@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 import { WatchlistClientV2Grok } from "./watchlist-client-v2-grok";
 
 export const metadata: Metadata = {
-  title: "視聴管理リスト — numanie"
+  title: "マイリスト — numanie"
 };
 
 export default async function WatchlistPage() {

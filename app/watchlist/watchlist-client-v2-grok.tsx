@@ -318,7 +318,7 @@ export function useWatchlistV2Editor(initialItems: AnimeStatusRecord[]): Watchli
       setShareUrl(url);
       const outcome = await shareOrCopyUrl({
         url,
-        title: "私の視聴管理リスト",
+        title: "私のマイリスト",
         text: "今追ってるアニメをまとめました",
       });
       setShareOutcome(outcome);

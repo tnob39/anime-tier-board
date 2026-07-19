@@ -135,7 +135,7 @@ export async function createWatchlistShare(
   const watchlist: SharedWatchlist = {
     version: 1,
     kind: "watchlist",
-    title: "追ってるアニメ",
+    title: "マイリスト",
     updatedAt: now
   };
 
