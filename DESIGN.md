@@ -2,11 +2,26 @@
 
 This document defines the practical design direction for the next implementation pass. It is intentionally scoped to UI behavior, component treatment, and accessibility. It does not prescribe backend schema names or implementation details beyond what the interface needs.
 
+**IA / decision SSOT (do not invent a parallel nav here):**
+
+| Topic | Canonical source |
+|-------|------------------|
+| Canonical mobile IA (ordered 5 tabs) | `docs/UIUX_RECONSIDERATION_20260711.md` §2 · `docs/UX_ABEMA_IA_REDESIGN_20260626.md` |
+| Auth-role nav / browse / save-login / post-auth return | `docs/UIUX_RECONSIDERATION_20260711.md` §5 |
+| Visual / Simple same-function display mode | `docs/UIUX_RECONSIDERATION_20260711.md` §6 |
+| text-first / non-decorative tier color rules | this file + `docs/UIUX_RECONSIDERATION_20260711.md` §7 |
+
+**Canonical Bottom Nav (order fixed):** ホーム `/` · Tier `/tier` · さがす `/explore` · マイリスト `/watchlist` · マイページ `/mypage`.
+**Out of Bottom Nav:** 分析 `/dashboard` is reached via マイページ only.
+**Historical / rejected (not design targets):** 4-tab IA, watchlist as non-tab, mypage rejected, simple/pro separate IA.
+
 ## Product Posture
 
 Anime Tier Board should feel like a fast personal ranking tool first, then a shareable discussion object. The main experience is operational: users need to scan a season list, move titles between tiers, save/share/export, and understand what changed without fighting the interface.
 
 Design for the smallest useful screen first. Desktop should add density and comfort, not a separate mental model.
+
+**Text-first:** Meaning is carried by always-visible text. Do not use standalone or purely decorative icons. Any remaining utility icon must ship with a permanently visible label; `aria-label` / tooltip alone is not a substitute.
 
 ## Mobile-First Tier Movement
 
@@ -71,7 +86,7 @@ Recommended first set:
 - Shock
 - Confused
 
-Use icons with text labels available to screen readers. On mobile, show icon plus count; on desktop, labels can appear on hover or in an overflow explanation if space is tight.
+Use icons with **always-visible** text labels (or short names), not screen-reader-only names. On mobile, show icon plus label/count; on desktop, keep the same labels visible rather than hover-only.
 
 Reaction behavior:
 - A viewer can select one reaction per shared board by default.
@@ -85,6 +100,18 @@ Reaction display:
 - Show zero-count reactions if the viewer has not reacted, because they are available actions.
 - Highlight the viewer's active reaction with a filled background and stronger border.
 - Keep the total social proof compact in the header, for example "24 reactions".
+
+## Visual / Simple Display Mode
+
+Visual and Simple are **display settings on the same IA**, not separate apps.
+
+- Same ordered 5-tab IA, same routes, same reachable features, same primary CTAs.
+- Do not hide major actions in only one mode or invent mode-specific navigation.
+- Simple: do not issue artwork HTTP requests; do not leave empty image placeholder slots (recompose to text/list layouts).
+- Visual: use images as recognition aids; keep the full card interactive.
+- Auth-role rules (guest / signed-in / owner) and `/dashboard` via mypage apply equally in both modes.
+
+Full decision tables: `docs/UIUX_RECONSIDERATION_20260711.md` §6.
 
 ## Viewing Status UI
 
@@ -136,7 +163,7 @@ Empty/loading/error states:
 - Loading season: skeleton rows or a compact centered loader with the target season named.
 - No anime found: explain the selected season/year and offer refresh or season change.
 - Fetch warning: show the warning without blocking board use if cached data exists.
-- Unauthenticated: local board use should remain available, with a clear note that Google sign-in enables cloud save and comments.
+- Unauthenticated (guest): local board use and browse-first flows remain available; do not put a full-page login wall before value. Google sign-in is required at **save / cloud sync / write** moments (comments, share create, server status). **Release requirement (not current behavior):** after sign-in, return the user to the intended page or resume the interrupted action; see `docs/UIUX_RECONSIDERATION_20260711.md` §5.
 
 ## Color, Spacing, And Component Principles
 
@@ -144,7 +171,8 @@ The app should keep its current restrained utility direction: light surfaces, cl
 
 Color:
 - Keep the base palette neutral: off-white background, white surfaces, dark ink, muted gray text, cool accent.
-- Tier colors are data colors. Do not reuse them for unrelated buttons or alerts.
+- Tier colors are **data colors only** (rank identity). Do not reuse them for decoration, unrelated buttons, or alerts.
+- Tier labels must not rely on color alone: pair each swatch with short visible text (S/A/B, etc.).
 - Use semantic colors consistently: red for destructive/error, amber for warning, teal or blue for primary action.
 - Avoid large decorative gradients, background blobs, and heavy shadows.
 - Every colored tier label must compute or choose readable text color.
@@ -158,9 +186,10 @@ Spacing:
 - Cards should be compact enough to support scanning many anime at once.
 
 Components:
-- Buttons: 40 px minimum height on mobile, 36-40 px on desktop. Icon-only buttons need labels via `aria-label` and tooltips where available.
+- Buttons: 40 px minimum height on mobile, 36-40 px on desktop. Prefer text buttons. If a utility icon remains, **always show a visible text label beside it**; `aria-label` and tooltips are assistive only, never the sole label.
+- Icons: ban standalone or decorative-only icons. Bottom nav keeps icon **plus** always-visible label (no icon-only, no selected-only labels).
 - Cards: 8 px radius or less, clear focus outline, no nested decorative card frames.
-- Tier rows: colored label column, bordered item area, clear empty drop state.
+- Tier rows: colored label column with text rank, bordered item area, clear empty drop state.
 - Bottom sheets: full-width on mobile, max height around 80 vh, sticky action area only if content scrolls.
 - Dialogs/menus: close on Escape, restore focus to the triggering card/control.
 - Banners: concise text plus one action. Do not stack multiple persistent banners without collapsing or prioritizing them.
@@ -213,5 +242,6 @@ Forms:
 2. Add shared page comments gated by Google sign-in, with complete empty/loading/error states.
 3. Expand reactions from a single like to a stable reaction bar.
 4. Add viewing status as a distinct layer separate from tier rank.
-5. Tighten dashboard visual hierarchy and state messaging.
-6. Audit accessibility for keyboard movement, focus management, contrast, labels, and live announcements.
+5. Tighten dashboard visual hierarchy and state messaging (dashboard remains **outside** Bottom Nav; entry via mypage).
+6. Audit accessibility for keyboard movement, focus management, contrast, **visible** labels, and live announcements.
+7. Keep Visual / Simple as same-function display modes; never reintroduce simple/pro IA splits.
