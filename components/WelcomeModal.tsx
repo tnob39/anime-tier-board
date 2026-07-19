@@ -10,7 +10,7 @@ const features = [
   { icon: "📋", text: "今期アニメを自動取得・一覧表示" },
   { icon: "✅", text: "見たい・視聴中・完了でステータス管理" },
   { icon: "💳", text: "契約サブスクで見放題かを確認" },
-  { icon: "⭐", text: "Tier表を作って自分の評価を残す（プロモード）" }
+  { icon: "⭐", text: "Tier表を作って自分の評価を残す" }
 ];
 
 export function WelcomeModal() {
@@ -74,10 +74,9 @@ export function WelcomeModal() {
   if (!show) return null;
 
   return (
-    <div className="welcome-backdrop" role="presentation" onClick={close}>
+    <div className="welcome-backdrop" role="presentation">
       <div
         className="welcome-modal"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
