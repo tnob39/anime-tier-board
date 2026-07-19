@@ -6,8 +6,22 @@ import type { AnimeItem } from "@/lib/types";
 import { HomeClient } from "./home-client";
 import { HomeGuest } from "./home-guest";
 
+/** Allowlisted protected routes only — exact path match; no query/hash/open redirect. */
+const ALLOWED_RETURN_TO = new Set([
+  "/dashboard",
+  "/watchlist",
+  "/settings",
+  "/voice-actors",
+]);
+
+function getValidatedReturnTo(raw: string | string[] | undefined): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  if (!ALLOWED_RETURN_TO.has(raw)) return undefined;
+  return raw;
+}
+
 type HomePageProps = {
-  searchParams: Promise<{ login?: string }>;
+  searchParams: Promise<{ login?: string; returnTo?: string | string[] }>;
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
@@ -15,8 +29,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    const { login } = await searchParams;
-    return <HomeGuest loginRequired={login === "required"} />;
+    const { login, returnTo: rawReturnTo } = await searchParams;
+    const returnTo = getValidatedReturnTo(rawReturnTo);
+    const loginRedirectTo = returnTo ?? (rawReturnTo === undefined ? undefined : "/");
+    return (
+      <HomeGuest
+        loginRequired={login === "required"}
+        loginRedirectTo={loginRedirectTo}
+      />
+    );
   }
 
   const [items, seasonalAnime] = await Promise.all([
