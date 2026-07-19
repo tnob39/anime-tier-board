@@ -340,6 +340,8 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
       hydrated={hydrated}
       mode={mode}
       onRetry={fetchNextAction}
+      onOpenRecord={openSheet}
+      items={items}
     />
   );
 
@@ -467,9 +469,11 @@ type HomeNextActionPanelProps = {
   hydrated: boolean;
   mode: "visual" | "simple";
   onRetry: () => void;
+  onOpenRecord: (record: AnimeStatusRecord) => void;
+  items: AnimeStatusRecord[];
 };
 
-function HomeNextActionPanel({ state, hydrated, mode, onRetry }: HomeNextActionPanelProps) {
+function HomeNextActionPanel({ state, hydrated, mode, onRetry, onOpenRecord, items }: HomeNextActionPanelProps) {
   if (state.kind === "loading") {
     return (
       <section className="home-next-action" aria-label="次にやること">
@@ -509,6 +513,7 @@ function HomeNextActionPanel({ state, hydrated, mode, onRetry }: HomeNextActionP
   const imageUrl = resolveNextActionImageUrl(action);
   const showImage = hydrated && mode === "visual" && Boolean(imageUrl);
   const meta = formatNextActionMeta(action);
+  const record = items.find((item) => item.animeId === action.anime.id) ?? null;
 
   return (
     <section className="home-next-action" aria-label="次にやること">
@@ -527,9 +532,19 @@ function HomeNextActionPanel({ state, hydrated, mode, onRetry }: HomeNextActionP
           <h2 className="home-next-action-title">{action.anime.title}</h2>
           <p className="home-next-action-reason">{action.reasonLabel}</p>
           {meta ? <p className="home-next-action-meta">{meta}</p> : null}
-          <Link href="/watchlist" className="home-next-action-link">
-            視聴管理を見る
-          </Link>
+          {record ? (
+            <button
+              type="button"
+              className="home-next-action-link"
+              onClick={() => onOpenRecord(record)}
+            >
+              視聴状況を記録する
+            </button>
+          ) : (
+            <Link href="/watchlist" className="home-next-action-link">
+              視聴管理を見る
+            </Link>
+          )}
         </div>
       </article>
     </section>
