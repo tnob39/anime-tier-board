@@ -27,10 +27,59 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.52",
+    date: "2026-07-19",
+    label: "呼称の統一とさがす・共有導線の改善",
+    isLatest: true,
+    changes: [
+      {
+        icon: ListChecks,
+        iconColor: "#6366f1",
+        title: "マイリスト・分析ページの呼び方を統一",
+        description: "画面によって「視聴管理リスト」「ウォッチリスト」「集計」などばらばらだった呼び名を「マイリスト」「分析」に統一しました。共有ページの見出しやタブタイトルも同じ表記になります。",
+        href: "/watchlist",
+      },
+      {
+        icon: Search,
+        iconColor: "#0ea5e9",
+        title: "さがすページを開いた瞬間に今年の作品を表示",
+        description: "これまでは「さがす」ボタンを押すまで作品が1件も表示されませんでした。ページを開くと自動で今年の作品を読み込むようにしました。",
+        href: "/explore",
+      },
+      {
+        icon: Trash2,
+        iconColor: "#ef4444",
+        title: "Tier表のリセットに確認ダイアログを追加",
+        description: "「リセット」を押すと即座に全消去されていましたが、誤操作を防ぐため確認ダイアログを挟むようにしました。",
+        href: "/tier",
+      },
+      {
+        icon: Share2,
+        iconColor: "#0ea5e9",
+        title: "共有ページのカードにタイトルを常時表示",
+        description: "共有されたTier表・布教カードで、作品タイトルが省略されず常に表示されるようになりました。",
+        href: "/tier",
+      },
+      {
+        icon: Compass,
+        iconColor: "#6366f1",
+        title: "分析・声優ページの空状態から「さがす」へ直接誘導",
+        description: "作品が登録されていないときの案内ボタンの遷移先を、行き止まりになりやすい一覧画面から「さがす」ページへ変更しました。",
+        href: "/explore",
+      },
+      {
+        icon: UserCheck,
+        iconColor: "#f59e0b",
+        title: "設定に「アカウント」セクションを追加",
+        description: "設定画面からログイン中のアカウントを確認し、ログアウトできるようになりました。",
+        href: "/settings",
+      },
+    ]
+  },
+  {
     version: "1.51",
     date: "2026-07-10",
     label: "ホームにタイミング限定の案内カード",
-    isLatest: true,
     changes: [
       {
         icon: Sparkles,
