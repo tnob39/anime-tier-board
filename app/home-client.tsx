@@ -518,6 +518,7 @@ function HomeNextActionPanel({ state, hydrated, mode, onRetry }: HomeNextActionP
             className="home-next-action-img"
             src={imageUrl}
             alt=""
+            aria-hidden="true"
             loading="lazy"
             decoding="async"
           />
