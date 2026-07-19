@@ -12,9 +12,13 @@ import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
 
 type HomeGuestProps = {
   loginRequired?: boolean;
+  loginRedirectTo?: string;
 };
 
-export function HomeGuest({ loginRequired = false }: HomeGuestProps) {
+export function HomeGuest({
+  loginRequired = false,
+  loginRedirectTo,
+}: HomeGuestProps) {
   const [seasonalAnime, setSeasonalAnime] = useState<AnimeItem[]>([]);
   useSeasonalPrefetch();
 
@@ -68,7 +72,11 @@ export function HomeGuest({ loginRequired = false }: HomeGuestProps) {
           <button
             type="button"
             className="command-button emphasis-button"
-            onClick={() => void signIn("google")}
+            onClick={() =>
+              void (loginRedirectTo
+                ? signIn("google", { redirectTo: loginRedirectTo })
+                : signIn("google"))
+            }
           >
             ログインして始める
           </button>
