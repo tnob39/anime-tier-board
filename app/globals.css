@@ -4534,10 +4534,6 @@ a.cl-history-title:hover {
 .global-nav.is-compact .global-nav-logo {
   font-size: 14px;
 }
-.global-nav.is-compact .global-nav-btn {
-  width: 30px;
-  height: 30px;
-}
 .global-nav-btn {
   display: flex;
   align-items: center;
