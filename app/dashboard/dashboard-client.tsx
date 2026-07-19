@@ -2,12 +2,14 @@
 
 import { Loader2, Share2 } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 import type { PublicSubscriptionDiagnosis } from "@/lib/subscription-stats";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { SubscriptionPicker } from "@/components/SubscriptionPicker";
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -21,11 +23,13 @@ export function DashboardClient({
   dashboard,
   subscriptionDiagnosis,
   hasSubscriptions,
+  initialSubscriptionServiceIds,
   isOwner
 }: {
   dashboard: DashboardData;
   subscriptionDiagnosis: PublicSubscriptionDiagnosis;
   hasSubscriptions: boolean;
+  initialSubscriptionServiceIds: string[];
   isOwner: boolean;
 }) {
   const maxStatus = Math.max(1, ...Object.values(dashboard.statusCounts));
@@ -35,8 +39,29 @@ export function DashboardClient({
   const [shareOutcome, setShareOutcome] = useState<ShareOutcome>("none");
   const [message, setMessage] = useState<string | null>(null);
   const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [subscriptionSheetOpen, setSubscriptionSheetOpen] = useState(false);
+  const [subscriptionMessage, setSubscriptionMessage] = useState<string | null>(null);
   const diagnosisTrackedRef = useRef(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  async function saveSubscriptions(nextServiceIds: string[]) {
+    setSubscriptionMessage(null);
+
+    const response = await fetch("/api/subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serviceIds: nextServiceIds })
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      throw new Error(payload.error ?? "保存に失敗しました。");
+    }
+
+    setSubscriptionMessage("サブスク設定を保存しました。カバー率を更新しています…");
+    router.refresh();
+  }
 
   useEffect(() => {
     if (searchParams.get("section") !== "subscriptions") {
@@ -129,7 +154,11 @@ export function DashboardClient({
         </div>
       ) : null}
 
-      <SubscriptionAnalyticsSection diagnosis={subscriptionDiagnosis} hasSubscriptions={hasSubscriptions} />
+      <SubscriptionAnalyticsSection
+        diagnosis={subscriptionDiagnosis}
+        hasSubscriptions={hasSubscriptions}
+        onEdit={() => setSubscriptionSheetOpen(true)}
+      />
 
       {isOwner ? (
         <div className="pref-analysis-accordion">
@@ -150,6 +179,24 @@ export function DashboardClient({
           ) : null}
         </div>
       ) : null}
+
+      <BottomSheet
+        open={subscriptionSheetOpen}
+        onOpenChange={setSubscriptionSheetOpen}
+        title="サブスク設定"
+        description="チェックを変更するとすぐに保存されます。"
+      >
+        {subscriptionMessage ? (
+          <div className="notice success" role="status" aria-live="polite">
+            {subscriptionMessage}
+          </div>
+        ) : null}
+        <SubscriptionPicker
+          initialServiceIds={initialSubscriptionServiceIds}
+          onSave={saveSubscriptions}
+          autoSave
+        />
+      </BottomSheet>
     </main>
   );
 }
@@ -179,10 +226,12 @@ const GENRE_JA: Record<string, string> = {
 
 function SubscriptionAnalyticsSection({
   diagnosis,
-  hasSubscriptions
+  hasSubscriptions,
+  onEdit
 }: {
   diagnosis: PublicSubscriptionDiagnosis;
   hasSubscriptions: boolean;
+  onEdit: () => void;
 }) {
   if (!hasSubscriptions) {
     return (
@@ -192,9 +241,9 @@ function SubscriptionAnalyticsSection({
           <h2>見放題カバー率 未設定</h2>
           <p>加入中のサブスクを登録するとカバー率を表示できます。</p>
         </div>
-        <Link className="command-button emphasis-button" href="/settings">
+        <button type="button" className="command-button emphasis-button" onClick={onEdit}>
           サブスクを登録する →
-        </Link>
+        </button>
       </section>
     );
   }
@@ -229,6 +278,9 @@ function SubscriptionAnalyticsSection({
         {diagnosis.watchlistCount}本中 <strong>{diagnosis.coveredCount}本</strong> が見放題
         {uncoveredCount > 0 ? `・未カバー ${uncoveredCount}本` : ""}
       </p>
+      <button type="button" className="command-button" onClick={onEdit}>
+        サブスクを編集
+      </button>
 
       <div className="subscription-diagnosis-list">
         {diagnosis.subscribedCoverage.map((entry) => {

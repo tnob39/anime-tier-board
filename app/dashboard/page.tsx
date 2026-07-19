@@ -44,6 +44,9 @@ export default async function DashboardPage() {
       dashboard={dashboard}
       subscriptionDiagnosis={subscriptionDiagnosis}
       hasSubscriptions={subscriptionState.subscriptions.length > 0}
+      initialSubscriptionServiceIds={subscriptionState.subscriptions.map(
+        (subscription) => subscription.serviceId
+      )}
       isOwner={isOwner}
     />
   );
