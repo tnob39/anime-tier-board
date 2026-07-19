@@ -124,7 +124,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
                     key={item.href}
                     type="button"
                     className="hamburger-nav-item"
-                    onClick={() => signIn("google")}
+                    onClick={() => signIn("google", { redirectTo: item.href })}
                   >
                     <Icon size={18} className="hamburger-nav-icon" aria-hidden="true" />
                     <span>{item.label}</span>

@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    redirect("/?login=required");
+    redirect("/?login=required&returnTo=/settings");
   }
 
   const state = await getSubscriptionState(userId);

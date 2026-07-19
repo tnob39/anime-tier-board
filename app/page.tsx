@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { fetchCurrentSeasonAnimeForHome } from "@/lib/home-seasonal-add";
+import { sanitizeReturnTo } from "@/lib/protected-routes";
 import { listStatuses } from "@/lib/statuses";
 import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
 import type { AnimeItem } from "@/lib/types";
@@ -7,7 +8,7 @@ import { HomeClient } from "./home-client";
 import { HomeGuest } from "./home-guest";
 
 type HomePageProps = {
-  searchParams: Promise<{ login?: string }>;
+  searchParams: Promise<{ login?: string; returnTo?: string }>;
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
@@ -15,8 +16,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    const { login } = await searchParams;
-    return <HomeGuest loginRequired={login === "required"} />;
+    const { login, returnTo } = await searchParams;
+    return <HomeGuest loginRequired={login === "required"} returnTo={sanitizeReturnTo(returnTo)} />;
   }
 
   const [items, seasonalAnime] = await Promise.all([

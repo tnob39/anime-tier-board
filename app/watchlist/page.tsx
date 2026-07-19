@@ -16,7 +16,7 @@ export default async function WatchlistPage() {
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
   if (!userId) {
-    redirect("/?login=required");
+    redirect("/?login=required&returnTo=/watchlist");
   }
 
   const items = await listStatuses(userId);
