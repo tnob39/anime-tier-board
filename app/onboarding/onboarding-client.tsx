@@ -52,6 +52,9 @@ export function OnboardingClient({ initialServiceIds }: { initialServiceIds: str
         <p className="eyebrow">はじめに</p>
         <h1>今入ってるサブスクを教えてください</h1>
         <p className="onboarding-lead">あとから設定で変更できます。</p>
+        <p className="onboarding-lead">
+          見放題で視聴できるかどうかの判定に使います。課金や外部連携は行いません。
+        </p>
         <SubscriptionPicker
           initialServiceIds={initialServiceIds}
           onSave={saveSubscriptions}
