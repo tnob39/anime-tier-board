@@ -2434,29 +2434,6 @@ button:disabled {
   margin-top: -2px;
 }
 
-.watchlist-favorite {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.watchlist-favorite button {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: #c7cdd3;
-}
-
-.watchlist-favorite button.is-active {
-  border-color: color-mix(in srgb, var(--warning) 45%, var(--warning-soft));
-  background: var(--warning-soft);
-  color: var(--warning);
-}
-
 .watchlist-info,
 .shared-watchlist-meta {
   display: flex;
@@ -2691,92 +2668,6 @@ button:disabled {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.55;
-}
-
-.watchlist-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.watchlist-card-share-btn {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  min-height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--accent, #6366f1);
-  cursor: pointer;
-}
-
-.watchlist-card-share-btn:hover {
-  background: var(--surface-soft);
-}
-
-.watchlist-card-menu {
-  position: relative;
-}
-
-.watchlist-card-menu-trigger {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  min-height: 32px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-}
-
-.watchlist-card-menu-trigger:hover,
-.watchlist-card-menu-trigger[aria-expanded="true"] {
-  background: var(--surface-soft);
-  color: var(--ink);
-}
-
-.watchlist-card-menu-panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 5;
-  min-width: 168px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.watchlist-card-menu-panel button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  min-height: 40px;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-  font-weight: 600;
-}
-
-.watchlist-card-menu-panel button:hover {
-  background: var(--surface-soft);
-}
-
-.watchlist-card-menu-item-danger {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #dc2626;
-}
-
-.watchlist-card-menu-item-danger:hover {
-  background: rgba(220, 38, 38, 0.08);
 }
 
 .evangelist-sheet-backdrop {
