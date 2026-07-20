@@ -10,7 +10,19 @@ dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
 export const TEST_USER_ID = "playwright-test-user";
 const COOKIE_NAME = "authjs.session-token";
 
-// テスト用アニメデータ（streamingProvidersJp 付き）
+/** Deterministic image sentinels for ATB-621 Simple HTTP-zero proof (no real CDN). */
+export const E2E_SENTINEL_HOST = "e2e-sentinel.invalid";
+export const E2E_SENTINEL_MARKER = "e2e-sentinel.invalid/atb-621";
+
+function sentinelExternalUrl(id: string): string {
+  return `https://${E2E_SENTINEL_HOST}/atb-621/${id}.jpg`;
+}
+
+function sentinelProxyUrl(id: string): string {
+  return `/api/image-proxy?url=${encodeURIComponent(sentinelExternalUrl(id))}`;
+}
+
+// テスト用アニメデータ（streamingProvidersJp 付き + 固定 sentinel 画像 URL）
 const TEST_ANIME = [
   {
     animeId: "anilist-pw-001",
@@ -20,8 +32,9 @@ const TEST_ANIME = [
       source: "anilist",
       title: "テストアニメ U-NEXT",
       titles: { native: "テストアニメ U-NEXT", romaji: "Test Anime UNEXT" },
-      imageUrl: "",
-      proxiedImageUrl: "",
+      // external form — identifiable without /api/image-proxy
+      imageUrl: sentinelExternalUrl("pw-001"),
+      proxiedImageUrl: sentinelProxyUrl("pw-001"),
       siteUrl: "https://anilist.co",
       episodes: 12,
       streamingProvidersJp: {
@@ -37,8 +50,9 @@ const TEST_ANIME = [
       source: "anilist",
       title: "テストアニメ Netflix",
       titles: { native: "テストアニメ Netflix", romaji: "Test Anime Netflix" },
-      imageUrl: "",
-      proxiedImageUrl: "",
+      imageUrl: sentinelExternalUrl("pw-002"),
+      // proxy form — E2E can assert zero /api/image-proxy for this fixture
+      proxiedImageUrl: sentinelProxyUrl("pw-002"),
       siteUrl: "https://anilist.co",
       episodes: 24,
       streamingProvidersJp: {
@@ -54,8 +68,8 @@ const TEST_ANIME = [
       source: "anilist",
       title: "テストアニメ Amazon",
       titles: { native: "テストアニメ Amazon", romaji: "Test Anime Amazon" },
-      imageUrl: "",
-      proxiedImageUrl: "",
+      imageUrl: sentinelExternalUrl("pw-003"),
+      proxiedImageUrl: sentinelProxyUrl("pw-003"),
       siteUrl: "https://anilist.co",
       episodes: 1,
       format: "MOVIE",
