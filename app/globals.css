@@ -404,7 +404,7 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
+  min-height: 44px;
   padding: 0 10px;
   border: 1px solid var(--danger);
   border-radius: 8px;
