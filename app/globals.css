@@ -155,7 +155,7 @@ body {
 }
 
 .season-share-providers a {
-  min-height: 32px;
+  min-height: 44px;
   padding: 7px 9px;
   border: 1px solid var(--line);
   border-radius: 999px;
