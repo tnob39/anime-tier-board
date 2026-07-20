@@ -6656,7 +6656,7 @@ a.cl-history-title:hover {
 .season-page-nav-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 44px;
   padding: 6px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
