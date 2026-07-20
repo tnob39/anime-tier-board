@@ -26,11 +26,11 @@
   flex-direction: column;
   gap: 10px;
   padding: 14px 14px 12px;
-  border: 1px solid var(--line, #2b3236);
+  border: 1px solid var(--hcc-card-border);
   border-radius: 14px;
-  background: var(--surface, #1a1a1a);
-  box-shadow: var(--shadow, 0 10px 24px rgba(0, 0, 0, 0.35));
-  color: var(--ink, #e7eaec);
+  background: var(--hcc-card-surface);
+  box-shadow: var(--hcc-card-shadow);
+  color: var(--hcc-card-ink);
 }
 
 .hcc-card-top {
@@ -47,8 +47,8 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: var(--surface-soft, #21262a);
-  color: var(--accent, #2dd4bf);
+  background: var(--hcc-icon-surface);
+  color: var(--hcc-icon-ink);
 }
 
 .hcc-copy {
@@ -61,14 +61,14 @@
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--ink, #e7eaec);
+  color: var(--hcc-card-ink);
 }
 
 .hcc-body {
   margin: 4px 0 0;
   font-size: 0.82rem;
   line-height: 1.45;
-  color: var(--muted, #97a2ab);
+  color: var(--hcc-body-ink);
 }
 
 .hcc-dismiss {
@@ -83,19 +83,19 @@
   border: 0;
   border-radius: 10px;
   background: transparent;
-  color: var(--muted, #97a2ab);
+  color: var(--hcc-dismiss-ink);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.08s ease, background-color 0.12s ease, color 0.12s ease;
 }
 
 .hcc-dismiss:hover {
-  background: var(--surface-soft, #21262a);
-  color: var(--ink, #e7eaec);
+  background: var(--hcc-dismiss-hover-surface);
+  color: var(--hcc-dismiss-hover-ink);
 }
 
 .hcc-dismiss:focus-visible {
-  outline: 2px solid var(--accent, #2dd4bf);
+  outline: 2px solid var(--hcc-focus);
   outline-offset: 2px;
 }
 
@@ -111,9 +111,9 @@
   min-height: 44px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--accent, #2dd4bf) 45%, transparent);
-  background: color-mix(in srgb, var(--accent, #2dd4bf) 16%, transparent);
-  color: var(--accent, #2dd4bf);
+  border: 1px solid var(--hcc-cta-border);
+  background: var(--hcc-cta-surface);
+  color: var(--hcc-cta-ink);
   font-size: 0.88rem;
   font-weight: 600;
   text-decoration: none;
@@ -122,12 +122,12 @@
 }
 
 .hcc-cta:hover {
-  background: color-mix(in srgb, var(--accent, #2dd4bf) 24%, transparent);
-  border-color: color-mix(in srgb, var(--accent, #2dd4bf) 65%, transparent);
+  background: var(--hcc-cta-hover-surface);
+  border-color: var(--hcc-cta-hover-border);
 }
 
 .hcc-cta:focus-visible {
-  outline: 2px solid var(--accent, #2dd4bf);
+  outline: 2px solid var(--hcc-focus);
   outline-offset: 2px;
 }
 

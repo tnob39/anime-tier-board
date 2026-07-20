@@ -76,6 +76,22 @@
   --status-sheet-stepper-surface: #181c1f;
   --status-sheet-danger-soft: #3a1d1c;
   --status-sheet-danger: #f87171;
+  --hcc-card-border: #2b3236;
+  --hcc-card-surface: #181c1f;
+  --hcc-card-ink: #e7eaec;
+  --hcc-card-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --hcc-icon-surface: #21262a;
+  --hcc-icon-ink: #2dd4bf;
+  --hcc-body-ink: #97a2ab;
+  --hcc-dismiss-ink: #97a2ab;
+  --hcc-dismiss-hover-surface: #21262a;
+  --hcc-dismiss-hover-ink: #e7eaec;
+  --hcc-focus: #2dd4bf;
+  --hcc-cta-border: rgba(45, 212, 191, 0.45);
+  --hcc-cta-surface: rgba(45, 212, 191, 0.16);
+  --hcc-cta-ink: #2dd4bf;
+  --hcc-cta-hover-surface: rgba(45, 212, 191, 0.24);
+  --hcc-cta-hover-border: rgba(45, 212, 191, 0.65);
 }
 
 /* 保存済みのライト設定は明示的なopt-inとして維持する。 */
@@ -146,6 +162,22 @@
   --status-sheet-stepper-surface: #ffffff;
   --status-sheet-danger-soft: #fff0ee;
   --status-sheet-danger: #b42318;
+  --hcc-card-border: #d8dde2;
+  --hcc-card-surface: #ffffff;
+  --hcc-card-ink: #161a1d;
+  --hcc-card-shadow: 0 10px 24px rgba(25, 31, 36, 0.1);
+  --hcc-icon-surface: #f0f2f3;
+  --hcc-icon-ink: #0f766e;
+  --hcc-body-ink: #66707a;
+  --hcc-dismiss-ink: #66707a;
+  --hcc-dismiss-hover-surface: #f0f2f3;
+  --hcc-dismiss-hover-ink: #161a1d;
+  --hcc-focus: #0f766e;
+  --hcc-cta-border: rgba(15, 118, 110, 0.45);
+  --hcc-cta-surface: rgba(15, 118, 110, 0.16);
+  --hcc-cta-ink: #0f766e;
+  --hcc-cta-hover-surface: rgba(15, 118, 110, 0.24);
+  --hcc-cta-hover-border: rgba(15, 118, 110, 0.65);
 }
 
 @media (prefers-reduced-transparency: reduce) {
