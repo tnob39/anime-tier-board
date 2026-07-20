@@ -7,10 +7,10 @@
   gap: 12px;
   width: 100%;
   padding: 20px 16px;
-  border: 1px solid var(--line, #e5e3df);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface, #ffffff);
-  color: var(--ink, #1a1a1a);
+  background: var(--surface);
+  color: var(--ink);
   font-family:
     Inter, "Hiragino Sans", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
 }
@@ -22,7 +22,7 @@
   line-height: 1.4;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted, #5d5b54);
+  color: var(--muted);
 }
 
 .async-state__title {
@@ -31,7 +31,7 @@
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: -0.01em;
-  color: var(--ink, #1a1a1a);
+  color: var(--ink);
 }
 
 .async-state__description {
@@ -39,7 +39,7 @@
   font-size: 14px;
   font-weight: 400;
   line-height: 1.55;
-  color: var(--muted, #5d5b54);
+  color: var(--muted);
 }
 
 .async-state__body {
@@ -105,41 +105,41 @@
 }
 
 .async-state__button--secondary {
-  background: var(--surface, #ffffff);
-  color: var(--ink, #1a1a1a);
-  border-color: var(--line-strong, #c8c4be);
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line-strong);
 }
 
 .async-state__button--secondary:hover:not(:disabled) {
-  background: var(--surface-soft, #f0eeec);
+  background: var(--surface-soft);
 }
 
 /* Status tones — never rely on color alone; eyebrow + role/live carry meaning */
 .async-state--loading {
-  border-color: var(--line, #e5e3df);
+  border-color: var(--line);
 }
 
 .async-state--empty {
-  border-color: var(--line, #e5e3df);
-  background: var(--surface-soft, #fafaf9);
+  border-color: var(--line);
+  background: var(--surface-soft);
 }
 
 .async-state--error {
-  border-color: color-mix(in srgb, var(--danger, #c5221f) 35%, var(--line, #e5e3df));
-  background: var(--danger-soft, #fce8e6);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+  background: var(--danger-soft);
 }
 
 .async-state--error .async-state__eyebrow {
-  color: var(--danger, #c5221f);
+  color: var(--danger);
 }
 
 .async-state--success {
-  border-color: color-mix(in srgb, var(--success, #137333) 35%, var(--line, #e5e3df));
-  background: var(--success-soft, #e6f4ea);
+  border-color: color-mix(in srgb, var(--success) 35%, var(--line));
+  background: var(--success-soft);
 }
 
 .async-state--success .async-state__eyebrow {
-  color: var(--success, #137333);
+  color: var(--success);
 }
 
 /* Loading skeleton bars (decorative; text title remains authoritative) */
