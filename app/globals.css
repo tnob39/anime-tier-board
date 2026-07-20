@@ -2644,34 +2644,6 @@ button:disabled {
   outline-offset: 1px;
 }
 
-.watchlist-title-copy {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 24px;
-  padding: 0 6px;
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  gap: 3px;
-  white-space: nowrap;
-}
-
-.watchlist-title-copy:hover {
-  background: var(--surface-soft);
-  color: var(--text);
-}
-
-.watchlist-title-copy.is-copied {
-  color: #10b981;
-  border-color: #10b981;
-}
-
 .watchlist-streaming-chip-more {
   width: auto;
   height: 24px;
@@ -2730,27 +2702,6 @@ button:disabled {
 .watchlist-save-button {
   width: 100%;
   margin-top: 2px;
-}
-
-.watchlist-save-status {
-  min-height: 18px;
-  margin: -4px 0 0;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
-.watchlist-save-status.is-dirty,
-.watchlist-save-status.is-saving {
-  color: #92400e;
-}
-
-.watchlist-save-status.is-saved {
-  color: var(--accent);
-}
-
-.watchlist-save-status.is-error {
-  color: #b91c1c;
 }
 
 .watchlist-field {
@@ -3365,10 +3316,6 @@ button:disabled {
   .shared-watchlist-card > .anime-card-placeholder {
     width: 76px;
     height: 108px;
-  }
-
-  .watchlist-title-copy .copy-label {
-    display: none;
   }
 
   .explore-header,
