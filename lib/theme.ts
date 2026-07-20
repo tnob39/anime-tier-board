@@ -8,12 +8,11 @@ export const THEME_KEY = "numanie:theme";
 
 const VALID: readonly ThemePref[] = ["light", "dark", "system"] as const;
 
-// 既定はライト。ダーク全体の色調整が完了するまではオプトイン運用にし、
-// 調整完了後に既定を "system" へ引き上げる。
+// 既定はdark。保存済みのlight/system設定はそのまま尊重する。
 export function readThemePref(): ThemePref {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   const raw = window.localStorage.getItem(THEME_KEY);
-  return (VALID as readonly string[]).includes(raw ?? "") ? (raw as ThemePref) : "light";
+  return (VALID as readonly string[]).includes(raw ?? "") ? (raw as ThemePref) : "dark";
 }
 
 function systemPrefersDark(): boolean {
@@ -34,7 +33,7 @@ export function applyTheme(pref: ThemePref): void {
 }
 
 export function useTheme(): readonly [ThemePref, (pref: ThemePref) => void] {
-  const [pref, setPref] = useState<ThemePref>("light");
+  const [pref, setPref] = useState<ThemePref>("dark");
 
   useEffect(() => {
     setPref(readThemePref());
