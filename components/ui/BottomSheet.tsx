@@ -238,7 +238,7 @@ export function BottomSheet({
                 onClick={requestClose}
                 aria-label={closeLabel}
               >
-                <span aria-hidden="true">×</span>
+                {closeLabel}
               </button>
             ) : null}
           </header>
