@@ -468,6 +468,97 @@
   outline-offset: 2px;
 }
 
+/* Simple display mode: text-first rows — no image column / empty poster frame */
+.wl2g-poster.wl2g-poster--simple {
+  width: min(260px, 78vw);
+  flex: 0 0 auto;
+  min-height: 44px;
+  overflow: visible;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.wl2g-poster--simple-menu-open {
+  padding-bottom: 100px;
+}
+
+.wl2g-poster--simple .wl2g-simple-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 8px 10px 12px;
+  min-height: 72px;
+}
+
+.wl2g-poster--simple .wl2g-simple-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.wl2g-poster--simple .wl2g-ptitle {
+  text-shadow: none;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.wl2g-poster--simple .wl2g-simple-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.wl2g-poster--simple .wl2g-badge {
+  position: static;
+  backdrop-filter: none;
+}
+
+.wl2g-poster--simple .wl2g-tier {
+  position: static;
+  margin: 0;
+}
+
+.wl2g-poster--simple .wl2g-more {
+  position: relative;
+  top: auto;
+  right: auto;
+  flex: 0 0 auto;
+}
+
+.wl2g-poster--simple .wl2g-more-trigger {
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.wl2g-poster--simple .wl2g-more-trigger:hover,
+.wl2g-poster--simple .wl2g-more-trigger[aria-expanded="true"] {
+  background: var(--surface);
+}
+
+.wl2g-poster--simple .wl2g-prog {
+  margin-top: 6px;
+}
+
+.wl2g-poster--simple .wl2g-pnum,
+.wl2g-poster--simple .wl2g-catchup {
+  color: var(--muted);
+  text-shadow: none;
+}
+
+.wl2g-discover-card.wl2g-discover-card--simple {
+  width: 140px;
+  flex: 0 0 140px;
+}
+
+.wl2g-discover-card--simple .wl2g-discover-title {
+  margin-top: 0;
+}
+
+.wl2g-discover-card--simple .wl2g-discover-button {
+  width: 100%;
+}
+
 /* Sheet (edit) */
 .wl2g-sheet-overlay {
   position: fixed;

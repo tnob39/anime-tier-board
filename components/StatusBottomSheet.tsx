@@ -10,6 +10,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { useDisplayMode } from "@/components/display-mode/DisplayModeProvider";
 import { track } from "@/lib/analytics";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import { matchServiceIdByProviderName } from "@/lib/streaming-services";
@@ -64,6 +65,8 @@ export default function StatusBottomSheet({
   onEpisodesSaved,
 }: StatusBottomSheetProps) {
   const titleId = useId();
+  const { mode, hydrated } = useDisplayMode();
+  const showImages = hydrated && mode === "visual";
   const rootRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -532,13 +535,15 @@ export default function StatusBottomSheet({
 
         <div className="sbs-body">
           <div className="sbs-header">
-            <div className="sbs-thumb">
-              {cover ? (
-                <img src={cover} alt="" aria-hidden="true" loading="lazy" />
-              ) : (
-                <div className="sbs-thumb-fallback">No Image</div>
-              )}
-            </div>
+            {showImages ? (
+              <div className="sbs-thumb">
+                {cover ? (
+                  <img src={cover} alt="" aria-hidden="true" loading="lazy" />
+                ) : (
+                  <div className="sbs-thumb-fallback">No Image</div>
+                )}
+              </div>
+            ) : null}
             <h2 id={titleId} className="sbs-title">
               {anime.title}
             </h2>
@@ -610,7 +615,7 @@ export default function StatusBottomSheet({
                     rel="noreferrer"
                     className="sbs-stream-chip"
                   >
-                    {provider.logoUrl ? (
+                    {showImages && provider.logoUrl ? (
                       <img src={provider.logoUrl} alt="" aria-hidden="true" loading="lazy" />
                     ) : null}
                     {provider.name}
