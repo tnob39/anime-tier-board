@@ -1756,7 +1756,7 @@ button:disabled {
   height: 7px;
   border-radius: 50%;
   background: #f76f4f;
-  border: 1.5px solid var(--bg, #fff);
+  border: 1.5px solid var(--bg);
 }
 
 .dashboard-actions {
@@ -2467,7 +2467,7 @@ button:disabled {
 }
 
 .watchlist-season-next .watchlist-season-header h2 {
-  color: var(--accent, #6366f1);
+  color: var(--accent);
 }
 
 .watchlist-grid {
@@ -2487,7 +2487,7 @@ button:disabled {
 }
 
 .shared-watchlist-lane:focus-visible {
-  outline: 2px solid var(--accent, #6366f1);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 8px;
 }
@@ -2648,7 +2648,7 @@ button:disabled {
 
 .watchlist-streaming-chip-link:hover .watchlist-streaming-chip,
 .watchlist-streaming-chip-link:focus .watchlist-streaming-chip {
-  outline: 2px solid var(--accent, #6366f1);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -5152,8 +5152,8 @@ a.cl-history-title:hover {
   margin: 1.5rem auto 1rem;
   max-width: 600px;
   padding: 1.5rem;
-  background: var(--surface-raised, rgba(99,102,241,0.06));
-  border: 1px solid var(--border, rgba(99,102,241,0.2));
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 12px;
   text-align: center;
 }
@@ -5371,15 +5371,15 @@ a.cl-history-title:hover {
   width: 100%;
   padding: 0.3rem 0.5rem;
   font-size: 0.78rem;
-  background: var(--surface-raised, rgba(99,102,241,0.08));
-  color: var(--accent, #6366f1);
-  border: 1px dashed var(--accent, #6366f1);
+  background: var(--surface-raised);
+  color: var(--accent);
+  border: 1px dashed var(--accent);
   border-radius: 6px;
   cursor: pointer;
 }
 .quick-add-planned:hover {
-  background: var(--accent, #6366f1);
-  color: var(--accent-ink, #fff);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 /* ─── Home page ──────────────────────────────────────────────────────────── */
@@ -6248,9 +6248,9 @@ a.cl-history-title:hover {
 }
 
 .home-add-card-btn--watching {
-  background: var(--accent, #2dd4bf);
+  background: var(--accent);
   color: var(--accent-ink);
-  border-color: var(--accent, #2dd4bf);
+  border-color: var(--accent);
 }
 
 /* Simple / hydration-pending: no poster slot — title + CTAs only */
@@ -6625,7 +6625,7 @@ a.cl-history-title:hover {
 .guide-action-primary {
   border-color: var(--accent);
   background: var(--accent);
-  color: var(--accent-ink, #fff);
+  color: var(--accent-ink);
 }
 
 @keyframes guide-fade-in {
