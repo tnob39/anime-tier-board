@@ -167,13 +167,14 @@ Empty/loading/error states:
 
 ## Color, Spacing, And Component Principles
 
-The app should keep its current restrained utility direction: light surfaces, clear borders, compact controls, and tier colors used as functional labels.
+The app uses a Flat 2.0 / Swiss-style dark default: neutral graphite surfaces, clear borders, compact controls, and tier colors used only as functional labels. A user-saved light preference remains supported.
 
 Color:
-- Keep the base palette neutral: off-white background, white surfaces, dark ink, muted gray text, cool accent.
+- Keep the base palette neutral: near-black canvas, graphite surfaces, light ink, muted gray metadata, and one teal interaction accent.
 - Tier colors are **data colors only** (rank identity). Do not reuse them for decoration, unrelated buttons, or alerts.
 - Tier labels must not rely on color alone: pair each swatch with short visible text (S/A/B, etc.).
-- Use semantic colors consistently: red for destructive/error, amber for warning, teal or blue for primary action.
+- Use semantic colors consistently: red for destructive/error, amber for warning, teal for primary action.
+- Consume semantic CSS tokens instead of introducing selector-level fixed colors for chrome.
 - Avoid large decorative gradients, background blobs, and heavy shadows.
 - Every colored tier label must compute or choose readable text color.
 

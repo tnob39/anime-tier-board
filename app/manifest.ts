@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "アニメ視聴を自分のものに — ティア表・ウォッチリスト・サブスク管理",
     start_url: "/",
     display: "standalone",
-    background_color: "#f5f3ff",
-    theme_color: "#6366f1",
+    background_color: "#0f1214",
+    theme_color: "#0f1214",
     orientation: "portrait",
     shortcuts: [
       {

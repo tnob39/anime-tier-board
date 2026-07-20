@@ -1,32 +1,4 @@
 :root {
-  color-scheme: light;
-  --background: #f6f7f8;
-  --surface: #ffffff;
-  --surface-soft: #f0f2f3;
-  --ink: #161a1d;
-  --muted: #66707a;
-  --line: #d8dde2;
-  --line-strong: #b7c0c8;
-  --accent: #0f766e;
-  --danger: #b42318;
-  --danger-soft: #fff0ee;
-  --warning: #7a4a05;
-  --warning-soft: #fff6dc;
-  --success: #0f5f55;
-  --success-soft: #edfaf5;
-  --info: #37306a;
-  --info-soft: #f2f0ff;
-  --accent-ink: #ffffff;
-  --shadow: 0 14px 30px rgba(25, 31, 36, 0.1);
-  --nav-surface: rgba(255,255,255,0.94);
-  --nav-border: rgba(183,192,200,0.85);
-  --nav-active-bg: #e7f5f2;
-  --nav-badge-border: rgba(255,255,255,0.95);
-}
-
-/* ダークテーマ。ブランドのティール基調を維持しつつ反転。
-   data-theme=dark は ThemeProvider / FOUC防止スクリプトが <html> に付与する。 */
-:root[data-theme="dark"] {
   color-scheme: dark;
   --background: #0f1214;
   --surface: #181c1f;
@@ -50,6 +22,44 @@
   --nav-border: rgba(60,69,75,0.85);
   --nav-active-bg: rgba(45,212,191,0.15);
   --nav-badge-border: rgba(24,28,31,0.92);
+  --focus: var(--accent);
+  --ink-secondary: var(--muted);
+  --surface-muted: var(--surface-soft);
+  --surface-raised: var(--surface-soft);
+  --bg: var(--background);
+  --fg: var(--ink);
+  --text: var(--ink);
+  --ink-2: var(--muted);
+  --fg-muted: var(--muted);
+  --border: var(--line);
+  --surface-2: var(--surface-soft);
+}
+
+/* 保存済みのライト設定は明示的なopt-inとして維持する。 */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f6f7f8;
+  --surface: #ffffff;
+  --surface-soft: #f0f2f3;
+  --ink: #161a1d;
+  --muted: #66707a;
+  --line: #d8dde2;
+  --line-strong: #b7c0c8;
+  --accent: #0f766e;
+  --danger: #b42318;
+  --danger-soft: #fff0ee;
+  --warning: #7a4a05;
+  --warning-soft: #fff6dc;
+  --success: #0f5f55;
+  --success-soft: #edfaf5;
+  --info: #37306a;
+  --info-soft: #f2f0ff;
+  --accent-ink: #ffffff;
+  --shadow: 0 14px 30px rgba(25, 31, 36, 0.1);
+  --nav-surface: rgba(255,255,255,0.94);
+  --nav-border: rgba(183,192,200,0.85);
+  --nav-active-bg: #e7f5f2;
+  --nav-badge-border: rgba(255,255,255,0.95);
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -260,7 +270,7 @@ button:disabled {
   justify-content: space-between;
   gap: 24px;
   padding: 16px clamp(16px, 3vw, 36px);
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--nav-surface);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
 }
@@ -838,7 +848,7 @@ button:disabled {
   padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--nav-surface);
   backdrop-filter: blur(10px);
   box-shadow: 0 -4px 16px rgba(20, 26, 32, 0.08);
   font-size: 14px;

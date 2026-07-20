@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#6366f1",
+  themeColor: "#0f1214",
 };
 
 export default function RootLayout({
@@ -39,12 +39,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
       <head>
-        {/* 初回ペイント前にテーマを適用してFOUC（ライト→ダークのちらつき）を防ぐ。 */}
+        {/* 初回ペイント前に保存テーマを適用し、既定darkのFOUCを防ぐ。 */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var p=localStorage.getItem("numanie:theme")||"light";var d=p==="dark"||(p==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";}catch(e){}})();`
+            __html: `(function(){try{var p=localStorage.getItem("numanie:theme")||"dark";if(p!=="light"&&p!=="dark"&&p!=="system")p="dark";var d=p==="dark"||(p==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";}catch(e){document.documentElement.dataset.theme="dark";}})();`
           }}
         />
       </head>
