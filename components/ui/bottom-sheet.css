@@ -28,11 +28,11 @@
   max-height: min(88vh, 720px);
   margin: 0;
   padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px));
-  border: 1px solid var(--line, #e5e3df);
+  border: 1px solid var(--line);
   border-bottom: none;
   border-radius: 18px 18px 0 0;
-  background: var(--surface, #ffffff);
-  color: var(--ink, #1a1a1a);
+  background: var(--surface);
+  color: var(--ink);
   box-shadow: 0 -8px 32px rgba(25, 31, 36, 0.14);
   font-family:
     Inter, "Hiragino Sans", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
@@ -44,8 +44,8 @@
 .bottom-sheet:focus-visible {
   box-shadow:
     0 -8px 32px rgba(25, 31, 36, 0.14),
-    0 0 0 2px var(--surface, #ffffff),
-    0 0 0 4px var(--focus, #5645d4);
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--focus);
 }
 
 .bottom-sheet__handle {
@@ -54,7 +54,7 @@
   height: 4px;
   margin: 10px auto 4px;
   border-radius: 9999px;
-  background: var(--line-strong, #c8c4be);
+  background: var(--line-strong);
 }
 
 .bottom-sheet__header {
@@ -63,7 +63,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 16px 12px;
-  border-bottom: 1px solid var(--line, #e5e3df);
+  border-bottom: 1px solid var(--line);
 }
 
 .bottom-sheet__header-text {
@@ -80,7 +80,7 @@
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: -0.01em;
-  color: var(--ink, #1a1a1a);
+  color: var(--ink);
 }
 
 .bottom-sheet__description {
@@ -88,7 +88,7 @@
   font-size: 13px;
   font-weight: 400;
   line-height: 1.5;
-  color: var(--muted, #5d5b54);
+  color: var(--muted);
 }
 
 .bottom-sheet__description--solo {
@@ -107,7 +107,7 @@
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: var(--ink-secondary, #5d5b54);
+  color: var(--ink-secondary);
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
@@ -118,8 +118,8 @@
 }
 
 .bottom-sheet__close:hover {
-  background: var(--surface-muted, #f0eeec);
-  color: var(--ink, #1a1a1a);
+  background: var(--surface-muted);
+  color: var(--ink);
 }
 
 .bottom-sheet__close:focus {
@@ -127,9 +127,9 @@
 }
 
 .bottom-sheet__close:focus-visible {
-  outline: 2px solid var(--focus, #5645d4);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.24);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 24%, transparent);
 }
 
 .bottom-sheet__body {
@@ -171,7 +171,7 @@
     width: min(480px, 100%);
     max-height: min(80vh, 720px);
     border-radius: 18px;
-    border-bottom: 1px solid var(--line, #e5e3df);
+    border-bottom: 1px solid var(--line);
     box-shadow: 0 16px 48px rgba(25, 31, 36, 0.18);
     padding-bottom: 16px;
     animation-name: bottom-sheet-scale-in;
