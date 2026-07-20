@@ -76,6 +76,10 @@
   --status-sheet-stepper-surface: #181c1f;
   --status-sheet-danger-soft: #3a1d1c;
   --status-sheet-danger: #f87171;
+  --bottom-sheet-backdrop: rgba(17, 24, 39, 0.4);
+  --bottom-sheet-shadow: rgba(25, 31, 36, 0.14);
+  --bottom-sheet-shadow-desktop: rgba(25, 31, 36, 0.18);
+  --bottom-sheet-focus-ring: color-mix(in srgb, var(--focus) 24%, transparent);
   --hcc-card-border: #2b3236;
   --hcc-card-surface: #181c1f;
   --hcc-card-ink: #e7eaec;
@@ -162,6 +166,10 @@
   --status-sheet-stepper-surface: #ffffff;
   --status-sheet-danger-soft: #fff0ee;
   --status-sheet-danger: #b42318;
+  --bottom-sheet-backdrop: rgba(17, 24, 39, 0.4);
+  --bottom-sheet-shadow: rgba(25, 31, 36, 0.14);
+  --bottom-sheet-shadow-desktop: rgba(25, 31, 36, 0.18);
+  --bottom-sheet-focus-ring: color-mix(in srgb, var(--focus) 24%, transparent);
   --hcc-card-border: #d8dde2;
   --hcc-card-surface: #ffffff;
   --hcc-card-ink: #161a1d;
