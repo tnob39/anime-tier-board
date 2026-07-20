@@ -1732,19 +1732,19 @@ function ReputationBadges({ item }: { item: AnimeItem }) {
     <div className="reputation-badges" title={getReputationTitle(item)}>
       {score ? (
         <span aria-label={`評価 ${score}`}>
-          <Star size={11} />
+          <Star size={11} aria-hidden="true" />
           {score}
         </span>
       ) : null}
       {audience ? (
         <span aria-label={`人気 ${audience}`}>
-          <TrendingUp size={11} />
+          <TrendingUp size={11} aria-hidden="true" />
           {audience}
         </span>
       ) : null}
       {momentum ? (
         <span aria-label={`お気に入り ${momentum}`}>
-          <Heart size={11} />
+          <Heart size={11} aria-hidden="true" />
           {momentum}
         </span>
       ) : reputation.rank ? (
