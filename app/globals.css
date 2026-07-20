@@ -57,6 +57,25 @@
   --watchlist-tier-ink: #ffffff;
   --watchlist-tier-text-shadow: rgba(0, 0, 0, 0.6);
   --watchlist-skeleton-shimmer: rgba(255, 255, 255, 0.08);
+  --status-sheet-backdrop: rgba(0, 0, 0, 0.55);
+  --status-sheet-panel-border: #2b3236;
+  --status-sheet-panel-surface: #181c1f;
+  --status-sheet-panel-ink: #e7eaec;
+  --status-sheet-panel-shadow: rgba(0, 0, 0, 0.45);
+  --status-sheet-focus: #2dd4bf;
+  --status-sheet-handle: #3c454b;
+  --status-sheet-thumb-surface: #21262a;
+  --status-sheet-thumb-border: #2b3236;
+  --status-sheet-muted: #97a2ab;
+  --status-sheet-control-border: #2b3236;
+  --status-sheet-control-surface: #21262a;
+  --status-sheet-control-ink: #e7eaec;
+  --status-sheet-active-border: #2dd4bf;
+  --status-sheet-active-surface: rgba(45, 212, 191, 0.15);
+  --status-sheet-active-ink: #2dd4bf;
+  --status-sheet-stepper-surface: #181c1f;
+  --status-sheet-danger-soft: #3a1d1c;
+  --status-sheet-danger: #f87171;
 }
 
 /* 保存済みのライト設定は明示的なopt-inとして維持する。 */
@@ -108,6 +127,25 @@
   --watchlist-tier-ink: #ffffff;
   --watchlist-tier-text-shadow: rgba(0, 0, 0, 0.6);
   --watchlist-skeleton-shimmer: rgba(255, 255, 255, 0.08);
+  --status-sheet-backdrop: rgba(0, 0, 0, 0.55);
+  --status-sheet-panel-border: #d8dde2;
+  --status-sheet-panel-surface: #ffffff;
+  --status-sheet-panel-ink: #161a1d;
+  --status-sheet-panel-shadow: rgba(0, 0, 0, 0.45);
+  --status-sheet-focus: #0f766e;
+  --status-sheet-handle: #b7c0c8;
+  --status-sheet-thumb-surface: #f0f2f3;
+  --status-sheet-thumb-border: #d8dde2;
+  --status-sheet-muted: #66707a;
+  --status-sheet-control-border: #d8dde2;
+  --status-sheet-control-surface: #f0f2f3;
+  --status-sheet-control-ink: #161a1d;
+  --status-sheet-active-border: #0f766e;
+  --status-sheet-active-surface: #e7f5f2;
+  --status-sheet-active-ink: #0f766e;
+  --status-sheet-stepper-surface: #ffffff;
+  --status-sheet-danger-soft: #fff0ee;
+  --status-sheet-danger: #b42318;
 }
 
 @media (prefers-reduced-transparency: reduce) {
