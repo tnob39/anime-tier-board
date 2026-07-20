@@ -14,7 +14,7 @@
 .sbs-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--status-sheet-backdrop);
   opacity: 0;
   will-change: opacity;
   border: 0;
@@ -32,12 +32,12 @@
   flex-direction: column;
   margin: 0;
   padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px));
-  border: 1px solid var(--line, #2b3236);
+  border: 1px solid var(--status-sheet-panel-border);
   border-bottom: 0;
   border-radius: 16px 16px 0 0;
-  background: var(--surface, #1a1a1a);
-  color: var(--ink, #e7eaec);
-  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+  background: var(--status-sheet-panel-surface);
+  color: var(--status-sheet-panel-ink);
+  box-shadow: 0 -12px 40px var(--status-sheet-panel-shadow);
   transform: translate3d(-50%, 100%, 0);
   will-change: transform, opacity;
   touch-action: none;
@@ -46,9 +46,9 @@
 
 .sbs-panel:focus-visible {
   box-shadow:
-    0 -12px 40px rgba(0, 0, 0, 0.45),
-    0 0 0 2px var(--surface, #1a1a1a),
-    0 0 0 4px var(--focus, #5645d4);
+    0 -12px 40px var(--status-sheet-panel-shadow),
+    0 0 0 2px var(--status-sheet-panel-surface),
+    0 0 0 4px var(--status-sheet-focus);
 }
 
 .sbs-root.sbs-root--reduced .sbs-panel {
@@ -89,7 +89,7 @@
   width: 40px;
   height: 4px;
   border-radius: 999px;
-  background: var(--line-strong, #3c454b);
+  background: var(--status-sheet-handle);
 }
 
 .sbs-body {
@@ -113,8 +113,8 @@
   height: 80px;
   border-radius: 10px;
   overflow: hidden;
-  background: var(--surface-soft, #21262a);
-  border: 1px solid var(--line, #2b3236);
+  background: var(--status-sheet-thumb-surface);
+  border: 1px solid var(--status-sheet-thumb-border);
 }
 
 .sbs-thumb img {
@@ -131,7 +131,7 @@
   height: 100%;
   font-size: 11px;
   font-weight: 700;
-  color: var(--muted, #97a2ab);
+  color: var(--status-sheet-muted);
   text-align: center;
   padding: 4px;
   line-height: 1.2;
@@ -153,7 +153,7 @@
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--muted, #97a2ab);
+  color: var(--status-sheet-muted);
   letter-spacing: 0.02em;
 }
 
@@ -167,10 +167,10 @@
 .sbs-status-btn {
   min-height: 48px;
   padding: 10px 12px;
-  border: 1.5px solid var(--line, #2b3236);
+  border: 1.5px solid var(--status-sheet-control-border);
   border-radius: 12px;
-  background: var(--surface-soft, #21262a);
-  color: var(--ink, #e7eaec);
+  background: var(--status-sheet-control-surface);
+  color: var(--status-sheet-control-ink);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -188,10 +188,10 @@
 }
 
 .sbs-status-btn.sbs-status-btn--active {
-  border-color: var(--accent, #2dd4bf);
-  background: var(--nav-active-bg, rgba(45, 212, 191, 0.15));
-  color: var(--accent, #2dd4bf);
-  box-shadow: inset 0 0 0 1px var(--accent, #2dd4bf);
+  border-color: var(--status-sheet-active-border);
+  background: var(--status-sheet-active-surface);
+  color: var(--status-sheet-active-ink);
+  box-shadow: inset 0 0 0 1px var(--status-sheet-active-border);
 }
 
 .sbs-episodes {
@@ -202,14 +202,14 @@
   margin-bottom: 18px;
   padding: 12px;
   border-radius: 12px;
-  background: var(--surface-soft, #21262a);
-  border: 1px solid var(--line, #2b3236);
+  background: var(--status-sheet-control-surface);
+  border: 1px solid var(--status-sheet-control-border);
 }
 
 .sbs-episodes-label {
   font-size: 13px;
   font-weight: 700;
-  color: var(--muted, #97a2ab);
+  color: var(--status-sheet-muted);
 }
 
 .sbs-stepper {
@@ -223,10 +223,10 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--line, #2b3236);
+  border: 1px solid var(--status-sheet-control-border);
   border-radius: 12px;
-  background: var(--surface, #1a1a1a);
-  color: var(--ink, #e7eaec);
+  background: var(--status-sheet-stepper-surface);
+  color: var(--status-sheet-control-ink);
   cursor: pointer;
   transition: transform 0.05s ease;
   -webkit-tap-highlight-color: transparent;
@@ -263,9 +263,9 @@
   min-height: 40px;
   padding: 8px 12px;
   border-radius: 999px;
-  border: 1px solid var(--line, #2b3236);
-  background: var(--surface-soft, #21262a);
-  color: var(--ink, #e7eaec);
+  border: 1px solid var(--status-sheet-control-border);
+  background: var(--status-sheet-control-surface);
+  color: var(--status-sheet-control-ink);
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
@@ -288,8 +288,8 @@
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--danger-soft, #3a1d1c);
-  color: var(--danger, #f87171);
+  background: var(--status-sheet-danger-soft);
+  color: var(--status-sheet-danger);
   font-size: 13px;
   font-weight: 600;
 }
@@ -308,7 +308,7 @@
   border: 0;
   border-radius: 10px;
   background: transparent;
-  color: var(--muted, #97a2ab);
+  color: var(--status-sheet-muted);
   cursor: pointer;
   transition: transform 0.05s ease;
   -webkit-tap-highlight-color: transparent;
@@ -316,7 +316,7 @@
 
 .sbs-close-btn:active {
   transform: scale(0.97);
-  color: var(--ink, #e7eaec);
+  color: var(--status-sheet-panel-ink);
 }
 
 @media (min-width: 640px) {
