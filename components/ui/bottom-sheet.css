@@ -13,7 +13,7 @@
 .bottom-sheet__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(17, 24, 39, 0.4);
+  background: var(--bottom-sheet-backdrop);
   pointer-events: auto;
   animation: bottom-sheet-fade-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -33,7 +33,7 @@
   border-radius: 18px 18px 0 0;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 -8px 32px rgba(25, 31, 36, 0.14);
+  box-shadow: 0 -8px 32px var(--bottom-sheet-shadow);
   font-family:
     Inter, "Hiragino Sans", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
   pointer-events: auto;
@@ -43,7 +43,7 @@
 
 .bottom-sheet:focus-visible {
   box-shadow:
-    0 -8px 32px rgba(25, 31, 36, 0.14),
+    0 -8px 32px var(--bottom-sheet-shadow),
     0 0 0 2px var(--surface),
     0 0 0 4px var(--focus);
 }
@@ -129,7 +129,7 @@
 .bottom-sheet__close:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 24%, transparent);
+  box-shadow: 0 0 0 3px var(--bottom-sheet-focus-ring);
 }
 
 .bottom-sheet__body {
@@ -172,7 +172,7 @@
     max-height: min(80vh, 720px);
     border-radius: 18px;
     border-bottom: 1px solid var(--line);
-    box-shadow: 0 16px 48px rgba(25, 31, 36, 0.18);
+    box-shadow: 0 16px 48px var(--bottom-sheet-shadow-desktop);
     padding-bottom: 16px;
     animation-name: bottom-sheet-scale-in;
   }
