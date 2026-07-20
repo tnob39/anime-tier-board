@@ -33,6 +33,30 @@
   --fg-muted: var(--muted);
   --border: var(--line);
   --surface-2: var(--surface-soft);
+  --watchlist-provider-surface: #ffffff;
+  --watchlist-provider-shadow: rgba(20, 26, 32, 0.35);
+  --watchlist-poster-shadow: rgba(0, 0, 0, 0.5);
+  --watchlist-poster-overlay: rgba(0, 0, 0, 0.88);
+  --watchlist-status-watching-surface: rgba(34, 211, 238, 0.92);
+  --watchlist-status-watching-ink: #06222a;
+  --watchlist-status-planned-surface: rgba(255, 93, 115, 0.92);
+  --watchlist-status-planned-ink: #ffffff;
+  --watchlist-status-completed-surface: rgba(70, 201, 139, 0.92);
+  --watchlist-status-completed-ink: #053522;
+  --watchlist-status-inactive-surface: rgba(120, 120, 120, 0.85);
+  --watchlist-status-inactive-ink: #f5f5f5;
+  --watchlist-poster-action-surface: rgba(0, 0, 0, 0.55);
+  --watchlist-poster-action-hover-surface: rgba(0, 0, 0, 0.72);
+  --watchlist-poster-menu-hover-surface: rgba(0, 0, 0, 0.75);
+  --watchlist-menu-danger-ink: #dc2626;
+  --watchlist-menu-danger-hover-surface: rgba(220, 38, 38, 0.08);
+  --watchlist-poster-title-shadow: #000000;
+  --watchlist-simple-card-shadow: rgba(0, 0, 0, 0.28);
+  --watchlist-sheet-overlay-surface: rgba(0, 0, 0, 0.7);
+  --watchlist-rating-active-ink: #f5b400;
+  --watchlist-tier-ink: #ffffff;
+  --watchlist-tier-text-shadow: rgba(0, 0, 0, 0.6);
+  --watchlist-skeleton-shimmer: rgba(255, 255, 255, 0.08);
 }
 
 /* 保存済みのライト設定は明示的なopt-inとして維持する。 */
@@ -60,6 +84,30 @@
   --nav-border: rgba(183,192,200,0.85);
   --nav-active-bg: #e7f5f2;
   --nav-badge-border: rgba(255,255,255,0.95);
+  --watchlist-provider-surface: #ffffff;
+  --watchlist-provider-shadow: rgba(20, 26, 32, 0.35);
+  --watchlist-poster-shadow: rgba(0, 0, 0, 0.5);
+  --watchlist-poster-overlay: rgba(0, 0, 0, 0.88);
+  --watchlist-status-watching-surface: rgba(34, 211, 238, 0.92);
+  --watchlist-status-watching-ink: #06222a;
+  --watchlist-status-planned-surface: rgba(255, 93, 115, 0.92);
+  --watchlist-status-planned-ink: #ffffff;
+  --watchlist-status-completed-surface: rgba(70, 201, 139, 0.92);
+  --watchlist-status-completed-ink: #053522;
+  --watchlist-status-inactive-surface: rgba(120, 120, 120, 0.85);
+  --watchlist-status-inactive-ink: #f5f5f5;
+  --watchlist-poster-action-surface: rgba(0, 0, 0, 0.55);
+  --watchlist-poster-action-hover-surface: rgba(0, 0, 0, 0.72);
+  --watchlist-poster-menu-hover-surface: rgba(0, 0, 0, 0.75);
+  --watchlist-menu-danger-ink: #dc2626;
+  --watchlist-menu-danger-hover-surface: rgba(220, 38, 38, 0.08);
+  --watchlist-poster-title-shadow: #000000;
+  --watchlist-simple-card-shadow: rgba(0, 0, 0, 0.28);
+  --watchlist-sheet-overlay-surface: rgba(0, 0, 0, 0.7);
+  --watchlist-rating-active-ink: #f5b400;
+  --watchlist-tier-ink: #ffffff;
+  --watchlist-tier-text-shadow: rgba(0, 0, 0, 0.6);
+  --watchlist-skeleton-shimmer: rgba(255, 255, 255, 0.08);
 }
 
 @media (prefers-reduced-transparency: reduce) {
