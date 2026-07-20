@@ -35,6 +35,7 @@ export function SeasonShareClient({
                   ) : (
                     <AnimeCardPlaceholder title={anime.title} />
                   )}
+                  <span className="sr-only">（新しいタブで開きます）</span>
                 </a>
                 <div className="season-share-card-body">
                   <h2>{anime.title}</h2>
