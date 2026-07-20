@@ -5,9 +5,9 @@
   align-items: stretch;
   gap: 0;
   padding: 2px;
-  border: 1px solid var(--line, #d8dde2);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-soft, #f0f2f3);
+  background: var(--surface-soft);
 }
 
 .display-mode-toggle__btn {
@@ -16,7 +16,7 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--muted, #66707a);
+  color: var(--muted);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
@@ -27,13 +27,13 @@
 }
 
 .display-mode-toggle__btn:hover {
-  color: var(--ink, #161a1d);
+  color: var(--ink);
 }
 
 .display-mode-toggle__btn--active {
-  background: var(--surface, #ffffff);
-  color: var(--ink, #161a1d);
-  box-shadow: 0 1px 2px rgba(25, 31, 36, 0.08);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 .display-mode-toggle__btn:focus {
@@ -41,7 +41,7 @@
 }
 
 .display-mode-toggle__btn:focus-visible {
-  outline: 2px solid var(--accent, #0f766e);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   z-index: 1;
 }
