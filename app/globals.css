@@ -5886,9 +5886,9 @@ a.cl-history-title:hover {
 .home-planned-manager-remove {
   min-height: 44px;
   width: 100%;
-  border: 1px solid #f0d9a8;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--warning-soft));
   border-radius: 8px;
-  background: #fff8ec;
+  background: var(--warning-soft);
   color: var(--warning);
   cursor: pointer;
   font-size: 0.9rem;
