@@ -6170,6 +6170,19 @@ a.cl-history-title:hover {
   border-color: var(--accent, #2dd4bf);
 }
 
+/* Simple / hydration-pending: no poster slot — title + CTAs only */
+.home-add-card.home-add-card--simple {
+  width: 140px;
+}
+
+.home-add-card--simple .home-add-card-title {
+  min-height: 0;
+}
+
+.home-add-card--simple .home-add-card-actions {
+  width: 100%;
+}
+
 /* S8 explore title/genre search */
 .explore-search {
   display: flex;

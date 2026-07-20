@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { useDisplayMode } from "@/components/display-mode/DisplayModeProvider";
 import StatusBottomSheet from "@/components/StatusBottomSheet";
 import { track } from "@/lib/analytics";
 import { isOwnerEmail } from "@/lib/owner";
@@ -699,6 +700,8 @@ function DiscoveryLane({
 }) {
   const { data: session } = useSession();
   const isOwner = isOwnerEmail(session?.user?.email);
+  const { mode, hydrated } = useDisplayMode();
+  const showImages = hydrated && mode === "visual";
   const [savingId, setSavingId] = useState<string | null>(null);
   const laneItems = recommendedAnime.filter(
     (anime) => !items.some((record) => record.animeId === anime.id)
@@ -739,29 +742,35 @@ function DiscoveryLane({
           const isSaving = savingId === anime.id;
 
           return (
-            <div key={anime.id} className="wl2g-discover-card" role="listitem">
-              <div className="wl2g-discover-poster">
-                {coverImage ? (
-                  <Image
-                    src={coverImage}
-                    alt={anime.title}
-                    width={92}
-                    height={130}
-                    className="wl2g-discover-image"
-                    unoptimized
-                  />
-                ) : (
-                  <AnimeCardPlaceholder
-                    title={anime.title}
-                    className="wl2g-discover-placeholder"
-                  />
-                )}
-                {provider?.logoUrl ? (
-                  <span className="wl2g-provider" title={provider.name}>
-                    <img src={provider.logoUrl} alt={provider.name} width={16} height={16} loading="lazy" />
-                  </span>
-                ) : null}
-              </div>
+            <div
+              key={anime.id}
+              className={showImages ? "wl2g-discover-card" : "wl2g-discover-card wl2g-discover-card--simple"}
+              role="listitem"
+            >
+              {showImages ? (
+                <div className="wl2g-discover-poster">
+                  {coverImage ? (
+                    <Image
+                      src={coverImage}
+                      alt={anime.title}
+                      width={92}
+                      height={130}
+                      className="wl2g-discover-image"
+                      unoptimized
+                    />
+                  ) : (
+                    <AnimeCardPlaceholder
+                      title={anime.title}
+                      className="wl2g-discover-placeholder"
+                    />
+                  )}
+                  {provider?.logoUrl ? (
+                    <span className="wl2g-provider" title={provider.name}>
+                      <img src={provider.logoUrl} alt={provider.name} width={16} height={16} loading="lazy" />
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
               <p className="wl2g-discover-title">{anime.title}</p>
               <button
                 type="button"
@@ -794,6 +803,8 @@ export function PosterCard({
   tier?: { label: string; color: string };
 }) {
   const anime = record.anime!;
+  const { mode, hydrated } = useDisplayMode();
+  const showImages = hydrated && mode === "visual";
   const prog = computeProgress(record);
   const catchUp = computeCatchUp(record);
   const badge = getStatusBadgeClass(record.status);
@@ -885,6 +896,71 @@ export function PosterCard({
     );
   }
 
+  function renderProgress() {
+    if (prog && record.status === "watching") {
+      return (
+        <div className="wl2g-prog">
+          <div className="wl2g-bar">
+            <i style={{ width: `${prog.pct}%` }} />
+          </div>
+          <div className="wl2g-pnum">
+            {prog.cur} / {prog.total}話
+          </div>
+          {catchUp === "caughtUp" ? (
+            <div className="wl2g-catchup">追いつき済み</div>
+          ) : catchUp ? (
+            <div className="wl2g-catchup wl2g-catchup--behind">未視聴{catchUp.unwatched}話</div>
+          ) : null}
+        </div>
+      );
+    }
+    if (record.status === "completed" && prog) {
+      return (
+        <div className="wl2g-prog">
+          <div className="wl2g-bar">
+            <i style={{ width: "100%" }} />
+          </div>
+          <div className="wl2g-pnum">全{prog.total}話 視聴済</div>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  // Simple: text-first row — no img, Next/Image, background-image, or empty poster frame.
+  if (!showImages) {
+    return (
+      <div
+        className={`wl2g-poster wl2g-poster--simple${menuOpen ? " wl2g-poster--simple-menu-open" : ""}`}
+        onClick={onOpen}
+        role="button"
+        tabIndex={0}
+        aria-label={`${anime.title}の詳細を開く`}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onOpen();
+          }
+        }}
+      >
+        <div className="wl2g-simple-body">
+          <div className="wl2g-simple-main">
+            <div className="wl2g-ptitle">{anime.title}</div>
+            <div className="wl2g-simple-meta">
+              <span className={`wl2g-badge ${badge}`}>{label}</span>
+              {tier ? (
+                <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
+              ) : null}
+            </div>
+            {renderProgress()}
+          </div>
+          {renderMenu()}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="wl2g-poster"
@@ -915,38 +991,10 @@ export function PosterCard({
             </span>
           ) : null}
           {renderMenu()}
-          {prog && record.status === "watching" ? (
-            <div className="wl2g-meta">
-              <div className="wl2g-ptitle">{anime.title}</div>
-              <div className="wl2g-prog">
-                <div className="wl2g-bar">
-                  <i style={{ width: `${prog.pct}%` }} />
-                </div>
-                <div className="wl2g-pnum">
-                  {prog.cur} / {prog.total}話
-                </div>
-                {catchUp === "caughtUp" ? (
-                  <div className="wl2g-catchup">追いつき済み</div>
-                ) : catchUp ? (
-                  <div className="wl2g-catchup wl2g-catchup--behind">未視聴{catchUp.unwatched}話</div>
-                ) : null}
-              </div>
-            </div>
-          ) : record.status === "completed" && prog ? (
-            <div className="wl2g-meta">
-              <div className="wl2g-ptitle">{anime.title}</div>
-              <div className="wl2g-prog">
-                <div className="wl2g-bar">
-                  <i style={{ width: "100%" }} />
-                </div>
-                <div className="wl2g-pnum">全{prog.total}話 視聴済</div>
-              </div>
-            </div>
-          ) : (
-            <div className="wl2g-meta">
-              <div className="wl2g-ptitle">{anime.title}</div>
-            </div>
-          )}
+          <div className="wl2g-meta">
+            <div className="wl2g-ptitle">{anime.title}</div>
+            {renderProgress()}
+          </div>
         </div>
       ) : (
         <div className="pic" style={{ background: "var(--surface-soft)" }}>
