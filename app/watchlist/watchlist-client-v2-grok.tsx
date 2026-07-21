@@ -543,13 +543,12 @@ export function WatchlistClientV2Grok({
           />
         </div>
 
-        <div className="wl2g-filters" role="tablist" aria-label="フィルタ">
+        <div className="wl2g-filters" aria-label="フィルタ">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               type="button"
-              role="tab"
-              aria-selected={filter === f.key}
+              aria-pressed={filter === f.key}
               className={`wl2g-fchip${filter === f.key ? " on" : ""}`}
               onClick={() => setFilter(f.key)}
             >
