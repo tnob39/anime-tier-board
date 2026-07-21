@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import {
-  BarChart3, Bell, BookOpen, CalendarDays, Compass, CreditCard,
-  Filter, Layers, ListChecks, Menu, Mic2, PlayCircle, Search, Share2, Smartphone, Sparkles, Star,
+  Accessibility, BarChart3, Bell, BookOpen, CalendarDays, Compass, CreditCard,
+  Filter, ImageOff, Info, Layers, ListChecks, Menu, Mic2, Moon, PlayCircle, Search, Share2,
+  ShieldCheck, Smartphone, Sparkles, Star,
   Trash2, Tv2, UserCheck, Zap, Download, Loader2, Bookmark, type LucideIcon
 } from "lucide-react";
 import Link from "next/link";
@@ -27,10 +28,55 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.54",
+    date: "2026-07-21",
+    label: "ダークテーマを標準に・簡易モードの通信量削減など",
+    isLatest: true,
+    changes: [
+      {
+        icon: Moon,
+        iconColor: "#818cf8",
+        title: "ダークテーマを標準表示に変更",
+        description: "初回アクセス時の表示テーマを、ライトからダーク基調に変更しました。設定でライトテーマに戻すこともできます。",
+      },
+      {
+        icon: ImageOff,
+        iconColor: "#0ea5e9",
+        title: "簡易モードで画像の読み込みを停止",
+        description: "通信量を抑える「簡易モード」利用時に、作品画像そのものを読み込まないようにしました。低速回線でも軽快に閲覧できます。",
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: "#10b981",
+        title: "エラー画面に保存データの安全性を明記",
+        description: "予期しないエラー画面が出た場合でも、保存済みのTier表・マイリストは失われないことを画面上に明記しました。",
+      },
+      {
+        icon: Info,
+        iconColor: "#6366f1",
+        title: "オンボーディングのサブスク質問に説明を追加",
+        description: "初回案内でサブスク登録状況を尋ねる質問に、何のために使う情報かの説明を追加しました。",
+      },
+      {
+        icon: Bookmark,
+        iconColor: "#f59e0b",
+        title: "ホームの「次はこれ」カードから直接記録",
+        description: "ホームの次アクションカードのボタンから、対象作品の記録シートへ直接移動できるようになりました。",
+        href: "/",
+      },
+      {
+        icon: Accessibility,
+        iconColor: "#ef4444",
+        title: "アクセシビリティ改善を継続実施",
+        description: "タップ領域の44px統一、装飾アイコンへのaria-hidden付与、フィルターのARIAロール修正など、細かな操作性・スクリーンリーダー対応の改善を積み重ねています。",
+      },
+    ]
+  },
+  {
     version: "1.53",
     date: "2026-07-19",
     label: "ホームの次アクション表示とサブスク登録の画面内完結",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Zap,
