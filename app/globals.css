@@ -778,6 +778,7 @@ button:disabled {
 .tier-login-prompt-close {
   width: 44px;
   min-width: 44px;
+  min-height: 44px;
   padding: 0;
   font-size: 22px;
 }
