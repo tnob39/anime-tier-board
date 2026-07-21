@@ -49,7 +49,7 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
       <header className="settings-header">
         <div>
           <p className="eyebrow">設定</p>
-          <h1>アカウント設定</h1>
+          <h1>設定</h1>
           <p>加入中のストリーミングサービスを管理します。</p>
         </div>
         <Link className="command-button" href="/dashboard">
