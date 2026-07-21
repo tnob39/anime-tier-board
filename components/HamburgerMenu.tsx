@@ -89,7 +89,7 @@ export function HamburgerMenu({ isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
   return (
-    <div className="hamburger-overlay" aria-modal="true" role="dialog" aria-labelledby="hamburger-menu-title">
+    <div id="global-nav-drawer" className="hamburger-overlay" aria-modal="true" role="dialog" aria-labelledby="hamburger-menu-title">
       <div className="hamburger-backdrop" onClick={onClose} aria-hidden="true" />
 
       <aside className="hamburger-drawer" ref={panelRef}>

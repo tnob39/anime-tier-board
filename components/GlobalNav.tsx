@@ -94,6 +94,7 @@ export function GlobalNav() {
               onClick={() => setIsDrawerOpen(true)}
               aria-label="メニューを開く"
               aria-expanded={isDrawerOpen}
+              aria-controls="global-nav-drawer"
             >
               <Menu size={20} />
             </button>
