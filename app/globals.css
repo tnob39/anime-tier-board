@@ -4424,6 +4424,7 @@ a.cl-history-title:hover {
 }
 
 .push-toggle-btn {
+  min-height: 44px;
   padding: 6px 14px;
   font-size: 0.82rem;
   border-radius: 6px;
