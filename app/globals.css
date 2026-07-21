@@ -6140,7 +6140,7 @@ a.cl-history-title:hover {
 
 .home-add-card-btn {
   flex: 1;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   padding: 6px 3px;
   border-radius: 5px;
@@ -6149,7 +6149,7 @@ a.cl-history-title:hover {
   color: var(--ink);
   cursor: pointer;
   white-space: nowrap;
-  min-height: 32px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
