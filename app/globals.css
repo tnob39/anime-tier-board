@@ -1782,7 +1782,7 @@ button:disabled {
 
 .status-chip {
   flex: 0 0 auto;
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1813,7 +1813,7 @@ button:disabled {
 }
 
 .move-status-chips .status-chip {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   font-size: 13px;
 }
