@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "numanie",
     short_name: "numanie",
-    description: "アニメ視聴を自分のものに — ティア表・ウォッチリスト・サブスク管理",
+    description: "アニメ視聴を自分のものに — ティア表・マイリスト・サブスク管理",
     start_url: "/",
     display: "standalone",
     background_color: "#0f1214",
