@@ -28,10 +28,36 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.55",
+    date: "2026-07-22",
+    label: "アクセシビリティ改善の継続と設定ページの見出し統一",
+    isLatest: true,
+    changes: [
+      {
+        icon: Accessibility,
+        iconColor: "#ef4444",
+        title: "タップ領域を44pxへ追加統一",
+        description: "視聴ステータスチップ、Tier画面のログイン促しダイアログの閉じるボタンなど、残っていた小さめのタップ領域を44px以上に拡大しました。",
+      },
+      {
+        icon: Menu,
+        iconColor: "#6366f1",
+        title: "ハンバーガーメニューのスクリーンリーダー対応を改善",
+        description: "グローバルナビのメニュー開閉ボタンに、開閉先の要素を示すaria-controlsを追加しました。",
+      },
+      {
+        icon: Info,
+        iconColor: "#0ea5e9",
+        title: "設定ページの見出しを「設定」に統一",
+        description: "画面タイトルが「アカウント設定」のままで、実際の内容（表示・通知・サブスク設定など）と一致していなかったため「設定」に統一しました。",
+      },
+    ]
+  },
+  {
     version: "1.54",
     date: "2026-07-21",
     label: "ダークテーマを標準に・簡易モードの通信量削減など",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Moon,
