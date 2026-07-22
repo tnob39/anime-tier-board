@@ -146,7 +146,7 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
                 サブスクを見直す
               </h2>
               <p className="hcc-body">
-                加入中サービスでウォッチリストの何%が見られるかチェック
+                加入中サービスでマイリストの何%が見られるかチェック
               </p>
             </div>
             <button
