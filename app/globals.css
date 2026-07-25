@@ -136,6 +136,18 @@
   --updates-icon-coral-soft: #f76f4f1a;
   --updates-icon-gold-ink: #f7b24f;
   --updates-icon-gold-soft: #f7b24f1a;
+  --anime-card-placeholder-tone-indigo: #6366f1;
+  --anime-card-placeholder-tone-violet: #8b5cf6;
+  --anime-card-placeholder-tone-pink: #ec4899;
+  --anime-card-placeholder-tone-rose: #f43f5e;
+  --anime-card-placeholder-tone-sky: #0ea5e9;
+  --anime-card-placeholder-tone-cyan: #06b6d4;
+  --anime-card-placeholder-tone-emerald: #10b981;
+  --anime-card-placeholder-tone-teal: #14b8a6;
+  --anime-card-placeholder-tone-amber: #f59e0b;
+  --anime-card-placeholder-tone-red: #ef4444;
+  --anime-card-placeholder-label-ink: rgba(255, 255, 255, 0.9);
+  --anime-card-placeholder-label-shadow-color: rgba(0, 0, 0, 0.4);
 }
 
 /* 保存済みのライト設定は明示的なopt-inとして維持する。 */
@@ -266,6 +278,18 @@
   --updates-icon-coral-soft: #f76f4f1a;
   --updates-icon-gold-ink: #f7b24f;
   --updates-icon-gold-soft: #f7b24f1a;
+  --anime-card-placeholder-tone-indigo: #6366f1;
+  --anime-card-placeholder-tone-violet: #8b5cf6;
+  --anime-card-placeholder-tone-pink: #ec4899;
+  --anime-card-placeholder-tone-rose: #f43f5e;
+  --anime-card-placeholder-tone-sky: #0ea5e9;
+  --anime-card-placeholder-tone-cyan: #06b6d4;
+  --anime-card-placeholder-tone-emerald: #10b981;
+  --anime-card-placeholder-tone-teal: #14b8a6;
+  --anime-card-placeholder-tone-amber: #f59e0b;
+  --anime-card-placeholder-tone-red: #ef4444;
+  --anime-card-placeholder-label-ink: rgba(255, 255, 255, 0.9);
+  --anime-card-placeholder-label-shadow-color: rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -1235,11 +1259,43 @@ button:disabled {
   overflow: hidden;
 }
 
+.anime-card-placeholder.anime-card-placeholder-pair-indigo-violet {
+  background: linear-gradient(135deg, var(--anime-card-placeholder-tone-indigo), var(--anime-card-placeholder-tone-violet));
+}
+
+.anime-card-placeholder.anime-card-placeholder-pair-pink-rose {
+  background: linear-gradient(135deg, var(--anime-card-placeholder-tone-pink), var(--anime-card-placeholder-tone-rose));
+}
+
+.anime-card-placeholder.anime-card-placeholder-pair-sky-cyan {
+  background: linear-gradient(135deg, var(--anime-card-placeholder-tone-sky), var(--anime-card-placeholder-tone-cyan));
+}
+
+.anime-card-placeholder.anime-card-placeholder-pair-emerald-teal {
+  background: linear-gradient(135deg, var(--anime-card-placeholder-tone-emerald), var(--anime-card-placeholder-tone-teal));
+}
+
+.anime-card-placeholder.anime-card-placeholder-pair-amber-red {
+  background: linear-gradient(135deg, var(--anime-card-placeholder-tone-amber), var(--anime-card-placeholder-tone-red));
+}
+
+.anime-card-placeholder.anime-card-placeholder-pair-violet-pink {
+  background: linear-gradient(135deg, var(--anime-card-placeholder-tone-violet), var(--anime-card-placeholder-tone-pink));
+}
+
+.anime-card-placeholder.anime-card-placeholder-pair-cyan-sky {
+  background: linear-gradient(135deg, var(--anime-card-placeholder-tone-cyan), var(--anime-card-placeholder-tone-sky));
+}
+
+.anime-card-placeholder.anime-card-placeholder-pair-teal-emerald {
+  background: linear-gradient(135deg, var(--anime-card-placeholder-tone-teal), var(--anime-card-placeholder-tone-emerald));
+}
+
 .anime-card-placeholder span {
   font-size: 1.2rem;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  color: var(--anime-card-placeholder-label-ink);
+  text-shadow: 0 1px 4px var(--anime-card-placeholder-label-shadow-color);
   text-align: center;
   padding: 4px;
   line-height: 1.2;
