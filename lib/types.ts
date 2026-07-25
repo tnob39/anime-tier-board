@@ -104,11 +104,56 @@ export type StreamingProvidersJp = {
   providerLink?: string | null;
 };
 
+export type SeasonalFreshness = "fresh" | "stale" | "unavailable";
+
+export type SeasonalServePath =
+  | "fresh_direct"
+  | "stale_after_anilist_fail"
+  | "live_anilist"
+  | "live_jikan"
+  | "unavailable";
+
+export type AniListOutcome =
+  | "success"
+  | "timeout"
+  | "transport"
+  | "http_429"
+  | "http_5xx"
+  | "malformed"
+  | "empty_results"
+  | "skipped";
+
+export type AniListFailureOutcome = Exclude<AniListOutcome, "success" | "skipped">;
+
+export type JikanOutcome =
+  | "success"
+  | "error"
+  | "skipped_pre_policy"
+  | "skipped_post_cutoff"
+  | "disabled";
+
+export type SeasonalCutoffRegime = "pre" | "post";
+
+/** Structured telemetry for one seasonal source return or throw (exactly one per call). */
+export type SeasonalTelemetryEvent = {
+  seasonal_key: string;
+  source: AnimeSourceName | "cache" | "db_snapshot";
+  freshness: SeasonalFreshness | "unusable";
+  anilist_outcome: AniListOutcome;
+  jikan_outcome: JikanOutcome;
+  fetched_at: string;
+  cutoff_regime: SeasonalCutoffRegime;
+  serve_path: SeasonalServePath;
+};
+
 export type SeasonalAnimeResult = {
   items: AnimeItem[];
   source: AnimeSourceName;
   cached: boolean;
   warning?: string;
+  freshness: SeasonalFreshness;
+  servePath: SeasonalServePath;
+  fetchedAt: string;
 };
 
 export const SEASONS: AnimeSeason[] = ["WINTER", "SPRING", "SUMMER", "FALL"];

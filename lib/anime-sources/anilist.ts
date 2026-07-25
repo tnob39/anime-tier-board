@@ -1,9 +1,15 @@
-import type { AnimeAiringInfo, AnimeItem, AnimeSeason } from "../types";
-import { pickDisplayTitle, proxiedImageUrl } from "./shared";
+import type {
+  AnimeAiringInfo,
+  AnimeItem,
+  AnimeSeason,
+  AniListFailureOutcome
+} from "../types.ts";
+import { pickDisplayTitle, proxiedImageUrl } from "./shared.ts";
 
-const ANILIST_ENDPOINT = "https://graphql.anilist.co";
+export const ANILIST_ENDPOINT = "https://graphql.anilist.co";
+export const ANILIST_MAX_PAGES = 5;
+export const ANILIST_ATTEMPT_BUDGET_MS = 6000;
 const PER_PAGE = 50;
-const MAX_PAGES = 5;
 
 type AniListMedia = {
   id: number;
@@ -101,6 +107,48 @@ type AniListResponse = {
   };
   errors?: Array<{ message?: string }>;
 };
+
+/** Shared physical HTTP request budget for one logical AniList attempt. */
+type HttpRequestBudget = {
+  used: number;
+  max: number;
+};
+
+export type AniListAttemptOptions = {
+  fetchImpl?: typeof fetch;
+  now?: () => number;
+  /** Absolute deadline (epoch ms) for the logical attempt wall budget. */
+  deadlineMs: number;
+  maxPages?: number;
+  signal?: AbortSignal;
+};
+
+export type AniListAttemptSuccess = {
+  ok: true;
+  items: AnimeItem[];
+  outcome: "success";
+  pagesUsed: number;
+};
+
+export type AniListAttemptFailure = {
+  ok: false;
+  items: AnimeItem[];
+  outcome: AniListFailureOutcome;
+  error: Error;
+  pagesUsed: number;
+  failoverEligible: boolean;
+};
+
+export type AniListAttemptResult = AniListAttemptSuccess | AniListAttemptFailure;
+
+const FAILOVER_OUTCOMES: ReadonlySet<AniListFailureOutcome> = new Set([
+  "timeout",
+  "transport",
+  "http_429",
+  "http_5xx",
+  "malformed",
+  "empty_results"
+]);
 
 const query = `
   query SeasonalAnime($page: Int, $perPage: Int, $season: MediaSeason, $seasonYear: Int) {
@@ -260,122 +308,239 @@ const safeQuery = `
   }
 `;
 
+/**
+ * One logical AniList seasonal attempt: shared physical ≤ maxPages HTTP requests
+ * (including safe-query retries), wall budget via deadlineMs.
+ * Never returns partial success when the HTTP/page cap is hit while hasNextPage remains true.
+ * Cap failures always return empty items (no partial data for callers to cache).
+ */
 export async function fetchAniListSeasonalAnime(
   year: number,
-  season: AnimeSeason
-): Promise<AnimeItem[]> {
+  season: AnimeSeason,
+  options: AniListAttemptOptions
+): Promise<AniListAttemptResult> {
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+  const now = options.now ?? Date.now;
+  const maxHttp = options.maxPages ?? ANILIST_MAX_PAGES;
+  const budget: HttpRequestBudget = { used: 0, max: maxHttp };
+  /** Accumulated only for incomplete walks; never returned on cap/timeout failure. */
   const items: AnimeItem[] = [];
+  let attemptClosed = false;
 
-  for (let page = 1; page <= MAX_PAGES; page += 1) {
-    const payload = await fetchAniListPage({
-      page,
-      perPage: PER_PAGE,
-      season,
-      seasonYear: year
-    });
+  const fail = (
+    outcome: AniListFailureOutcome,
+    error: Error,
+    failoverEligible = FAILOVER_OUTCOMES.has(outcome)
+  ): AniListAttemptFailure => {
+    attemptClosed = true;
+    return {
+      ok: false,
+      items: [],
+      outcome,
+      error,
+      pagesUsed: budget.used,
+      failoverEligible
+    };
+  };
 
-    if (payload.errors?.length) {
-      throw new Error(
-        payload.errors.map((error) => error.message).filter(Boolean).join(", ") ||
-          "AniList returned an error"
-      );
-    }
-
-    const pageData = payload.data?.Page;
-    const media = pageData?.media ?? [];
-
-    for (const entry of media) {
-      if (entry.isAdult) {
-        continue;
+  try {
+    for (let page = 1; ; page += 1) {
+      if (attemptClosed || now() >= options.deadlineMs) {
+        return fail(
+          "timeout",
+          new Error("AniList attempt exceeded 6s wall budget")
+        );
       }
 
-      const imageUrl =
-        entry.coverImage?.extraLarge ??
-        entry.coverImage?.large ??
-        entry.coverImage?.medium;
-
-      if (!imageUrl) {
-        continue;
+      // Shared physical budget: never send a request when already at cap.
+      if (budget.used >= budget.max) {
+        return fail(
+          "timeout",
+          new Error(
+            `AniList attempt exceeded ${budget.max} HTTP request cap before complete set`
+          )
+        );
       }
 
-      const titles = {
-        native: entry.title.native,
-        userPreferred: entry.title.userPreferred,
-        romaji: entry.title.romaji,
-        english: entry.title.english
-      };
+      let payload: AniListResponse;
+      try {
+        payload = await fetchAniListPage(
+          {
+            page,
+            perPage: PER_PAGE,
+            season,
+            seasonYear: year
+          },
+          {
+            fetchImpl,
+            now,
+            deadlineMs: options.deadlineMs,
+            parentSignal: options.signal,
+            budget
+          }
+        );
+      } catch (error) {
+        if (attemptClosed) {
+          return fail(
+            "timeout",
+            new Error("AniList attempt exceeded 6s wall budget")
+          );
+        }
+        const classified = classifyThrownError(error);
+        return fail(classified.outcome, toError(error), classified.failoverEligible);
+      }
 
-      const streamingEpisodes = (entry.streamingEpisodes ?? [])
-        .filter((episode) => Boolean(episode.url))
-        .map((episode) => ({
-          title: episode.title,
-          site: episode.site,
-          url: episode.url as string
-        }));
+      if (attemptClosed || now() >= options.deadlineMs) {
+        return fail(
+          "timeout",
+          new Error("AniList attempt exceeded 6s wall budget")
+        );
+      }
 
-      items.push({
-        id: `anilist-${entry.id}`,
-        source: "anilist",
-        title: pickDisplayTitle(titles),
-        titles,
-        imageUrl,
-        proxiedImageUrl: proxiedImageUrl(imageUrl),
-        siteUrl: entry.siteUrl ?? `https://anilist.co/anime/${entry.id}`,
-        format: entry.format,
-        season: entry.season,
-        seasonYear: entry.seasonYear,
-        episodes: entry.episodes,
-        score: entry.averageScore,
-        popularity: entry.popularity,
-        reputation: {
+      if (payload.errors?.length) {
+        return fail(
+          "malformed",
+          new Error(
+            payload.errors.map((e) => e.message).filter(Boolean).join(", ") ||
+              "AniList returned an error"
+          )
+        );
+      }
+
+      const pageData = payload.data?.Page;
+      if (!pageData || !Array.isArray(pageData.media)) {
+        return fail(
+          "malformed",
+          new Error("AniList response missing Page.media")
+        );
+      }
+
+      const media = pageData.media;
+
+      for (const entry of media) {
+        if (entry.isAdult) {
+          continue;
+        }
+
+        const imageUrl =
+          entry.coverImage?.extraLarge ??
+          entry.coverImage?.large ??
+          entry.coverImage?.medium;
+
+        if (!imageUrl) {
+          continue;
+        }
+
+        const titles = {
+          native: entry.title?.native,
+          userPreferred: entry.title?.userPreferred,
+          romaji: entry.title?.romaji,
+          english: entry.title?.english
+        };
+
+        const streamingEpisodes = (entry.streamingEpisodes ?? [])
+          .filter((episode) => Boolean(episode.url))
+          .map((episode) => ({
+            title: episode.title,
+            site: episode.site,
+            url: episode.url as string
+          }));
+
+        items.push({
+          id: `anilist-${entry.id}`,
+          source: "anilist",
+          title: pickDisplayTitle(titles),
+          titles,
+          imageUrl,
+          proxiedImageUrl: proxiedImageUrl(imageUrl),
+          siteUrl: entry.siteUrl ?? `https://anilist.co/anime/${entry.id}`,
+          format: entry.format,
+          season: entry.season,
+          seasonYear: entry.seasonYear,
+          episodes: entry.episodes,
           score: entry.averageScore,
-          scoreMax: 100,
           popularity: entry.popularity,
-          favourites: entry.favourites,
-          trending: entry.trending
-        },
-        genres: cleanStringList(entry.genres),
-        studios: (entry.studios?.nodes ?? [])
-          .filter((studio) => studio.isAnimationStudio !== false)
-          .map((studio) => ({
-            id: studio.id,
-            name: studio.name?.trim() ?? "",
-            siteUrl: studio.siteUrl
-          }))
-          .filter((studio) => studio.name.length > 0),
-        voiceActors: formatAniListVoiceActors(entry.characters),
-        airing: {
-          startDate: formatAniListDate(entry.startDate),
-          courEstimate: estimateCour(entry.episodes),
-          broadcastDay: deriveBroadcastDay(entry.nextAiringEpisode?.airingAt),
-          nextEpisode: formatAniListNextEpisode(entry.nextAiringEpisode),
-          recentEpisodes: (entry.airingSchedule?.nodes ?? [])
-            .filter(
-              (node) =>
-                typeof node.episode === "number" &&
-                typeof node.airingAt === "number"
-            )
-            .map((node) => ({
-              episode: node.episode as number,
-              airingAt: formatUnixSeconds(node.airingAt as number)
+          reputation: {
+            score: entry.averageScore,
+            scoreMax: 100,
+            popularity: entry.popularity,
+            favourites: entry.favourites,
+            trending: entry.trending
+          },
+          genres: cleanStringList(entry.genres),
+          studios: (entry.studios?.nodes ?? [])
+            .filter((studio) => studio.isAnimationStudio !== false)
+            .map((studio) => ({
+              id: studio.id,
+              name: studio.name?.trim() ?? "",
+              siteUrl: studio.siteUrl
             }))
-        },
-        isRebroadcast: isLikelyRebroadcast(entry),
-        streamingEpisodes,
-        streamingPlatforms: normalizeStreamingPlatforms(streamingEpisodes)
-      });
-    }
+            .filter((studio) => studio.name.length > 0),
+          voiceActors: formatAniListVoiceActors(entry.characters),
+          airing: {
+            startDate: formatAniListDate(entry.startDate),
+            courEstimate: estimateCour(entry.episodes),
+            broadcastDay: deriveBroadcastDay(entry.nextAiringEpisode?.airingAt),
+            nextEpisode: formatAniListNextEpisode(entry.nextAiringEpisode),
+            recentEpisodes: (entry.airingSchedule?.nodes ?? [])
+              .filter(
+                (node) =>
+                  typeof node.episode === "number" &&
+                  typeof node.airingAt === "number"
+              )
+              .map((node) => ({
+                episode: node.episode as number,
+                airingAt: formatUnixSeconds(node.airingAt as number)
+              }))
+          },
+          isRebroadcast: isLikelyRebroadcast(entry),
+          streamingEpisodes,
+          streamingPlatforms: normalizeStreamingPlatforms(streamingEpisodes)
+        });
+      }
 
-    if (!pageData?.pageInfo?.hasNextPage || media.length === 0) {
-      break;
+      const hasNext = Boolean(pageData.pageInfo?.hasNextPage) && media.length > 0;
+      if (!hasNext) {
+        break;
+      }
+
+      // Need another page: if no HTTP budget remains, fail without partial data.
+      if (budget.used >= budget.max) {
+        return fail(
+          "timeout",
+          new Error(
+            `AniList attempt exceeded ${budget.max} HTTP request cap before complete set`
+          )
+        );
+      }
     }
+  } catch (error) {
+    const classified = classifyThrownError(error);
+    return fail(classified.outcome, toError(error), classified.failoverEligible);
   }
 
-  if (items.length === 0) {
-    throw new Error("AniList returned no seasonal anime");
+  if (attemptClosed || now() >= options.deadlineMs) {
+    return fail(
+      "timeout",
+      new Error("AniList attempt exceeded 6s wall budget")
+    );
   }
 
-  return dedupeById(items);
+  const deduped = dedupeById(items);
+  if (deduped.length === 0) {
+    return fail(
+      "empty_results",
+      new Error("AniList returned no seasonal anime")
+    );
+  }
+
+  attemptClosed = true;
+  return {
+    ok: true,
+    items: deduped,
+    outcome: "success",
+    pagesUsed: budget.used
+  };
 }
 
 function normalizeStreamingPlatforms(
@@ -426,10 +591,10 @@ function inferPlatformName(url: string): string | null {
 
 function isLikelyRebroadcast(entry: AniListMedia): boolean {
   const combinedText = [
-    entry.title.native,
-    entry.title.userPreferred,
-    entry.title.romaji,
-    entry.title.english,
+    entry.title?.native,
+    entry.title?.userPreferred,
+    entry.title?.romaji,
+    entry.title?.english,
     ...(entry.streamingEpisodes ?? []).flatMap((episode) => [episode.title, episode.site])
   ]
     .filter(Boolean)
@@ -438,17 +603,27 @@ function isLikelyRebroadcast(entry: AniListMedia): boolean {
   return /再放送|再配信|rerun|rebroadcast|re-air/i.test(combinedText);
 }
 
-async function fetchAniListPage(variables: {
-  page: number;
-  perPage: number;
-  season: AnimeSeason;
-  seasonYear: number;
-}): Promise<AniListResponse> {
+async function fetchAniListPage(
+  variables: {
+    page: number;
+    perPage: number;
+    season: AnimeSeason;
+    seasonYear: number;
+  },
+  runtime: {
+    fetchImpl: typeof fetch;
+    now: () => number;
+    deadlineMs: number;
+    parentSignal?: AbortSignal;
+    budget: HttpRequestBudget;
+  }
+): Promise<AniListResponse> {
   try {
-    return await requestAniListPage(query, variables);
+    return await requestAniListPage(query, variables, runtime);
   } catch (error) {
     if (error instanceof AniListHttpError && error.status === 400) {
-      return requestAniListPage(safeQuery, variables);
+      // Safe-query retry shares the same physical HTTP budget; never send 6th.
+      return requestAniListPage(safeQuery, variables, runtime);
     }
 
     throw error;
@@ -462,38 +637,213 @@ async function requestAniListPage(
     perPage: number;
     season: AnimeSeason;
     seasonYear: number;
+  },
+  runtime: {
+    fetchImpl: typeof fetch;
+    now: () => number;
+    deadlineMs: number;
+    parentSignal?: AbortSignal;
+    budget: HttpRequestBudget;
   }
 ): Promise<AniListResponse> {
-  const response = await fetch(ANILIST_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json"
-    },
-    body: JSON.stringify({
-      query: queryText,
-      variables
-    }),
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new AniListHttpError(response.status, detail);
+  if (runtime.now() >= runtime.deadlineMs) {
+    throw new AniListTimeoutError("AniList attempt exceeded 6s wall budget");
   }
 
-  return (await response.json()) as AniListResponse;
+  if (runtime.parentSignal?.aborted) {
+    throw new AniListTimeoutError("AniList attempt aborted");
+  }
+
+  // Physical budget gate: sixth request must never leave this client.
+  if (runtime.budget.used >= runtime.budget.max) {
+    throw new AniListTimeoutError(
+      `AniList attempt exceeded ${runtime.budget.max} HTTP request cap before complete set`
+    );
+  }
+
+  // Count at send-time so concurrent/retry paths share one budget.
+  runtime.budget.used += 1;
+
+  try {
+    const response = await raceFetchAgainstDeadline(
+      (signal) =>
+        runtime.fetchImpl(ANILIST_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json"
+          },
+          body: JSON.stringify({
+            query: queryText,
+            variables
+          }),
+          cache: "no-store",
+          signal
+        }),
+      {
+        now: runtime.now,
+        deadlineMs: runtime.deadlineMs,
+        parentSignal: runtime.parentSignal
+      }
+    );
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new AniListHttpError(response.status, detail);
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new AniListMalformedError("AniList response is not valid JSON");
+    }
+
+    if (!payload || typeof payload !== "object") {
+      throw new AniListMalformedError("AniList response is not an object");
+    }
+
+    if (runtime.now() >= runtime.deadlineMs) {
+      throw new AniListTimeoutError("AniList attempt exceeded 6s wall budget");
+    }
+
+    return payload as AniListResponse;
+  } catch (error) {
+    if (error instanceof AniListHttpError) {
+      throw error;
+    }
+    if (error instanceof AniListTimeoutError || error instanceof AniListMalformedError) {
+      throw error;
+    }
+    if (isAbortError(error) || runtime.now() >= runtime.deadlineMs) {
+      throw new AniListTimeoutError("AniList attempt exceeded 6s wall budget");
+    }
+    throw new AniListTransportError(toError(error).message);
+  }
 }
 
-class AniListHttpError extends Error {
-  constructor(
-    readonly status: number,
-    detail: string
-  ) {
+/**
+ * Race a fetch against the absolute logical-attempt deadline even when the
+ * underlying fetch implementation ignores AbortSignal. Aborts at expiry and
+ * always clears the timer in finally.
+ */
+async function raceFetchAgainstDeadline(
+  work: (signal: AbortSignal) => Promise<Response>,
+  runtime: {
+    now: () => number;
+    deadlineMs: number;
+    parentSignal?: AbortSignal;
+  }
+): Promise<Response> {
+  if (runtime.now() >= runtime.deadlineMs) {
+    throw new AniListTimeoutError("AniList attempt exceeded 6s wall budget");
+  }
+  if (runtime.parentSignal?.aborted) {
+    throw new AniListTimeoutError("AniList attempt aborted");
+  }
+
+  const controller = new AbortController();
+  const remaining = Math.max(0, runtime.deadlineMs - runtime.now());
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const onParentAbort = () => {
+    controller.abort();
+  };
+  runtime.parentSignal?.addEventListener("abort", onParentAbort);
+
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new AniListTimeoutError("AniList attempt exceeded 6s wall budget"));
+      }, remaining);
+    });
+
+    return await Promise.race([work(controller.signal), timeoutPromise]);
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+    runtime.parentSignal?.removeEventListener("abort", onParentAbort);
+  }
+}
+
+export class AniListHttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number, detail: string) {
     super(
       `AniList request failed: ${status}${detail ? ` ${detail.slice(0, 240)}` : ""}`
     );
+    this.name = "AniListHttpError";
+    this.status = status;
   }
+}
+
+class AniListTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AniListTimeoutError";
+  }
+}
+
+class AniListTransportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AniListTransportError";
+  }
+}
+
+class AniListMalformedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AniListMalformedError";
+  }
+}
+
+function classifyThrownError(error: unknown): {
+  outcome: AniListFailureOutcome;
+  failoverEligible: boolean;
+} {
+  if (error instanceof AniListTimeoutError) {
+    return { outcome: "timeout", failoverEligible: true };
+  }
+  if (error instanceof AniListTransportError) {
+    return { outcome: "transport", failoverEligible: true };
+  }
+  if (error instanceof AniListMalformedError) {
+    return { outcome: "malformed", failoverEligible: true };
+  }
+  if (error instanceof AniListHttpError) {
+    if (error.status === 429) {
+      return { outcome: "http_429", failoverEligible: true };
+    }
+    if (error.status >= 500 && error.status <= 599) {
+      return { outcome: "http_5xx", failoverEligible: true };
+    }
+    // Other HTTP statuses are not fail-over triggers (SSOT §3.2).
+    return { outcome: "malformed", failoverEligible: false };
+  }
+  if (isAbortError(error)) {
+    return { outcome: "timeout", failoverEligible: true };
+  }
+  if (error instanceof TypeError) {
+    return { outcome: "transport", failoverEligible: true };
+  }
+  return { outcome: "transport", failoverEligible: true };
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof Error && error.name === "AbortError") ||
+    (typeof DOMException !== "undefined" &&
+      error instanceof DOMException &&
+      error.name === "AbortError")
+  );
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 function cleanStringList(values?: Array<string | null> | null): string[] {
@@ -610,7 +960,15 @@ function formatUnixSeconds(value: number): string {
 }
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
-const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday"
+] as const;
 
 function deriveBroadcastDay(unixSeconds?: number | null): string | null {
   if (!unixSeconds) return null;
