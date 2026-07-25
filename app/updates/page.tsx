@@ -12,6 +12,26 @@ export const metadata: Metadata = {
   description: "numanie の最新アップデート一覧"
 };
 
+type IconTone =
+  | "red"
+  | "indigo"
+  | "sky"
+  | "indigo-light"
+  | "emerald"
+  | "amber"
+  | "blue"
+  | "violet"
+  | "teal"
+  | "pink"
+  | "green"
+  | "purple"
+  | "lavender"
+  | "azure"
+  | "mint"
+  | "orange"
+  | "coral"
+  | "gold";
+
 type Release = {
   version: string;
   date: string;
@@ -19,7 +39,7 @@ type Release = {
   isLatest?: boolean;
   changes: Array<{
     icon: LucideIcon;
-    iconColor: string;
+    iconTone: IconTone;
     title: string;
     description: string;
     href?: string;
@@ -35,19 +55,19 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Accessibility,
-        iconColor: "#ef4444",
+        iconTone: "red",
         title: "タップ領域を44pxへ追加統一",
         description: "視聴ステータスチップ、Tier画面のログイン促しダイアログの閉じるボタンなど、残っていた小さめのタップ領域を44px以上に拡大しました。",
       },
       {
         icon: Menu,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "ハンバーガーメニューのスクリーンリーダー対応を改善",
         description: "グローバルナビのメニュー開閉ボタンに、開閉先の要素を示すaria-controlsを追加しました。",
       },
       {
         icon: Info,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "設定ページの見出しを「設定」に統一",
         description: "画面タイトルが「アカウント設定」のままで、実際の内容（表示・通知・サブスク設定など）と一致していなかったため「設定」に統一しました。",
       },
@@ -61,38 +81,38 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Moon,
-        iconColor: "#818cf8",
+        iconTone: "indigo-light",
         title: "ダークテーマを標準表示に変更",
         description: "初回アクセス時の表示テーマを、ライトからダーク基調に変更しました。設定でライトテーマに戻すこともできます。",
       },
       {
         icon: ImageOff,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "簡易モードで画像の読み込みを停止",
         description: "通信量を抑える「簡易モード」利用時に、作品画像そのものを読み込まないようにしました。低速回線でも軽快に閲覧できます。",
       },
       {
         icon: ShieldCheck,
-        iconColor: "#10b981",
+        iconTone: "emerald",
         title: "エラー画面に保存データの安全性を明記",
         description: "予期しないエラー画面が出た場合でも、保存済みのTier表・マイリストは失われないことを画面上に明記しました。",
       },
       {
         icon: Info,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "オンボーディングのサブスク質問に説明を追加",
         description: "初回案内でサブスク登録状況を尋ねる質問に、何のために使う情報かの説明を追加しました。",
       },
       {
         icon: Bookmark,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "ホームの「次はこれ」カードから直接記録",
         description: "ホームの次アクションカードのボタンから、対象作品の記録シートへ直接移動できるようになりました。",
         href: "/",
       },
       {
         icon: Accessibility,
-        iconColor: "#ef4444",
+        iconTone: "red",
         title: "アクセシビリティ改善を継続実施",
         description: "タップ領域の44px統一、装飾アイコンへのaria-hidden付与、フィルターのARIAロール修正など、細かな操作性・スクリーンリーダー対応の改善を積み重ねています。",
       },
@@ -106,27 +126,27 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Zap,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "ホームに「次はこれ」カードを表示",
         description: "視聴中の作品から次に見る1本をホーム上部で提案するカードを追加しました。",
         href: "/",
       },
       {
         icon: CreditCard,
-        iconColor: "#10b981",
+        iconTone: "emerald",
         title: "分析画面内でサブスク登録が完結",
         description: "これまで設定画面への遷移が必須だったサブスク登録・編集を、分析画面のボトムシートから直接行えるようにしました。",
         href: "/dashboard",
       },
       {
         icon: UserCheck,
-        iconColor: "#3b82f6",
+        iconTone: "blue",
         title: "ログイン後に元のページへ復帰",
         description: "未ログインで分析・マイリスト・設定・声優ページへアクセスした際、ログイン完了後に自動でそのページへ戻るようにしました。",
       },
       {
         icon: Layers,
-        iconColor: "#8b5cf6",
+        iconTone: "violet",
         title: "初回案内モーダルの誤タップ対策",
         description: "背景タップだけで初回案内が閉じて二度と表示されなくなる問題を修正しました。閉じるボタンなどの明示的な操作でのみ閉じます。",
       },
@@ -140,42 +160,42 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: ListChecks,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "マイリスト・分析ページの呼び方を統一",
         description: "画面によって「視聴管理リスト」「ウォッチリスト」「集計」などばらばらだった呼び名を「マイリスト」「分析」に統一しました。共有ページの見出しやタブタイトルも同じ表記になります。",
         href: "/watchlist",
       },
       {
         icon: Search,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "さがすページを開いた瞬間に今年の作品を表示",
         description: "これまでは「さがす」ボタンを押すまで作品が1件も表示されませんでした。ページを開くと自動で今年の作品を読み込むようにしました。",
         href: "/explore",
       },
       {
         icon: Trash2,
-        iconColor: "#ef4444",
+        iconTone: "red",
         title: "Tier表のリセットに確認ダイアログを追加",
         description: "「リセット」を押すと即座に全消去されていましたが、誤操作を防ぐため確認ダイアログを挟むようにしました。",
         href: "/tier",
       },
       {
         icon: Share2,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "共有ページのカードにタイトルを常時表示",
         description: "共有されたTier表・布教カードで、作品タイトルが省略されず常に表示されるようになりました。",
         href: "/tier",
       },
       {
         icon: Compass,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "分析・声優ページの空状態から「さがす」へ直接誘導",
         description: "作品が登録されていないときの案内ボタンの遷移先を、行き止まりになりやすい一覧画面から「さがす」ページへ変更しました。",
         href: "/explore",
       },
       {
         icon: UserCheck,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "設定に「アカウント」セクションを追加",
         description: "設定画面からログイン中のアカウントを確認し、ログアウトできるようになりました。",
         href: "/settings",
@@ -189,7 +209,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Sparkles,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "期末・月初だけ出るホームカード",
         description: "今期の終わり頃には「今期Tierを作ろう」、毎月初めには「サブスクを見直す」カードがホームに表示されます。不要なときは閉じるとその期間は再表示しません。",
         href: "/",
@@ -203,7 +223,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: ListChecks,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "ステータス変更ボトムシートを追加",
         description: "ホームの放映カレンダーやマイリストのカードから、ページ遷移なしで視聴ステータスと話数進捗を変更できるようになりました。下にスワイプして閉じられます。",
         href: "/",
@@ -217,7 +237,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: PlayCircle,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "「配信サービスで見る」ボタンを追加",
         description: "マイリストの作品詳細から、その作品が見られる配信サービスへワンタップで移動できるようになりました。未視聴話の追いつきがさらに楽になります。",
         href: "/watchlist",
@@ -232,7 +252,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Share2,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "「期まとめ布教」がマイリストから作れるように",
         description: "今期のアニメをまとめて友だちに布教できる共有ページを、マイリストのボタンから作成できるようになりました。共有リンクは常に最新の内容を反映します。",
         href: "/watchlist",
@@ -247,7 +267,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Tv2,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "「今期アニメ どこで見れる」がひと目で分かるページ",
         description: "季節ごとのアニメを配信サービスとあわせて一覧できる公開ページを作りました。ログインなしで誰でも見られます。",
         href: "/seasons/2026/summer",
@@ -262,7 +282,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Layers,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "自分のTier分布がマイページで見られるように",
         description: "S・A・BなどのTierごとに何作品評価したかをマイページの視聴データに表示しました。自分の評価の傾向がひと目で分かります。",
         href: "/mypage",
@@ -277,7 +297,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: CreditCard,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "サブスクの加入状況とカバー率がマイページに",
         description: "加入中のサービス数と見放題カバー率をマイページで確認できるようになりました。未登録の方は登録への案内を表示します。",
         href: "/mypage",
@@ -292,7 +312,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: UserCheck,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "マイページで自分の視聴データがひと目で分かるように",
         description: "視聴中・見たい・完了の件数をマイページに表示しました。マイリストや分析へもマイページから直接移動できます。",
         href: "/mypage",
@@ -307,7 +327,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: PlayCircle,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "追いつき状況がひと目で分かるように",
         description: "視聴中の作品カードに「未視聴◯話」または「追いつき済み」を表示するようにしました。今すぐ見られる話数がすぐ分かります。",
         href: "/watchlist",
@@ -322,7 +342,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Zap,
-        iconColor: "#ec4899",
+        iconTone: "pink",
         title: "マイリストの読み込みがなめらかに",
         description: "読み込み中も実際の画面と同じ形のプレースホルダーを表示するようにしました。カードのタップ時の反応も心地よくしています。",
         href: "/watchlist",
@@ -337,7 +357,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Compass,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "マイリストの下に「今期のおすすめ」を表示",
         description: "マイリストのジャンル傾向に合わせた今期作品を横スクロールで提案します。気になる作品は「見たい」ですぐ追加できます。",
         href: "/watchlist",
@@ -352,7 +372,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Tv2,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "マイリストのカードに配信サービスを表示",
         description: "マイリストページの各カードにも、どのサブスクで見られるかをロゴで表示するようにしました。",
         href: "/watchlist",
@@ -367,25 +387,25 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Tv2,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "ホームのカードに配信サービスを表示",
         description: "放映カレンダー・視聴中/見たいレーン・今期から追加の各カードに、どのサブスクで見られるかをロゴで表示するようにしました。",
       },
       {
         icon: Menu,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "パソコンでも主要ページへ移動しやすく",
         description: "PCなど広い画面でもヘッダーからホーム・Tier・分析・マイリストへ直接移動できるようになりました。",
       },
       {
         icon: BarChart3,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "分析ページがすぐ開けるように",
         description: "サブスク未登録でもジャンルや声優の分析をすぐ確認できるようになりました。サブスク登録は分析ページからいつでも行えます。",
       },
       {
         icon: Zap,
-        iconColor: "#ec4899",
+        iconTone: "pink",
         title: "サブスク設定は変更した瞬間に保存",
         description: "設定画面のサブスクのチェックは変更するとすぐに保存されるようになりました。",
       },
@@ -399,20 +419,20 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Sparkles,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "ライトテーマの配色を修正",
         description: "ライトテーマでボタンや強調表示の色が表示されない不具合を修正しました。",
       },
       {
         icon: Compass,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "はじめての画面を刷新",
         description: "ログイン前のトップからTier表と使い方ガイドへすぐ移動できるようになり、できることを一目で確認できます。",
         href: "/guide",
       },
       {
         icon: UserCheck,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "ログインが必要な場面の案内を追加",
         description: "ログインが必要なページや操作では、突然画面が切り替わらず理由とログイン導線を表示するようにしました。",
       },
@@ -426,7 +446,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Tv2,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "Tier表にサブスクアイコンを表示",
         description: "シェアされたTier表の各作品に配信中のサブスクアイコンを表示しました。",
         href: "/tier",
@@ -441,7 +461,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Share2,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "コメントと作成導線に集約",
         description: "シェアページからいいねを廃止し、コメントと「自分のシェアカードを作る」導線に集約しました。",
         href: "/tier",
@@ -456,7 +476,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: BookOpen,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "使い方ガイドを追加しました",
         description: "メニューの「使い方」から、主要機能をアニメーション付きで確認できます。",
         href: "/guide",
@@ -471,7 +491,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Smartphone,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "5タブ＋マイページを試せるようになりました",
         description: "設定から「新しいナビ」をONにすると、マイリストとマイページを含む5タブのナビゲーションを試せます。",
         href: "/settings",
@@ -486,7 +506,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Trash2,
-        iconColor: "#ef4444",
+        iconTone: "red",
         title: "カードからすぐに削除",
         description: "マイリストのポスターカードに削除ボタンを追加しました。編集画面を開かず、カードからワンタップで作品を削除できます。",
         href: "/watchlist",
@@ -501,7 +521,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Layers,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "マイリストカードにTierバッジ",
         description: "視聴リストのポスターカードに、Tier表でユーザーが付けたS/A/Bなどのランクバッジを表示するようになりました。ステータスバッジの反対側（左上）に色付きの小さいピルで表示され、一覧で自分の評価がわかります。",
         href: "/watchlist",
@@ -516,7 +536,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Bookmark,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "今期 / 来期から横スワイプで追加",
         description: "ホームの追加セクションを横スワイプのポスターレーンに刷新しました。今期 / 来期を切り替えながら、気になる作品を「見たい」「視聴中」でワンタップ追加できます。",
         href: "/",
@@ -531,28 +551,28 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: ListChecks,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "ホームを「マイリスト」に刷新",
         description: "ホームを視聴管理リスト中心に作り直しました。「続きを見る」「今期 / 来期 / その他」「見たい」を横スワイプで一覧でき、下に今週の放映カレンダーを表示します。",
         href: "/",
       },
       {
         icon: Sparkles,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "新しい視聴管理リストを全員に",
         description: "ポスターカードと話数の進捗バーで見やすくした新デザインの視聴管理リストを全ユーザーに導入しました。ライト / ダークのテーマにも追従します。",
         href: "/watchlist",
       },
       {
         icon: BarChart3,
-        iconColor: "#10b981",
+        iconTone: "emerald",
         title: "分析タブをシンプルに",
         description: "分析タブは加入中サブスクのカバー率を中心に整理し、ひと目で分かるようにしました。",
         href: "/dashboard",
       },
       {
         icon: Menu,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "ナビをすっきり整理",
         description: "下部ナビをホーム / Tier / 分析に整理しました。",
       },
@@ -566,7 +586,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Menu,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "ヘッダー・フッター・メニューのダークモード対応",
         description: "GlobalNav、MobileNav、ハンバーガードロワーをテーマトークンに追従させ、ダークモードでも適切な配色で表示されるようにしました。",
       },
@@ -580,7 +600,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Layers,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "共有リストを「今期 / 来期 / その他」に分けて横スライダー表示",
         description: "視聴管理リストを共有したとき、相手の画面でも今期・来期・その他のセクションに分かれ、それぞれ横スワイプで作品を見られるようにしました。自分の視聴管理リストと同じ並びで共有相手にも伝わります。",
         href: "/watchlist",
@@ -595,7 +615,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Share2,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "視聴リスト・Tier表・分析の共有がOSのシェアシートに対応",
         description: "これまで共有ボタンはURLをコピーするだけでしたが、スマホではタップするとそのままLINEやXなどのシェアシートが開くようにしました。共有先をすぐ選べてよりライトに共有できます（非対応の環境では従来どおりURLをコピーします）。",
         href: "/watchlist",
@@ -610,14 +630,14 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Layers,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "視聴管理リストを「今期 / 来期 / その他」に分けて表示",
         description: "今期と来期の変わり目に向けて、視聴中の今期作品とこれから見たい来期作品を別々のセクションで管理できるようにしました。各セクションには年・シーズン・件数を表示します。",
         href: "/watchlist",
       },
       {
         icon: Share2,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "各作品から1タップで布教カードをシェア",
         description: "これまでメニューの中に隠れていた布教カード作成を、各作品のシェアアイコンから直接呼び出せるようにしました。気に入った作品をよりライトに共有できます。",
         href: "/watchlist",
@@ -632,7 +652,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: CalendarDays,
-        iconColor: "#0f766e",
+        iconTone: "teal",
         title: "まだ放送が先の作品も薄め表示＋放送開始日でわかるように",
         description: "登録した作品のうち放送開始がまだ先のものを、これまでは非表示にしていました。今後は同じ曜日レーンに薄め表示し、放送開始日（例: 4/10〜）を添えて「これから放送」だとわかるようにしました。表示ルールは見出しの ⓘ から確認できます。",
         href: "/",
@@ -647,7 +667,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: CalendarDays,
-        iconColor: "#16a34a",
+        iconTone: "green",
         title: "視聴管理リストの週間カレンダーに放送中の作品が出ない不具合を修正",
         description: "ホームと同じく、追加した時点の放送予定を使い続けていたため、放送中の作品でもカレンダーに表示されないことがありました。最新の放送スケジュールで曜日別に表示されるようになりました。",
         href: "/watchlist",
@@ -662,7 +682,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: CalendarDays,
-        iconColor: "#16a34a",
+        iconTone: "green",
         title: "今週の放映カレンダーに視聴中・見たい作品が出ない不具合を修正",
         description: "追加した時点の放送予定を使い続けていたため、放送中の今期作品でもカレンダーに表示されないことがありました。最新の放送スケジュールで曜日別に表示されるようになりました。",
         href: "/",
@@ -677,7 +697,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Search,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "さがすページが上位50件で打ち止めになっていた不具合を修正",
         description: "年代を選んで探した結果が上位50件しか表示されない問題を修正。「もっと見る」で残りの作品も表示できるようになりました。",
         href: "/explore",
@@ -692,7 +712,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: ListChecks,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "「今期/来期から追加」で8件しか見えなかった不具合を修正",
         description: "リストが8件で打ち止めになっていた問題を修正。「もっと見る」で残りの作品も表示できるようになりました。",
         href: "/",
@@ -707,21 +727,21 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Smartphone,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "放映カレンダーのスマホ表示崩れを修正",
         description: "曜日ごとのカードレーンが画面幅を超えて横にずれる不具合を修正しました。",
         href: "/",
       },
       {
         icon: CalendarDays,
-        iconColor: "#16a34a",
+        iconTone: "green",
         title: "今週の放映カレンダーに来期作品が混ざらないように",
         description: "曜日が一致するだけで来期作品の初回放送日が今週の枠に表示されていた不具合を修正しました。",
         href: "/",
       },
       {
         icon: Bookmark,
-        iconColor: "#7c3aed",
+        iconTone: "purple",
         title: "ホームから来期アニメを「見たい」に追加できるように",
         description: "「今期から追加」セクションに今期/来期の切り替えを追加。来期作品はまだ放送前のため「見たい」のみ選べます。",
         href: "/",
@@ -736,7 +756,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Zap,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "Tier の読み込みを高速化（リロード・直アクセス対応）",
         description: "季節アニメを sessionStorage に永続化し、/tier ページでサーバーシード。カレンダーカードからの遷移も prefetch。ロゴクリックでフルリロードしなくなりました。",
         href: "/tier",
@@ -751,7 +771,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: CalendarDays,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "ホームが今週の放映カレンダーに",
         description: "ホームを開くと、視聴中・見たい作品が曜日別の放映カレンダーで表示されるようになりました。今日の曜日へ自動でスクロールします。",
         href: "/",
@@ -766,19 +786,19 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Layers,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "シンプル / プロの表示モードを廃止",
         description: "表示モードの切り替えをなくし、すべての機能を1つの画面で使えるようにしました。設定からモード切替の項目も削除しています。",
       },
       {
         icon: Menu,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "下部ナビを4タブに統一",
         description: "下部ナビゲーションを「ホーム / Tier / 分析 / さがす」の4タブに統一しました。",
       },
       {
         icon: Sparkles,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "Tier表のツールバーを整理",
         description: "よく使う操作（年・期の切り替え／再取得／共有）を前面に残し、フィルタや自動配置・リセットは「⋯」メニューにまとめました。",
         href: "/tier",
@@ -793,14 +813,14 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Search,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "「探す」アイコンを虫眼鏡に統一",
         description: "下部ナビと探索ページの「探す」ボタンを、コンパスから虫眼鏡アイコンに変更しました。",
         href: "/explore",
       },
       {
         icon: Filter,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "探索を年単位のフィルタに簡素化",
         description: "季節（春夏秋冬）の選択を廃止し、年代だけ選べばその年の作品をまとめて探せるようにしました。",
         href: "/explore",
@@ -815,7 +835,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: CalendarDays,
-        iconColor: "#a07ef7",
+        iconTone: "lavender",
         title: "放映カレンダーを横スクロールレーンに復元",
         description: "視聴管理ページの放映カレンダーを、曜日ごとの横スクロールレーンで表示するように戻しました。今日の曜日レーンへ自動スクロールし、ハイライト表示します。",
         href: "/watchlist",
@@ -830,27 +850,27 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Menu,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "ヘッダーを集約",
         description: "ヘッダーの「探す」アイコンを削除。ユーザーメニューの設定項目をハンバーガードロワーに統合し、サブスクへの導線もドロワーに追加しました。",
       },
       {
         icon: Layers,
-        iconColor: "#10b981",
+        iconTone: "emerald",
         title: "Tier表のタップヒント・ヘッダー・未分類欄を調整",
         description: "カードタップ時の移動ヒントは初回のみ表示に。スクロール時はヘッダーが自動でコンパクト化。未分類プールはトリガー式のアコーディオンドロワーに変更しました。",
         href: "/tier",
       },
       {
         icon: Trash2,
-        iconColor: "#ef4444",
+        iconTone: "red",
         title: "視聴解除アクションを追加",
         description: "視聴管理リストの作品を視聴解除（削除）できるアクションを追加しました。",
         href: "/watchlist",
       },
       {
         icon: PlayCircle,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "「今すぐ見放題」がサブスク連動に",
         description: "探索ページの「今すぐ見放題」フィルタが、登録済みのサブスクサービスと連動するようになりました。未登録の場合は従来の動作にフォールバックします。",
         href: "/explore",
@@ -865,21 +885,21 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: BarChart3,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "分析タブを整理してスッキリ",
         description: "「今夜何見る」「最近更新した作品」「更新情報リンク」を削除。ジャンルと声優を横棒グラフで表示し、制作会社欄を廃止。ジャンル名も日本語に変換しました。",
         href: "/dashboard",
       },
       {
         icon: Layers,
-        iconColor: "#10b981",
+        iconTone: "emerald",
         title: "Tierツールバーを整理",
         description: "使われにくい「表出力（PNG）」ボタンを削除。「Tier追加」ボタンをリスト末尾に移動し、「リセット」ボタンに文字ラベルを追加しました。",
         href: "/tier",
       },
       {
         icon: Compass,
-        iconColor: "#0ea5e9",
+        iconTone: "sky",
         title: "探索ページの案内を統合",
         description: "「ボードに戻る」ボタンを削除し、重複していたページタイトルと文言案内を一本化しました。",
         href: "/explore",
@@ -894,7 +914,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Zap,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "Tierデータをホームで先読みして高速化",
         description: "ホーム表示時に今期アニメをバックグラウンドで先読みし、Tierページとキャッシュを共有。ホームからTierへ遷移したときの表示を速くしました。",
         href: "/tier",
@@ -909,7 +929,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Compass,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "ホームに「今期から追加」セクションを追加",
         description: "未登録の今期アニメを人気順で表示し、その場で「見たい」「視聴中」に登録できます。登録後は視聴中・見たいセクションへ即時反映されます。",
         href: "/",
@@ -924,14 +944,14 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: ListChecks,
-        iconColor: "#10b981",
+        iconTone: "emerald",
         title: "視聴済み話数の手入力を廃止",
         description: "視聴管理の「何話まで見た？」ステッパーを削除しました。ホームは視聴中の作品を手入力なしで一覧表示するシンプルな構成に戻しています。",
         href: "/watchlist",
       },
       {
         icon: Tv2,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "ホームを視聴中ベースに簡素化",
         description: "シンプル・プロ両モードで「今すぐ見られる」を「視聴中」に変更。未視聴話数の計算に依存せず、ステータスが視聴中の作品をそのまま表示します。",
         href: "/",
@@ -946,20 +966,20 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Smartphone,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "下部ナビをモード別に出し分け",
         description: "シンプルはホーム／視聴中／さがす／サブスク、プロはホーム／Tier／分析／探索の4本に。HOME_DESIGN_OPTIONS の宿題を反映。",
       },
       {
         icon: Bookmark,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "PWAバッジを未視聴最新話の作品数に変更",
         description: "今日放送の本数ではなく、視聴中で未視聴話が残っている作品数をホーム画面アイコンに表示します（watchedEpisodes 入力済みのみ）。",
         href: "/watchlist",
       },
       {
         icon: ListChecks,
-        iconColor: "#10b981",
+        iconTone: "emerald",
         title: "視聴リズム設定を廃止",
         description: "ペルソナ議論で不要と判断された「毎週リアタイ／まとめて見る／ゆっくり見る」の選択UIを削除しました。",
         href: "/watchlist",
@@ -974,7 +994,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Layers,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "ホームをモード別（シンプル／プロ）に刷新",
         description: "アンケート結果（サブスク派メイン、C案最多）を反映。シンプルは「今すぐ見られる／これから配信／見たい」、プロは進捗バー＋未視聴キャッチアップ＋最近の記録＋Tierリンク。watchedEpisodes未入力時の未視聴過大表示を調整。",
         href: "/",
@@ -989,34 +1009,34 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Tv2,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "トップページがパーソナルホームに",
         description: "アプリを開くと「今夜放映」「視聴中」「見たい」の3レーンで自分の視聴状況が一目でわかるホーム画面になりました。",
         href: "/",
       },
       {
         icon: Smartphone,
-        iconColor: "#10b981",
+        iconTone: "emerald",
         title: "下部ナビを4本に整理",
         description: "モバイル下部タブをホーム・視聴中・Tier・分析の4本に集約しました。サブスクはハンバーガーメニューからアクセスできます。",
       },
       {
         icon: CalendarDays,
-        iconColor: "#a07ef7",
+        iconTone: "lavender",
         title: "放映カレンダーを横スクロールレーン化",
         description: "視聴管理ページの放映カレンダーが曜日ごとの横スクロールレーンに変わりました。今日の欄に自動スクロールし、見たいアニメが一目でわかるようになりました。",
         href: "/watchlist",
       },
       {
         icon: Layers,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "Tier 表を /tier へ移設",
         description: "Tier ボードを専用の /tier ページへ移設しました。トップ（/）は今後パーソナルホームとして整備予定です。",
         href: "/tier",
       },
       {
         icon: Search,
-        iconColor: "#4f8ef7",
+        iconTone: "azure",
         title: "探すアイコンを虫眼鏡に変更",
         description: "右上ナビの「探す」ボタンのアイコンをコンパスから虫眼鏡（Search）に変更しました。機能がひと目でわかりやすくなりました。",
         href: "/explore",
@@ -1031,14 +1051,14 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Smartphone,
-        iconColor: "#6366f1",
+        iconTone: "indigo",
         title: "PWA ホーム画面ショートカット",
         description: "ホーム画面の numanie アイコンを長押しすると「今夜見るリスト」「ティア表」「サブスク診断」へのショートカットが表示されます（対応デバイスのみ）。",
         href: "/watchlist",
       },
       {
         icon: Bookmark,
-        iconColor: "#f59e0b",
+        iconTone: "amber",
         title: "アプリバッジ通知",
         description: "ウォッチリストを開くと、今日放送の視聴中アニメ数がホーム画面のアプリアイコン上にバッジ表示されます（対応ブラウザ・OS のみ）。",
         href: "/watchlist",
@@ -1053,20 +1073,20 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Sparkles,
-        iconColor: "#818cf8",
+        iconTone: "indigo-light",
         title: "numanie にリブランド",
         description: "サービス名を「numanie」に変更しました。「沼に」＋ フランス語 manie（熱中・偏愛）から着想を得た名前です。ロゴ・アイコン・PWAアイコンも新デザインに刷新。",
       },
       {
         icon: Loader2,
-        iconColor: "#4f8ef7",
+        iconTone: "azure",
         title: "初期ロード スケルトン表示",
         description: "ページ読み込み中に「0作品」の空白Tier表が一瞬表示される問題を修正。データ取得中はシマーアニメーション付きのスケルトンUIに切り替わります。",
         href: "/",
       },
       {
         icon: CreditCard,
-        iconColor: "#4fc48e",
+        iconTone: "mint",
         title: "サブスク診断 — 結論ファースト表示",
         description: "サブスク診断ページの最上部に「ウォッチリストの XX% をカバー中」サマリーを追加。何本見られるか・追加するとお得なサービスが一目でわかるようになりました。",
         href: "/subscriptions",
@@ -1081,7 +1101,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Bell,
-        iconColor: "#f7a74f",
+        iconTone: "orange",
         title: "プッシュ通知（実験的）",
         description: "設定画面からプッシュ通知を有効にすると、視聴中・見たいアニメの放送日に通知が届きます。iPhoneはホーム画面に追加後にご利用ください。",
         href: "/settings",
@@ -1096,19 +1116,19 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Menu,
-        iconColor: "#4f8ef7",
+        iconTone: "azure",
         title: "ハンバーガーメニュー追加",
         description: "左上 ☰ アイコンからメニューを開けるようになりました。シンプル/プロモードの切替、全ページへのナビゲーション、更新情報・設定へのリンクがここに集約されています。",
       },
       {
         icon: UserCheck,
-        iconColor: "#4fc48e",
+        iconTone: "mint",
         title: "ログイン/ユーザーアイコンを右上に配置",
         description: "未ログイン時は右上のアイコンをタップするとGoogleログインができます。ログイン後はアバターをタップして設定・ログアウトにアクセスできます。",
       },
       {
         icon: Sparkles,
-        iconColor: "#f7a74f",
+        iconTone: "orange",
         title: "初回訪問チュートリアル",
         description: "初めてアプリを開いたとき「何のアプリか」を説明するモーダルが表示されます。3ステップのガイドとGoogleログイン誘導ボタン付き。",
       }
@@ -1122,7 +1142,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Layers,
-        iconColor: "#a07ef7",
+        iconTone: "lavender",
         title: "シンプルモード / プロモード切り替え",
         description: "設定ページから表示モードを選べるようになりました。シンプルモードはアニメ一覧・視聴管理・サブスクのみ。プロモードはティア追加・PNG出力・共有・過去作探索・声優・分析など全機能が使えます。",
         href: "/settings"
@@ -1137,7 +1157,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Download,
-        iconColor: "#4fc48e",
+        iconTone: "mint",
         title: "ホーム画面に追加（PWA）",
         description: "Safari の「共有 → ホーム画面に追加」または Chrome の「インストール」からアプリのようにホーム画面に追加できます。アイコン・スプラッシュ・テーマカラーに対応しました。",
       }
@@ -1150,28 +1170,28 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Smartphone,
-        iconColor: "#4fc48e",
+        iconTone: "mint",
         title: "モバイル視聴管理の表示崩れ修正",
         description: "スマートフォンでのウォッチリスト画面を改善。ステータスチップの折り返し表示、長いタイトルでのレイアウト崩れ、コピーボタンのアイコン表示を修正しました。",
         href: "/watchlist"
       },
       {
         icon: Filter,
-        iconColor: "#a07ef7",
+        iconTone: "lavender",
         title: "放送カレンダーフィルター変更",
         description: "放送カレンダーに表示するアニメを「視聴中」と「見たい」のみに絞り込むよう変更しました。一時停止・完了・中止は非表示になります。",
         href: "/watchlist"
       },
       {
         icon: CreditCard,
-        iconColor: "#4f8ef7",
+        iconTone: "azure",
         title: "サブスク診断の詳細表示",
         description: "見放題カバー率ページで、各サービスがカバーしている作品を展開して確認できるようになりました。",
         href: "/subscriptions"
       },
       {
         icon: Tv2,
-        iconColor: "#f76f4f",
+        iconTone: "coral",
         title: "今夜何見る？ ロジック改善",
         description: "週次視聴アニメを優先表示するよう修正。「今日放送」「昨日放送」「今週放送済み」などのタグと、おすすめ理由を表示するようにしました。",
         href: "/dashboard"
@@ -1185,7 +1205,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Tv2,
-        iconColor: "#f76f4f",
+        iconTone: "coral",
         title: "今夜何見る？",
         description: "ダッシュボードから「続きを見る」「今夜完結したい」で候補を提示します。視聴リズム（毎週リアタイ / まとめて見る / ゆっくり見る）も登録できます。",
         href: "/dashboard"
@@ -1199,28 +1219,28 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: CreditCard,
-        iconColor: "#4f8ef7",
+        iconTone: "azure",
         title: "サブスク最適化",
         description: "加入中のサービス（Netflix・U-NEXT・d アニメ等）とウォッチリストを照合して見放題カバー率を表示します。",
         href: "/subscriptions"
       },
       {
         icon: Share2,
-        iconColor: "#f76f4f",
+        iconTone: "coral",
         title: "布教カード",
         description: "ウォッチリストの作品カード（⋮ メニュー）からおすすめコメント付きのシェア URL を作成できます。",
         href: "/watchlist"
       },
       {
         icon: UserCheck,
-        iconColor: "#4fc48e",
+        iconTone: "mint",
         title: "オンボーディング",
         description: "初回ログイン時にサブスクサービスを登録する画面を追加しました。ダッシュボードを初めて開くと自動で表示されます。",
         href: "/onboarding"
       },
       {
         icon: Zap,
-        iconColor: "#f7b24f",
+        iconTone: "gold",
         title: "画像配信の高速化",
         description: "サーバー経由のプロキシを廃止し、AniList CDN から直接画像を配信するように変更。表示速度が向上しました。"
       }
@@ -1233,27 +1253,27 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Sparkles,
-        iconColor: "#4f8ef7",
+        iconTone: "azure",
         title: "TMDb Watch Providers 連携",
         description: "季節アニメのカードに Netflix・Amazon Prime 等の見放題サービスリンクを表示します。"
       },
       {
         icon: Compass,
-        iconColor: "#4fc48e",
+        iconTone: "mint",
         title: "「今すぐ見放題」フィルタ",
         description: "探す画面で見放題作品だけに絞り込めるフィルタを追加しました。",
         href: "/explore"
       },
       {
         icon: CalendarDays,
-        iconColor: "#a07ef7",
+        iconTone: "lavender",
         title: "放送カレンダー",
         description: "視聴管理リストに今週の放映スケジュールをカレンダー形式で表示するセクションを追加しました。",
         href: "/watchlist"
       },
       {
         icon: ListChecks,
-        iconColor: "#4fc48e",
+        iconTone: "mint",
         title: "視聴管理の保存ボタン",
         description: "ウォッチリストカードに明示的な「保存する」ボタンを追加し、変更内容を確実に保存できるようにしました。"
       }
@@ -1266,21 +1286,21 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Mic2,
-        iconColor: "#f76f4f",
+        iconTone: "coral",
         title: "声優ページ",
         description: "視聴した作品に出演する声優の傾向を一覧で確認できるページを追加しました。",
         href: "/voice-actors"
       },
       {
         icon: Compass,
-        iconColor: "#4f8ef7",
+        iconTone: "azure",
         title: "探すページ",
         description: "季節アニメをジャンル・フォーマット・視聴可否で絞り込んで探せるページを追加しました。",
         href: "/explore"
       },
       {
         icon: Sparkles,
-        iconColor: "#a07ef7",
+        iconTone: "lavender",
         title: "モバイルボトムナビ",
         description: "スマートフォンでの操作性を向上させるため、画面下部にナビゲーションバーを追加しました。"
       }
@@ -1293,14 +1313,14 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: ListChecks,
-        iconColor: "#4fc48e",
+        iconTone: "mint",
         title: "ウォッチリスト",
         description: "追っている作品の「いつ見るか」「お気に入り度」「メモ」をまとめて管理できるページを追加しました。",
         href: "/watchlist"
       },
       {
         icon: CalendarDays,
-        iconColor: "#f7b24f",
+        iconTone: "gold",
         title: "放送日・クール情報",
         description: "アニメカードに放送曜日・次回放送日・クール数を表示するようにしました。"
       }
@@ -1313,14 +1333,14 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: BarChart3,
-        iconColor: "#4f8ef7",
+        iconTone: "azure",
         title: "好み分析ダッシュボード",
         description: "視聴ステータスをもとにジャンル・制作会社・声優の傾向を集計・グラフ表示します。",
         href: "/dashboard"
       },
       {
         icon: Share2,
-        iconColor: "#f76f4f",
+        iconTone: "coral",
         title: "共有・コメント機能",
         description: "Tier ボードや分析結果を URL で共有し、コメントや絵文字リアクションをもらえます。"
       }
@@ -1333,13 +1353,13 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Star,
-        iconColor: "#f7b24f",
+        iconTone: "gold",
         title: "ステータス選択のチップ UI",
         description: "視聴ステータスの変更をチップ型のボタンで操作できるよう改善しました。"
       },
       {
         icon: Sparkles,
-        iconColor: "#a07ef7",
+        iconTone: "lavender",
         title: "ドラッグ & ドロップ改善",
         description: "Tier ボード上でのカードの並び替えをより快適に操作できるようにしました。"
       }
@@ -1352,7 +1372,7 @@ const RELEASES: Release[] = [
     changes: [
       {
         icon: Sparkles,
-        iconColor: "#a07ef7",
+        iconTone: "lavender",
         title: "numanie",
         description: "AniList から季節アニメを取得し、S / A / B / C / D の Tier に分類して保存できる最初のバージョン。",
         href: "/"
@@ -1391,10 +1411,9 @@ export default function UpdatesPage() {
                   const inner = (
                     <>
                       <span
-                        className="updates-icon-wrap"
-                        style={{ background: `${change.iconColor}1a` }}
+                        className={`updates-icon-wrap updates-icon-tone-${change.iconTone}`}
                       >
-                        <Icon size={22} color={change.iconColor} aria-hidden="true" />
+                        <Icon size={22} aria-hidden="true" />
                       </span>
                       <div className="updates-change-text">
                         <strong>{change.title}</strong>
