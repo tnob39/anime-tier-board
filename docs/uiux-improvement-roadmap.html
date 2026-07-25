@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>numanie UI/UX 改善 — 実施・予定 画面仕様図</title>
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --panel: #111318;
+      --panel-2: #161a22;
+      --line: #2b313d;
+      --ink: #f2f4f8;
+      --muted: #a9b1c0;
+      --muted-2: #737d91;
+      --blue: #7dd3fc;
+      --blue-bg: rgba(125, 211, 252, .10);
+      --green: #6ee7b7;
+      --green-bg: rgba(110, 231, 183, .11);
+      --orange: #fbbf24;
+      --orange-bg: rgba(251, 191, 36, .11);
+      --rose: #fda4af;
+      --rose-bg: rgba(253, 164, 175, .10);
+      --violet: #c4b5fd;
+      --violet-bg: rgba(196, 181, 253, .10);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+      line-height: 1.55;
+      background-image: linear-gradient(rgba(255,255,255,.026) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.026) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+    .wrap { width: min(1280px, calc(100% - 32px)); margin: 0 auto; padding: 44px 0 72px; }
+    .eyebrow { color: var(--blue); font: 700 12px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 12px 0 8px; font-size: clamp(28px, 4vw, 47px); letter-spacing: -.045em; line-height: 1.1; }
+    .lead { margin: 0; max-width: 780px; color: var(--muted); font-size: 16px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .pill { border: 1px solid var(--line); background: rgba(17,19,24,.86); border-radius: 99px; padding: 5px 10px; color: var(--muted); font-size: 12px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px 18px; margin: 42px 0 17px; color: var(--muted); font-size: 12px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .done { background: var(--green); }.progress { background: var(--blue); }.plan { background: var(--orange); }.block { background: var(--rose); }
+    .diagram { position: relative; display: grid; grid-template-columns: 1fr 76px 1fr; gap: 0; min-height: 680px; }
+    .lane { position: relative; display: grid; gap: 14px; align-content: start; }
+    .lane-title { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 12px; border-bottom: 1px solid var(--line); }
+    .lane-title h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+    .lane-title small { color: var(--muted-2); font: 11px ui-monospace, monospace; }
+    .spine { position: relative; }
+    .spine::before { content: ""; position: absolute; top: 38px; bottom: 5px; left: 50%; width: 1px; background: var(--line); }
+    .spine span { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; border: 2px solid var(--bg); border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 1px var(--line); }
+    .card { position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(17,19,24,.93); padding: 17px 18px 16px; overflow: hidden; }
+    .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--card); }
+    .card.done-card { --card: var(--green); }.card.progress-card { --card: var(--blue); }.card.plan-card { --card: var(--orange); }.card.block-card { --card: var(--rose); }
+    .card-header { display: flex; gap: 9px; align-items: center; }
+    .status { border-radius: 99px; padding: 3px 7px; color: var(--card); border: 1px solid color-mix(in srgb, var(--card) 42%, transparent); background: color-mix(in srgb, var(--card) 9%, transparent); font: 700 10px ui-monospace, monospace; letter-spacing: .06em; white-space: nowrap; }
+    .scope { color: var(--muted-2); font: 11px ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    h3 { margin: 10px 0 4px; font-size: 16px; letter-spacing: -.018em; line-height: 1.3; }
+    .card p { margin: 0; color: var(--muted); font-size: 13px; }
+    .tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { padding: 3px 7px; border-radius: 5px; color: var(--muted); background: var(--panel-2); border: 1px solid #272d38; font-size: 11px; }
+    .chain { margin: 45px 0 0; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(17,19,24,.92); padding: 20px; }
+    .chain h2 { margin: 0 0 15px; font-size: 18px; }
+    .flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    .flow-step { min-height: 94px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); padding: 12px; }
+    .flow-step b { display: block; color: var(--blue); font: 700 11px ui-monospace, monospace; }
+    .flow-step span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+    .footnote { margin: 17px 2px 0; color: var(--muted-2); font-size: 12px; }
+    @media (max-width: 820px) {
+      .wrap { width: min(100% - 24px, 680px); padding-top: 28px; }
+      .diagram { grid-template-columns: 1fr; gap: 26px; }
+      .spine { display: none; }
+      .flow { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 460px) { .flow { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="eyebrow">numanie / anime-tier-board · UIUX execution map</div>
+    <h1>UI/UX 改善の実施・予定<br>画面仕様図</h1>
+    <p class="lead">現在の改善を「すでに画面・データ契約へ反映したもの」と「次に同じ品質ゲートで進めるもの」に分けて可視化。各カードは、画面責務・安全条件・実装単位を示す。</p>
+    <div class="meta">
+      <span class="pill">IA: 5タブ + 同一機能の Visual / Simple 表示モード</span>
+      <span class="pill">Design: Flat 2.0 / Swiss Style / dark default</span>
+      <span class="pill">品質ゲート: Grok実装 → Hermes検証 → 独立レビュー → CI</span>
+      <span class="pill">更新: 2026-07-25</span>
+    </div>
+
+    <div class="legend">
+      <span><i class="dot done"></i>完了・main統合済み</span>
+      <span><i class="dot progress"></i>進行中 / 再構築</span>
+      <span><i class="dot plan"></i>予定・原子的に分割</span>
+      <span><i class="dot block"></i>先行条件あり</span>
+    </div>
+
+    <section class="diagram" aria-label="UIUX実施と予定のタイムライン">
+      <div class="lane">
+        <div class="lane-title"><h2>実施済み</h2><small>MERGED / VERIFIED</small></div>
+
+        <article class="card done-card">
+          <div class="card-header"><span class="status">DONE</span><span class="scope">IA / display contract</span></div>
+          <h3>5タブIAとVisual / Simple表示契約</h3>
+          <p>表示モードは別機能ではなく同一情報・同一操作の見せ方として固定。Simpleでは画像DOM・placeholder・画像用空カラムを構造的に生成しない方針を採用。</p>
+          <div class="tags"><span class="tag">情報設計</span><span class="tag">アクセシビリティ</span><span class="tag">通信制約</span></div>
+        </article>
+
+        <article class="card done-card">
+          <div class="card-header"><span class="status">DONE</span><span class="scope">#646 #654 #672 #676 #680</span></div>
+          <h3>画面単位のsemantic token化</h3>
+          <p>Status Sheet、BottomSheet、Watchlist V2、Updates、AnimeCardPlaceholderの直接色をtokenへ移行。dark default / explicit lightの双方を回帰テストで固定。</p>
+          <div class="tags"><span class="tag">theme tokens</span><span class="tag">source regression</span><span class="tag">visual equivalence</span></div>
+        </article>
+
+        <article class="card done-card">
+          <div class="card-header"><span class="status">DONE</span><span class="scope">#677 / release-data</span></div>
+          <h3>季節アニメ取得のcutoff・freshness policy</h3>
+          <p>Jikan sunsetの通信cutoff、AniList retryを含むHTTP予算、hard deadline、fresh / stale / unavailableのレスポンス契約を実装。</p>
+          <div class="tags"><span class="tag">data reliability</span><span class="tag">6s deadline</span><span class="tag">5 request cap</span></div>
+        </article>
+
+        <article class="card done-card">
+          <div class="card-header"><span class="status">DONE</span><span class="scope">#679 / settings</span></div>
+          <h3>設定: アプリデータ削除と安全なログアウト</h3>
+          <p>二段階確認とAPI側の完全一致確認を導入。本人データだけを単一トランザクションで削除し、成功時だけログアウト。Googleアカウントは削除しないことを明記。</p>
+          <div class="tags"><span class="tag">store readiness</span><span class="tag">data safety</span><span class="tag">2-step confirm</span></div>
+        </article>
+      </div>
+
+      <div class="spine" aria-hidden="true"><span></span></div>
+
+      <div class="lane">
+        <div class="lane-title"><h2>これから進めるもの</h2><small>NEXT / GATED</small></div>
+
+        <article class="card progress-card">
+          <div class="card-header"><span class="status">REBUILD</span><span class="scope">P0 #621</span></div>
+          <h3>Simpleモードの画像通信ゼロ証明</h3>
+          <p>旧candidateの混入差分は採用しない。current mainから4ファイルだけで、Home / Watchlist / BottomSheetの画像DOM・<code>/api/image-proxy</code> requestが0件であるE2Eを再構築する。</p>
+          <div class="tags"><span class="tag">Playwright</span><span class="tag">negative proof</span><span class="tag">fixture server</span></div>
+        </article>
+
+        <article class="card plan-card">
+          <div class="card-header"><span class="status">NEXT</span><span class="scope">#371 residual clusters</span></div>
+          <h3>残存direct colorの原子的token化</h3>
+          <p>一度に全CSSを移行しない。画面・コンポーネント単位で、色行列・dark/light定義・直接色禁止テストをセットにして順に統合する。</p>
+          <div class="tags"><span class="tag">one component / PR</span><span class="tag">no fallback colors</span><span class="tag">design system</span></div>
+        </article>
+
+        <article class="card plan-card">
+          <div class="card-header"><span class="status">NEXT</span><span class="scope">#314 / release-data</span></div>
+          <h3>durable snapshotとstale UI</h3>
+          <p>source取得済みデータをdurable snapshotへ接続し、fresh / stale / unavailableを画面で正直に伝える。古いデータを新しいものと誤認させない。</p>
+          <div class="tags"><span class="tag">snapshot</span><span class="tag">data freshness</span><span class="tag">failure UX</span></div>
+        </article>
+
+        <article class="card plan-card">
+          <div class="card-header"><span class="status">NEXT</span><span class="scope">native release gate</span></div>
+          <h3>Native公開判定と退行防止</h3>
+          <p>Web / Nativeのデータ契約、公開対象バージョン、劣化時の安全な振る舞いを検証可能なrelease gateとして固定する。</p>
+          <div class="tags"><span class="tag">Capacitor</span><span class="tag">release criteria</span><span class="tag">compatibility</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="chain" aria-label="改善の実行フロー">
+      <h2>各改善を統合するまでの実行フロー</h2>
+      <div class="flow">
+        <div class="flow-step"><b>01 / SSOT</b><span>画面責務・データ契約・採否理由を固定</span></div>
+        <div class="flow-step"><b>02 / SLICE</b><span>1コンポーネント / 1安全な目的へ分割</span></div>
+        <div class="flow-step"><b>03 / GROK</b><span>隔離worktreeで限定実装</span></div>
+        <div class="flow-step"><b>04 / PROOF</b><span>target test、型検査、build、diff検証</span></div>
+        <div class="flow-step"><b>05 / REVIEW</b><span>Hermesと独立レビューで仕様照合</span></div>
+        <div class="flow-step"><b>06 / MERGE</b><span>CI / Vercel成功後にmainへ統合</span></div>
+      </div>
+      <p class="footnote">注: 予定は現時点の優先順位。破壊的変更・外部データ・Native公開に影響するものは、実装前にデータ所有範囲と安全条件を再確認する。</p>
+    </section>
+  </main>
+</body>
+</html>
