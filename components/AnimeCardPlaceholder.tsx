@@ -1,23 +1,24 @@
 "use client";
 
-const PALETTE = [
-  ["#6366f1", "#8b5cf6"],
-  ["#ec4899", "#f43f5e"],
-  ["#0ea5e9", "#06b6d4"],
-  ["#10b981", "#14b8a6"],
-  ["#f59e0b", "#ef4444"],
-  ["#8b5cf6", "#ec4899"],
-  ["#06b6d4", "#0ea5e9"],
-  ["#14b8a6", "#10b981"],
-];
+/** Ordered tone pairs (length/order preserved from prior hex palette). */
+const TONE_PAIRS = [
+  ["indigo", "violet"],
+  ["pink", "rose"],
+  ["sky", "cyan"],
+  ["emerald", "teal"],
+  ["amber", "red"],
+  ["violet", "pink"],
+  ["cyan", "sky"],
+  ["teal", "emerald"],
+] as const;
 
-function titleToColors(title: string): [string, string] {
+function titleToPairClass(title: string): string {
   let hash = 0;
   for (let i = 0; i < title.length; i++) {
     hash = (hash * 31 + title.charCodeAt(i)) & 0xffffff;
   }
-  const pair = PALETTE[hash % PALETTE.length];
-  return [pair[0], pair[1]];
+  const [from, to] = TONE_PAIRS[hash % TONE_PAIRS.length];
+  return `anime-card-placeholder-pair-${from}-${to}`;
 }
 
 function initials(title: string): string {
@@ -37,11 +38,10 @@ export default function AnimeCardPlaceholder({
   className?: string;
   draggable?: boolean;
 }) {
-  const [from, to] = titleToColors(title);
+  const pairClass = titleToPairClass(title);
   return (
     <div
-      className={["anime-card-placeholder", className].filter(Boolean).join(" ")}
-      style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+      className={["anime-card-placeholder", pairClass, className].filter(Boolean).join(" ")}
       role="img"
       aria-label={title}
       draggable={draggable}
