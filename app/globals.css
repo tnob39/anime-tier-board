@@ -100,6 +100,42 @@
   --hcc-cta-ink: #2dd4bf;
   --hcc-cta-hover-surface: rgba(45, 212, 191, 0.24);
   --hcc-cta-hover-border: rgba(45, 212, 191, 0.65);
+  --updates-icon-red-ink: #ef4444;
+  --updates-icon-red-soft: #ef44441a;
+  --updates-icon-indigo-ink: #6366f1;
+  --updates-icon-indigo-soft: #6366f11a;
+  --updates-icon-sky-ink: #0ea5e9;
+  --updates-icon-sky-soft: #0ea5e91a;
+  --updates-icon-indigo-light-ink: #818cf8;
+  --updates-icon-indigo-light-soft: #818cf81a;
+  --updates-icon-emerald-ink: #10b981;
+  --updates-icon-emerald-soft: #10b9811a;
+  --updates-icon-amber-ink: #f59e0b;
+  --updates-icon-amber-soft: #f59e0b1a;
+  --updates-icon-blue-ink: #3b82f6;
+  --updates-icon-blue-soft: #3b82f61a;
+  --updates-icon-violet-ink: #8b5cf6;
+  --updates-icon-violet-soft: #8b5cf61a;
+  --updates-icon-teal-ink: #0f766e;
+  --updates-icon-teal-soft: #0f766e1a;
+  --updates-icon-pink-ink: #ec4899;
+  --updates-icon-pink-soft: #ec48991a;
+  --updates-icon-green-ink: #16a34a;
+  --updates-icon-green-soft: #16a34a1a;
+  --updates-icon-purple-ink: #7c3aed;
+  --updates-icon-purple-soft: #7c3aed1a;
+  --updates-icon-lavender-ink: #a07ef7;
+  --updates-icon-lavender-soft: #a07ef71a;
+  --updates-icon-azure-ink: #4f8ef7;
+  --updates-icon-azure-soft: #4f8ef71a;
+  --updates-icon-mint-ink: #4fc48e;
+  --updates-icon-mint-soft: #4fc48e1a;
+  --updates-icon-orange-ink: #f7a74f;
+  --updates-icon-orange-soft: #f7a74f1a;
+  --updates-icon-coral-ink: #f76f4f;
+  --updates-icon-coral-soft: #f76f4f1a;
+  --updates-icon-gold-ink: #f7b24f;
+  --updates-icon-gold-soft: #f7b24f1a;
 }
 
 /* 保存済みのライト設定は明示的なopt-inとして維持する。 */
@@ -194,6 +230,42 @@
   --hcc-cta-ink: #0f766e;
   --hcc-cta-hover-surface: rgba(15, 118, 110, 0.24);
   --hcc-cta-hover-border: rgba(15, 118, 110, 0.65);
+  --updates-icon-red-ink: #ef4444;
+  --updates-icon-red-soft: #ef44441a;
+  --updates-icon-indigo-ink: #6366f1;
+  --updates-icon-indigo-soft: #6366f11a;
+  --updates-icon-sky-ink: #0ea5e9;
+  --updates-icon-sky-soft: #0ea5e91a;
+  --updates-icon-indigo-light-ink: #818cf8;
+  --updates-icon-indigo-light-soft: #818cf81a;
+  --updates-icon-emerald-ink: #10b981;
+  --updates-icon-emerald-soft: #10b9811a;
+  --updates-icon-amber-ink: #f59e0b;
+  --updates-icon-amber-soft: #f59e0b1a;
+  --updates-icon-blue-ink: #3b82f6;
+  --updates-icon-blue-soft: #3b82f61a;
+  --updates-icon-violet-ink: #8b5cf6;
+  --updates-icon-violet-soft: #8b5cf61a;
+  --updates-icon-teal-ink: #0f766e;
+  --updates-icon-teal-soft: #0f766e1a;
+  --updates-icon-pink-ink: #ec4899;
+  --updates-icon-pink-soft: #ec48991a;
+  --updates-icon-green-ink: #16a34a;
+  --updates-icon-green-soft: #16a34a1a;
+  --updates-icon-purple-ink: #7c3aed;
+  --updates-icon-purple-soft: #7c3aed1a;
+  --updates-icon-lavender-ink: #a07ef7;
+  --updates-icon-lavender-soft: #a07ef71a;
+  --updates-icon-azure-ink: #4f8ef7;
+  --updates-icon-azure-soft: #4f8ef71a;
+  --updates-icon-mint-ink: #4fc48e;
+  --updates-icon-mint-soft: #4fc48e1a;
+  --updates-icon-orange-ink: #f7a74f;
+  --updates-icon-orange-soft: #f7a74f1a;
+  --updates-icon-coral-ink: #f76f4f;
+  --updates-icon-coral-soft: #f76f4f1a;
+  --updates-icon-gold-ink: #f7b24f;
+  --updates-icon-gold-soft: #f7b24f1a;
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -3705,6 +3777,78 @@ a.updates-change:hover {
   height: 44px;
   border-radius: 12px;
   flex-shrink: 0;
+}
+.updates-icon-wrap.updates-icon-tone-red {
+  color: var(--updates-icon-red-ink);
+  background: var(--updates-icon-red-soft);
+}
+.updates-icon-wrap.updates-icon-tone-indigo {
+  color: var(--updates-icon-indigo-ink);
+  background: var(--updates-icon-indigo-soft);
+}
+.updates-icon-wrap.updates-icon-tone-sky {
+  color: var(--updates-icon-sky-ink);
+  background: var(--updates-icon-sky-soft);
+}
+.updates-icon-wrap.updates-icon-tone-indigo-light {
+  color: var(--updates-icon-indigo-light-ink);
+  background: var(--updates-icon-indigo-light-soft);
+}
+.updates-icon-wrap.updates-icon-tone-emerald {
+  color: var(--updates-icon-emerald-ink);
+  background: var(--updates-icon-emerald-soft);
+}
+.updates-icon-wrap.updates-icon-tone-amber {
+  color: var(--updates-icon-amber-ink);
+  background: var(--updates-icon-amber-soft);
+}
+.updates-icon-wrap.updates-icon-tone-blue {
+  color: var(--updates-icon-blue-ink);
+  background: var(--updates-icon-blue-soft);
+}
+.updates-icon-wrap.updates-icon-tone-violet {
+  color: var(--updates-icon-violet-ink);
+  background: var(--updates-icon-violet-soft);
+}
+.updates-icon-wrap.updates-icon-tone-teal {
+  color: var(--updates-icon-teal-ink);
+  background: var(--updates-icon-teal-soft);
+}
+.updates-icon-wrap.updates-icon-tone-pink {
+  color: var(--updates-icon-pink-ink);
+  background: var(--updates-icon-pink-soft);
+}
+.updates-icon-wrap.updates-icon-tone-green {
+  color: var(--updates-icon-green-ink);
+  background: var(--updates-icon-green-soft);
+}
+.updates-icon-wrap.updates-icon-tone-purple {
+  color: var(--updates-icon-purple-ink);
+  background: var(--updates-icon-purple-soft);
+}
+.updates-icon-wrap.updates-icon-tone-lavender {
+  color: var(--updates-icon-lavender-ink);
+  background: var(--updates-icon-lavender-soft);
+}
+.updates-icon-wrap.updates-icon-tone-azure {
+  color: var(--updates-icon-azure-ink);
+  background: var(--updates-icon-azure-soft);
+}
+.updates-icon-wrap.updates-icon-tone-mint {
+  color: var(--updates-icon-mint-ink);
+  background: var(--updates-icon-mint-soft);
+}
+.updates-icon-wrap.updates-icon-tone-orange {
+  color: var(--updates-icon-orange-ink);
+  background: var(--updates-icon-orange-soft);
+}
+.updates-icon-wrap.updates-icon-tone-coral {
+  color: var(--updates-icon-coral-ink);
+  background: var(--updates-icon-coral-soft);
+}
+.updates-icon-wrap.updates-icon-tone-gold {
+  color: var(--updates-icon-gold-ink);
+  background: var(--updates-icon-gold-soft);
 }
 
 .updates-change-text {
