@@ -57,6 +57,10 @@
   --watchlist-tier-ink: #ffffff;
   --watchlist-tier-text-shadow: rgba(0, 0, 0, 0.6);
   --watchlist-skeleton-shimmer: rgba(255, 255, 255, 0.08);
+  --watchlist-vbadge-ink: #fff;
+  --watchlist-vbadge-shadow: rgba(0, 0, 0, 0.25);
+  --watchlist-vbadge-codex-surface: #2563eb;
+  --watchlist-vbadge-grok-surface: #16a34a;
   --status-sheet-backdrop: rgba(0, 0, 0, 0.55);
   --status-sheet-panel-border: #2b3236;
   --status-sheet-panel-surface: #181c1f;
@@ -147,6 +151,10 @@
   --watchlist-tier-ink: #ffffff;
   --watchlist-tier-text-shadow: rgba(0, 0, 0, 0.6);
   --watchlist-skeleton-shimmer: rgba(255, 255, 255, 0.08);
+  --watchlist-vbadge-ink: #fff;
+  --watchlist-vbadge-shadow: rgba(0, 0, 0, 0.25);
+  --watchlist-vbadge-codex-surface: #2563eb;
+  --watchlist-vbadge-grok-surface: #16a34a;
   --status-sheet-backdrop: rgba(0, 0, 0, 0.55);
   --status-sheet-panel-border: #d8dde2;
   --status-sheet-panel-surface: #ffffff;
