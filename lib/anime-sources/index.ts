@@ -12,6 +12,12 @@ import type {
 } from "../types.ts";
 import { SEASONS } from "../types.ts";
 import {
+  getProductionSeasonalSnapshotStore,
+  parseSeasonalSnapshotKey,
+  type SeasonalSnapshotRecord,
+  type SeasonalSnapshotStore
+} from "../seasonal-snapshot-store.ts";
+import {
   ANILIST_ATTEMPT_BUDGET_MS,
   fetchAniListSeasonalAnime
 } from "./anilist.ts";
@@ -33,12 +39,23 @@ type CacheEntry = {
   result: Omit<SeasonalAnimeResult, "cached" | "freshness" | "servePath">;
 };
 
+type SnapshotCandidate = {
+  origin: "cache" | "db_snapshot";
+  fetchedAtMs: number;
+  result: Omit<SeasonalAnimeResult, "cached" | "freshness" | "servePath">;
+};
+
 export type SeasonalFetchDeps = {
   now: () => number;
   fetch: typeof fetch;
   onTelemetry: (event: SeasonalTelemetryEvent) => void;
   /** Inter-page delay for Jikan (default 350). Tests may set 0. */
   jikanPageDelayMs?: number;
+  /**
+   * Optional durable snapshot store.
+   * Production default attaches the Turso singleton; omit in unit tests for DB-free runs.
+   */
+  snapshotStore?: SeasonalSnapshotStore | null;
 };
 
 export type SeasonalAnimeSource = {
@@ -57,7 +74,10 @@ const defaultDeps: SeasonalFetchDeps = {
   onTelemetry: () => {}
 };
 
-const defaultSource = createSeasonalAnimeSource();
+/** Production path: Turso-backed durable store (lazy client on first I/O). */
+const defaultSource = createSeasonalAnimeSource({
+  snapshotStore: getProductionSeasonalSnapshotStore()
+});
 
 export async function fetchYearlyAnime(year: number): Promise<SeasonalAnimeResult> {
   return defaultSource.fetchYearlyAnime(year);
@@ -71,8 +91,9 @@ export async function fetchSeasonalAnime(
 }
 
 /**
- * Injectable factory: clock, fetch, and telemetry seams for tests and future wiring.
+ * Injectable factory: clock, fetch, telemetry, and optional durable store seams.
  * One frozen request_time per public call drives cutoff and freshness decisions.
+ * Without `snapshotStore`, behavior stays in-memory only (DB-free tests).
  */
 export function createSeasonalAnimeSource(
   partialDeps: Partial<SeasonalFetchDeps> = {}
@@ -81,10 +102,15 @@ export function createSeasonalAnimeSource(
     now: partialDeps.now ?? defaultDeps.now,
     fetch: partialDeps.fetch ?? defaultDeps.fetch,
     onTelemetry: partialDeps.onTelemetry ?? defaultDeps.onTelemetry,
-    jikanPageDelayMs: partialDeps.jikanPageDelayMs
+    jikanPageDelayMs: partialDeps.jikanPageDelayMs,
+    snapshotStore:
+      partialDeps.snapshotStore === undefined
+        ? null
+        : partialDeps.snapshotStore
   };
 
   const cache = new Map<string, CacheEntry>();
+  const store = deps.snapshotStore ?? null;
 
   async function fetchSeasonalAnime(
     year: number,
@@ -120,11 +146,11 @@ export function createSeasonalAnimeSource(
     const { cacheKey, seasonalKey, requestTimeMs, loadLive } = args;
     const cutoffRegime = regimeFor(requestTimeMs);
     const cached = cache.get(cacheKey);
-    const ageMs =
+    const memoryAgeMs =
       cached != null ? requestTimeMs - cached.fetchedAtMs : Number.POSITIVE_INFINITY;
 
-    // §3.1 / §5: fresh ≤24h may serve directly without upstream.
-    if (cached && ageMs >= 0 && ageMs <= FRESH_MAX_AGE_MS) {
+    // §3.1 / §5: in-process fresh ≤24h may serve directly without upstream.
+    if (cached && memoryAgeMs >= 0 && memoryAgeMs <= FRESH_MAX_AGE_MS) {
       return finishReturn({
         seasonalKey,
         requestTimeMs,
@@ -145,13 +171,55 @@ export function createSeasonalAnimeSource(
       });
     }
 
-    const staleEntry =
-      cached && ageMs > FRESH_MAX_AGE_MS && ageMs <= STALE_MAX_AGE_MS
-        ? cached
-        : null;
+    // Durable fresh short-circuit (age ≤24h): no upstream; telemetry source=db_snapshot.
+    const durable = await readDurableCandidate(seasonalKey, requestTimeMs);
+    if (durable && durable.tier === "fresh") {
+      cache.set(cacheKey, {
+        fetchedAtMs: durable.fetchedAtMs,
+        result: durable.result
+      });
+      return finishReturn({
+        seasonalKey,
+        requestTimeMs,
+        cutoffRegime,
+        body: {
+          items: durable.result.items,
+          source: durable.result.source,
+          warning: durable.result.warning,
+          fetchedAt: durable.result.fetchedAt,
+          freshness: "fresh",
+          servePath: "fresh_direct",
+          cached: true
+        },
+        telemetrySource: "db_snapshot",
+        anilistOutcome: "skipped",
+        jikanOutcome:
+          cutoffRegime === "pre" ? "skipped_pre_policy" : "skipped_post_cutoff"
+      });
+    }
 
-    // age > 7d is unusable for catalog; treat as missing.
-    // 24h < age ≤ 7d or missing: must attempt live path.
+    // Stale candidate only (24h < age ≤ 7d). >7d / negative age are not served.
+    const staleEntry = pickStaleCandidate({
+      requestTimeMs,
+      memory:
+        cached && memoryAgeMs > FRESH_MAX_AGE_MS && memoryAgeMs <= STALE_MAX_AGE_MS
+          ? {
+              origin: "cache",
+              fetchedAtMs: cached.fetchedAtMs,
+              result: cached.result
+            }
+          : null,
+      durable:
+        durable && durable.tier === "stale"
+          ? {
+              origin: "db_snapshot",
+              fetchedAtMs: durable.fetchedAtMs,
+              result: durable.result
+            }
+          : null
+    });
+
+    // 24h < age ≤ 7d or missing: must attempt live path (AniList policy first).
 
     let live: LiveLoadResult;
     try {
@@ -182,6 +250,8 @@ export function createSeasonalAnimeSource(
         fetchedAtMs: requestTimeMs,
         result: stable
       });
+      // DB write failure must never downgrade a valid live response.
+      await tryPersistSnapshot(seasonalKey, stable);
       return finishReturn({
         seasonalKey,
         requestTimeMs,
@@ -199,6 +269,7 @@ export function createSeasonalAnimeSource(
     }
 
     // Live failed — stale serve only if 24h < age ≤ 7d (§3.1 step 4).
+    // Preserve original source/fetchedAt from the snapshot candidate.
     if (staleEntry) {
       return finishReturn({
         seasonalKey,
@@ -213,7 +284,7 @@ export function createSeasonalAnimeSource(
           servePath: "stale_after_anilist_fail",
           cached: true
         },
-        telemetrySource: "cache",
+        telemetrySource: staleEntry.origin,
         anilistOutcome: live.anilistOutcome,
         jikanOutcome: live.jikanOutcome
       });
@@ -228,6 +299,93 @@ export function createSeasonalAnimeSource(
       jikanOutcome: live.jikanOutcome,
       staleEntry: null
     });
+  }
+
+  async function readDurableCandidate(
+    seasonalKey: string,
+    requestTimeMs: number
+  ): Promise<
+    | (SnapshotCandidate & { tier: "fresh" | "stale" })
+    | null
+  > {
+    if (!store) {
+      return null;
+    }
+
+    let record: SeasonalSnapshotRecord | null;
+    try {
+      record = await store.get(seasonalKey);
+    } catch {
+      // DB read failure → fall through to live (or memory stale).
+      return null;
+    }
+
+    if (!record) {
+      return null;
+    }
+
+    const fetchedAtMs = Date.parse(record.fetchedAt);
+    if (!Number.isFinite(fetchedAtMs)) {
+      return null;
+    }
+
+    const ageMs = requestTimeMs - fetchedAtMs;
+    // Negative age (clock skew) and >7d are unusable for catalog serve.
+    if (ageMs < 0 || ageMs > STALE_MAX_AGE_MS) {
+      return null;
+    }
+
+    const result = {
+      items: record.items,
+      source: record.source,
+      fetchedAt: record.fetchedAt
+    };
+
+    if (ageMs <= FRESH_MAX_AGE_MS) {
+      return {
+        origin: "db_snapshot",
+        fetchedAtMs,
+        result,
+        tier: "fresh"
+      };
+    }
+
+    return {
+      origin: "db_snapshot",
+      fetchedAtMs,
+      result,
+      tier: "stale"
+    };
+  }
+
+  async function tryPersistSnapshot(
+    seasonalKey: string,
+    stable: {
+      items: AnimeItem[];
+      source: "anilist" | "jikan";
+      warning?: string;
+      fetchedAt: string;
+    }
+  ): Promise<void> {
+    if (!store || stable.items.length === 0) {
+      return;
+    }
+    const parsed = parseSeasonalSnapshotKey(seasonalKey);
+    if (!parsed) {
+      return;
+    }
+    try {
+      await store.put({
+        seasonalKey,
+        seasonYear: parsed.seasonYear,
+        season: parsed.season,
+        source: stable.source,
+        items: stable.items,
+        fetchedAt: stable.fetchedAt
+      });
+    } catch {
+      // Never surface durable write errors to callers with a valid live body.
+    }
   }
 
   async function loadSeasonLive(
@@ -330,15 +488,19 @@ export function createSeasonalAnimeSource(
           throw live.error;
         }
         // Preserve prior behavior: successful season loads seed the season cache.
-        cache.set(`${year}:${season}`, {
+        const seasonKey = `${year}:${season}`;
+        const seasonStable = {
+          items: sortAnimeItems(live.items),
+          source: live.source,
+          warning: live.warning,
+          fetchedAt
+        };
+        cache.set(seasonKey, {
           fetchedAtMs: requestTimeMs,
-          result: {
-            items: sortAnimeItems(live.items),
-            source: live.source,
-            warning: live.warning,
-            fetchedAt
-          }
+          result: seasonStable
         });
+        // Best-effort durable mirror for season keys seeded by year aggregate.
+        await tryPersistSnapshot(seasonKey, seasonStable);
         return live;
       })
     );
@@ -426,7 +588,7 @@ export function createSeasonalAnimeSource(
     error: Error;
     anilistOutcome: AniListOutcome;
     jikanOutcome: JikanOutcome;
-    staleEntry: CacheEntry | null;
+    staleEntry: SnapshotCandidate | null;
   }): never {
     emitOnce({
       seasonal_key: args.seasonalKey,
@@ -473,6 +635,35 @@ type LiveLoadResult =
 
 function regimeFor(requestTimeMs: number): SeasonalCutoffRegime {
   return requestTimeMs >= JIKAN_CUTOFF_MS ? "post" : "pre";
+}
+
+/**
+ * Choose the better stale candidate when both memory and durable exist.
+ * Newer fetched_at wins; equal timestamp prefers anilist over jikan.
+ */
+function pickStaleCandidate(args: {
+  requestTimeMs: number;
+  memory: SnapshotCandidate | null;
+  durable: SnapshotCandidate | null;
+}): SnapshotCandidate | null {
+  const { memory, durable } = args;
+  if (!memory) {
+    return durable;
+  }
+  if (!durable) {
+    return memory;
+  }
+  if (memory.fetchedAtMs !== durable.fetchedAtMs) {
+    return memory.fetchedAtMs > durable.fetchedAtMs ? memory : durable;
+  }
+  if (memory.result.source === "anilist" && durable.result.source === "jikan") {
+    return memory;
+  }
+  if (durable.result.source === "anilist" && memory.result.source === "jikan") {
+    return durable;
+  }
+  // Prefer in-process cache on full tie (same ts + same source class).
+  return memory;
 }
 
 function sortAnimeItems(items: AnimeItem[]): AnimeItem[] {
