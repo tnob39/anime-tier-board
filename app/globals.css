@@ -4185,7 +4185,7 @@ a.cl-history-title:hover {
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   flex-shrink: 0;
 }
 
@@ -4224,7 +4224,7 @@ a.cl-history-title:hover {
   padding: 2px 7px;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   flex-shrink: 0;
 }
 
@@ -4549,7 +4549,7 @@ a.cl-history-title:hover {
 }
 .rhythm-chip.is-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   border-color: var(--accent);
 }
 .rhythm-chip-skip {
