@@ -14,6 +14,7 @@
   --warning-soft: #3a2f12;
   --success: #4ade80;
   --success-soft: #123a2c;
+  --subscription-diagnosis-gradient-end: #34d399;
   --info: #a5b4fc;
   --info-soft: #241f42;
   --accent-ink: #06231d;
@@ -170,6 +171,7 @@
   --warning-soft: #fff6dc;
   --success: #0f5f55;
   --success-soft: #edfaf5;
+  --subscription-diagnosis-gradient-end: #34d399;
   --info: #37306a;
   --info-soft: #f2f0ff;
   --accent-ink: #ffffff;
@@ -4367,7 +4369,7 @@ a.cl-history-title:hover {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), #34d399);
+  background: linear-gradient(90deg, var(--accent), var(--subscription-diagnosis-gradient-end));
 }
 
 .subscription-diagnosis-meta {
