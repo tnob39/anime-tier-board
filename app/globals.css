@@ -15,6 +15,10 @@
   --success: #4ade80;
   --success-soft: #123a2c;
   --subscription-diagnosis-gradient-end: #34d399;
+  --changelog-tag-feat: #4f8ef7;
+  --changelog-tag-fix: #f76f4f;
+  --changelog-tag-perf: #4fc48e;
+  --changelog-tag-refactor: #a07ef7;
   --info: #a5b4fc;
   --info-soft: #241f42;
   --accent-ink: #06231d;
@@ -172,6 +176,10 @@
   --success: #0f5f55;
   --success-soft: #edfaf5;
   --subscription-diagnosis-gradient-end: #34d399;
+  --changelog-tag-feat: #4f8ef7;
+  --changelog-tag-fix: #f76f4f;
+  --changelog-tag-perf: #4fc48e;
+  --changelog-tag-refactor: #a07ef7;
   --info: #37306a;
   --info-soft: #f2f0ff;
   --accent-ink: #ffffff;
@@ -3672,10 +3680,10 @@ button:disabled {
   margin-top: 2px;
 }
 
-.changelog-tag-feat { background: color-mix(in srgb, #4f8ef7 15%, transparent); color: #4f8ef7; }
-.changelog-tag-fix  { background: color-mix(in srgb, #f76f4f 15%, transparent); color: #f76f4f; }
-.changelog-tag-perf { background: color-mix(in srgb, #4fc48e 15%, transparent); color: #4fc48e; }
-.changelog-tag-refactor { background: color-mix(in srgb, #a07ef7 15%, transparent); color: #a07ef7; }
+.changelog-tag-feat { background: color-mix(in srgb, var(--changelog-tag-feat) 15%, transparent); color: var(--changelog-tag-feat); }
+.changelog-tag-fix  { background: color-mix(in srgb, var(--changelog-tag-fix) 15%, transparent); color: var(--changelog-tag-fix); }
+.changelog-tag-perf { background: color-mix(in srgb, var(--changelog-tag-perf) 15%, transparent); color: var(--changelog-tag-perf); }
+.changelog-tag-refactor { background: color-mix(in srgb, var(--changelog-tag-refactor) 15%, transparent); color: var(--changelog-tag-refactor); }
 
 .changelog-change-content p {
   margin: 2px 0 0;
