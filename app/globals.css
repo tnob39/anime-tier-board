@@ -148,6 +148,9 @@
   --anime-card-placeholder-tone-red: #ef4444;
   --anime-card-placeholder-label-ink: rgba(255, 255, 255, 0.9);
   --anime-card-placeholder-label-shadow-color: rgba(0, 0, 0, 0.4);
+  --global-nav-logo-gradient-start: #38bdf8;
+  --global-nav-logo-gradient-middle: #818cf8;
+  --global-nav-logo-gradient-end: #e879f9;
 }
 
 /* 保存済みのライト設定は明示的なopt-inとして維持する。 */
@@ -290,6 +293,9 @@
   --anime-card-placeholder-tone-red: #ef4444;
   --anime-card-placeholder-label-ink: rgba(255, 255, 255, 0.9);
   --anime-card-placeholder-label-shadow-color: rgba(0, 0, 0, 0.4);
+  --global-nav-logo-gradient-start: #0369a1;
+  --global-nav-logo-gradient-middle: #4338ca;
+  --global-nav-logo-gradient-end: #be185d;
 }
 
 @media (prefers-reduced-transparency: reduce) {
@@ -4773,7 +4779,12 @@ a.cl-history-title:hover {
   font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  background: linear-gradient(90deg, #38bdf8, #818cf8, #e879f9);
+  background: linear-gradient(
+    90deg,
+    var(--global-nav-logo-gradient-start),
+    var(--global-nav-logo-gradient-middle),
+    var(--global-nav-logo-gradient-end)
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
