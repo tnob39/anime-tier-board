@@ -61,6 +61,34 @@ const STORAGE_VERSION = 1;
 const STORAGE_PREFIX = "anime-tier-board:v1";
 const UNRANKED_TIER_ID = "tier-unranked";
 const MOVE_HINT_STORAGE_KEY = "numanie:tier:move-hint-seen";
+/** Fixed sessionStorage key for guest→auth share resume (metadata only). */
+const PENDING_SHARE_INTENT_KEY = "anime-tier-board:pending-share-intent:v1";
+const PENDING_SHARE_INTENT_TTL_MS = 10 * 60 * 1000;
+
+type ShareHandoffOutcome =
+  | {
+      kind: "auto-share";
+      board: BoardState;
+    }
+  | {
+      kind: "conflict";
+      local: BoardState;
+      remote: BoardState;
+      display: BoardState;
+    }
+  | {
+      kind: "error";
+      local: BoardState | null;
+    }
+  | {
+      kind: "idle";
+      board: BoardState;
+    };
+
+/** Survives React Strict Mode remounts — one handoff flight per intent token. */
+const shareHandoffFlights = new Map<string, Promise<ShareHandoffOutcome>>();
+/** Ensures auto-share POST runs at most once per flight key. */
+const shareHandoffSharePosted = new Set<string>();
 
 type TierRow = {
   id: string;
@@ -92,6 +120,24 @@ type StatusApiResponse = {
   statuses?: AnimeStatusRecord[];
   error?: string;
 };
+
+/** Metadata-only pending share intent (no board body / URL / user / token). */
+type PendingShareIntent = {
+  action: "share";
+  seasonYear: number;
+  season: AnimeSeason;
+  storageKey: string;
+  boardUpdatedAt: string;
+  createdAt: string;
+};
+
+type AuthHandoffState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "conflict"; local: BoardState; remote: BoardState }
+  | { status: "confirmReplace"; local: BoardState; remote: BoardState }
+  | { status: "error"; local: BoardState | null; remote: BoardState | null }
+  | { status: "expired" };
 
 const viewingStatusOptions: Array<{ value: ViewingStatus; label: string }> = [
   { value: "planned", label: "見たい" },
@@ -201,10 +247,33 @@ export function TierBoardApp({
   const [moveAnnouncement, setMoveAnnouncement] = useState<string | null>(null);
   const moveAnnouncementTimeoutRef = useRef<number | null>(null);
   const dragOriginTierIdRef = useRef<string | null>(null);
+  const [authHandoff, setAuthHandoff] = useState<AuthHandoffState>({ status: "idle" });
+  const [handoffNotice, setHandoffNotice] = useState<string | null>(null);
+  const handoffRunIdRef = useRef(0);
+  const conflictDialogRef = useRef<HTMLDivElement>(null);
+  const conflictInitialFocusRef = useRef<HTMLButtonElement>(null);
+  const loginPromptCloseRef = useRef<HTMLButtonElement>(null);
+  /** After cancel: do not clobber preserved localStorage / remote copies. */
+  const skipPersistOnceRef = useRef(false);
 
   useEffect(() => {
     setMoveHintSeen(window.localStorage.getItem(MOVE_HINT_STORAGE_KEY) === "1");
   }, []);
+
+  useEffect(() => {
+    if (
+      authHandoff.status === "conflict" ||
+      authHandoff.status === "confirmReplace"
+    ) {
+      conflictInitialFocusRef.current?.focus();
+    }
+  }, [authHandoff.status]);
+
+  useEffect(() => {
+    if (loginPrompt) {
+      loginPromptCloseRef.current?.focus();
+    }
+  }, [loginPrompt]);
 
   const announceMove = useCallback((itemTitle: string, tierLabel: string) => {
     if (moveAnnouncementTimeoutRef.current !== null) {
@@ -252,6 +321,16 @@ export function TierBoardApp({
     [seasonYear, season]
   );
   const isAuthenticated = authStatus === "authenticated";
+  const isHandoffLocked =
+    authHandoff.status === "loading" ||
+    authHandoff.status === "conflict" ||
+    authHandoff.status === "confirmReplace" ||
+    authHandoff.status === "error";
+  const suppressBoardWrites =
+    authHandoff.status === "loading" ||
+    authHandoff.status === "conflict" ||
+    authHandoff.status === "confirmReplace" ||
+    authHandoff.status === "error";
 
   const visibleItems = useMemo(
     () => filterAnimeItems(items, { hideMovies, hideRerunCandidates, seasonYear }),
@@ -323,6 +402,232 @@ export function TierBoardApp({
     return Array.from({ length: 8 }, (_, index) => start + index);
   }, [currentSeason.year]);
 
+  const postShareFromBoard = useCallback(
+    async (boardToShare: BoardState, itemsToShare: AnimeItem[]) => {
+      if (!itemsToShare.length) {
+        return;
+      }
+
+      // Consume intent before POST so reload cannot duplicate share creation.
+      clearPendingShareIntent();
+
+      setSharing(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/shares", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ board: boardToShare, items: itemsToShare })
+        });
+        const payload = (await response.json()) as ShareApiResponse;
+
+        if (!response.ok || !payload.shareId) {
+          throw new Error(payload.error ?? "シェアの作成に失敗しました。");
+        }
+
+        track({ name: "tier_share_create" });
+        const nextShareUrl = `${window.location.origin}/share/${payload.shareId}`;
+        setShareUrl(nextShareUrl);
+        const outcome = await shareOrCopyUrl({
+          url: nextShareUrl,
+          title: "今期アニメTier表",
+          text: "私の今期アニメTier表をシェアします"
+        });
+        setShareOutcome(outcome);
+
+        if (outcome === "copied") {
+          if (copyConfirmTimeoutRef.current !== null) {
+            window.clearTimeout(copyConfirmTimeoutRef.current);
+          }
+          setCopyConfirm(true);
+          copyConfirmTimeoutRef.current = window.setTimeout(() => {
+            setCopyConfirm(false);
+            copyConfirmTimeoutRef.current = null;
+          }, 2000);
+        }
+      } catch (shareError) {
+        setError(shareError instanceof Error ? shareError.message : String(shareError));
+      } finally {
+        setSharing(false);
+      }
+    },
+    []
+  );
+
+  const finishHandoffWithBoard = useCallback(
+    (nextBoard: BoardState, itemsForShare: AnimeItem[], autoShare: boolean) => {
+      setBoard(nextBoard);
+      setAuthHandoff({ status: "idle" });
+      if (autoShare) {
+        void postShareFromBoard(nextBoard, itemsForShare);
+      } else {
+        clearPendingShareIntent();
+      }
+    },
+    [postShareFromBoard]
+  );
+
+  const applyShareHandoffOutcome = useCallback(
+    (
+      outcome: ShareHandoffOutcome,
+      nextItems: AnimeItem[],
+      flightKey: string
+    ) => {
+      if (outcome.kind === "auto-share") {
+        setSaveState("saved");
+        // Avoid immediate autosave echo after intentional handoff PUT/share.
+        skipPersistOnceRef.current = true;
+        if (shareHandoffSharePosted.has(flightKey)) {
+          setBoard(outcome.board);
+          setAuthHandoff({ status: "idle" });
+          clearPendingShareIntent();
+          return;
+        }
+        shareHandoffSharePosted.add(flightKey);
+        finishHandoffWithBoard(outcome.board, nextItems, true);
+        return;
+      }
+      if (outcome.kind === "conflict") {
+        setBoard(outcome.display);
+        setAuthHandoff({
+          status: "conflict",
+          local: outcome.local,
+          remote: outcome.remote
+        });
+        return;
+      }
+      if (outcome.kind === "error") {
+        setAuthHandoff({
+          status: "error",
+          local: outcome.local,
+          remote: null
+        });
+        return;
+      }
+      setBoard(outcome.board);
+      setAuthHandoff({ status: "idle" });
+    },
+    [finishHandoffWithBoard]
+  );
+
+  const resolveShareHandoff = useCallback(
+    async (
+      localBoard: BoardState | null,
+      nextItems: AnimeItem[],
+      flightKey: string,
+      runId: number
+    ) => {
+      const isStale = () => handoffRunIdRef.current !== runId;
+
+      let flight = shareHandoffFlights.get(flightKey);
+      if (!flight) {
+        flight = (async (): Promise<ShareHandoffOutcome> => {
+          try {
+            const remoteBoard = await fetchRemoteBoardForHandoff(
+              seasonYear,
+              season
+            );
+
+            // Only storage-backed guest boards count; defaults are not guest data.
+            const guestLocal =
+              localBoard && isBoardState(localBoard) ? localBoard : null;
+
+            if (!guestLocal) {
+              const fallback =
+                remoteBoard ??
+                createDefaultBoard(seasonYear, season, nextItems);
+              const nextBoard = reconcileBoard(
+                fallback,
+                nextItems,
+                seasonYear,
+                season
+              );
+              clearPendingShareIntent();
+              return { kind: "idle", board: nextBoard };
+            }
+
+            if (!remoteBoard) {
+              const boardToSave = reconcileBoard(
+                guestLocal,
+                nextItems,
+                seasonYear,
+                season
+              );
+              const putResult = await putRemoteBoard(boardToSave, null);
+              if (putResult === "conflict") {
+                const latest = await fetchRemoteBoardForHandoff(
+                  seasonYear,
+                  season
+                );
+                if (latest) {
+                  return {
+                    kind: "conflict",
+                    local: guestLocal,
+                    remote: latest,
+                    display: boardToSave
+                  };
+                }
+                return { kind: "error", local: guestLocal };
+              }
+              return { kind: "auto-share", board: boardToSave };
+            }
+
+            if (boardsContentEqual(guestLocal, remoteBoard)) {
+              const nextBoard = reconcileBoard(
+                remoteBoard,
+                nextItems,
+                seasonYear,
+                season
+              );
+              return { kind: "auto-share", board: nextBoard };
+            }
+
+            return {
+              kind: "conflict",
+              local: guestLocal,
+              remote: remoteBoard,
+              display: reconcileBoard(
+                guestLocal,
+                nextItems,
+                seasonYear,
+                season
+              )
+            };
+          } catch {
+            return {
+              kind: "error",
+              local: localBoard && isBoardState(localBoard) ? localBoard : null
+            };
+          }
+        })();
+        shareHandoffFlights.set(flightKey, flight);
+      }
+
+      const outcome = await flight;
+
+      if (outcome.kind === "error" || outcome.kind === "conflict") {
+        // Allow retry / user-driven re-entry after interactive states.
+        shareHandoffFlights.delete(flightKey);
+      } else {
+        // Coalesce Strict Mode twin callers, then drop.
+        window.setTimeout(() => {
+          shareHandoffFlights.delete(flightKey);
+        }, 2000);
+      }
+
+      if (!isStale()) {
+        if (outcome.kind === "auto-share" || outcome.kind === "idle") {
+          setBoard(outcome.board);
+        }
+        applyShareHandoffOutcome(outcome, nextItems, flightKey);
+      }
+    },
+    [applyShareHandoffOutcome, season, seasonYear]
+  );
+
   const loadAnime = useCallback(async () => {
     if (authStatus === "loading") {
       return;
@@ -335,6 +640,52 @@ export function TierBoardApp({
     try {
       const payload = await fetchSeasonalAnimeClient(seasonYear, season);
       const nextItems = payload.items;
+
+      if (isAuthenticated) {
+        const intentKind = classifyPendingShareIntent(
+          seasonYear,
+          season,
+          storageKey
+        );
+
+        if (intentKind === "expired") {
+          clearPendingShareIntent();
+          setHandoffNotice(
+            "共有の再開期限が切れました。もう一度「共有」を押してください。"
+          );
+          setAuthHandoff({ status: "idle" });
+        } else if (intentKind === "invalid") {
+          clearPendingShareIntent();
+          setAuthHandoff({ status: "idle" });
+        } else if (intentKind === "valid") {
+          const localBoard = readStoredBoard(storageKey);
+          const displayBoard = reconcileBoard(
+            localBoard ?? createDefaultBoard(seasonYear, season, nextItems),
+            nextItems,
+            seasonYear,
+            season
+          );
+
+          setItems(nextItems);
+          setBoard(displayBoard);
+          setWarning(payload.warning ?? payload.enrichWarning ?? null);
+          setLoading(false);
+
+          setAuthHandoff({ status: "loading" });
+
+          const intentMeta = readRawPendingShareIntent();
+          const flightKey =
+            isPendingShareIntent(intentMeta)
+              ? `${intentMeta.createdAt}|${intentMeta.boardUpdatedAt}|${intentMeta.storageKey}`
+              : `${storageKey}|${Date.now()}`;
+
+          const runId = handoffRunIdRef.current + 1;
+          handoffRunIdRef.current = runId;
+          await resolveShareHandoff(localBoard, nextItems, flightKey, runId);
+          return;
+        }
+      }
+
       const storedBoard = isAuthenticated
         ? await readRemoteBoard(seasonYear, season)
         : readStoredBoard(storageKey);
@@ -350,12 +701,42 @@ export function TierBoardApp({
       setWarning(payload.warning ?? payload.enrichWarning ?? null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
+      // Never wipe guest/remote copies when a pending share handoff is active.
+      if (isAuthenticated) {
+        const intentKind = classifyPendingShareIntent(
+          seasonYear,
+          season,
+          storageKey
+        );
+        if (intentKind === "valid") {
+          const localBoard = readStoredBoard(storageKey);
+          if (localBoard) {
+            skipPersistOnceRef.current = true;
+            setBoard(localBoard);
+            setAuthHandoff({
+              status: "error",
+              local: localBoard,
+              remote: null
+            });
+            return;
+          }
+          setAuthHandoff({ status: "error", local: null, remote: null });
+          return;
+        }
+      }
       setItems([]);
       setBoard(createDefaultBoard(seasonYear, season, []));
     } finally {
       setLoading(false);
     }
-  }, [authStatus, isAuthenticated, season, seasonYear, storageKey]);
+  }, [
+    authStatus,
+    isAuthenticated,
+    resolveShareHandoff,
+    season,
+    seasonYear,
+    storageKey
+  ]);
 
   useEffect(() => {
     // For the very first load of the seeded current season, fetch will hit cache instantly.
@@ -417,6 +798,17 @@ export function TierBoardApp({
       return;
     }
 
+    // Auth handoff: no read-before-write violations (GET/local validation first).
+    if (suppressBoardWrites) {
+      return;
+    }
+
+    if (skipPersistOnceRef.current) {
+      skipPersistOnceRef.current = false;
+      setSaveState(isAuthenticated ? "saved" : "local");
+      return;
+    }
+
     localStorage.setItem(storageKey, JSON.stringify(board));
 
     if (!isAuthenticated) {
@@ -452,7 +844,7 @@ export function TierBoardApp({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [board, isAuthenticated, storageKey]);
+  }, [board, isAuthenticated, storageKey, suppressBoardWrites]);
 
   async function handleRetrySave() {
     if (!board || retryingSave) {
@@ -481,6 +873,10 @@ export function TierBoardApp({
   }
 
   function updateBoard(updater: (current: BoardState) => BoardState) {
+    if (isHandoffLocked) {
+      return;
+    }
+
     setBoard((current) => {
       if (!current) {
         return current;
@@ -500,6 +896,10 @@ export function TierBoardApp({
   }
 
   function handleDragStart(event: DragStartEvent) {
+    if (isHandoffLocked) {
+      return;
+    }
+
     const activeId = String(event.active.id);
 
     dragOriginTierIdRef.current = board
@@ -722,8 +1122,111 @@ export function TierBoardApp({
   }
 
   function handleReset() {
+    if (isHandoffLocked) {
+      return;
+    }
     localStorage.removeItem(storageKey);
     setBoard(createDefaultBoard(seasonYear, season, items));
+  }
+
+  function handleCancelShareHandoff() {
+    clearPendingShareIntent();
+    // Keep both copies intact: do not PUT and do not rewrite localStorage.
+    skipPersistOnceRef.current = true;
+    if (
+      authHandoff.status === "conflict" ||
+      authHandoff.status === "confirmReplace"
+    ) {
+      setBoard(reconcileBoard(authHandoff.remote, items, seasonYear, season));
+    } else if (authHandoff.status === "error") {
+      const keep =
+        authHandoff.local ??
+        readStoredBoard(storageKey) ??
+        board ??
+        createDefaultBoard(seasonYear, season, items);
+      setBoard(reconcileBoard(keep, items, seasonYear, season));
+    }
+    setAuthHandoff({ status: "idle" });
+    setHandoffNotice(null);
+  }
+
+  function handleUseRemoteBoard() {
+    if (authHandoff.status !== "conflict" && authHandoff.status !== "confirmReplace") {
+      return;
+    }
+    const remote = authHandoff.remote;
+    const nextBoard = reconcileBoard(remote, items, seasonYear, season);
+    // Remote adopt: no PUT; only mirror into localStorage, then one-shot share.
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(nextBoard));
+    } catch {
+      // ignore quota
+    }
+    skipPersistOnceRef.current = true;
+    finishHandoffWithBoard(nextBoard, items, true);
+  }
+
+  function handleRequestUseLocalBoard() {
+    if (authHandoff.status !== "conflict") {
+      return;
+    }
+    setAuthHandoff({
+      status: "confirmReplace",
+      local: authHandoff.local,
+      remote: authHandoff.remote
+    });
+  }
+
+  async function handleConfirmReplaceWithLocal() {
+    if (authHandoff.status !== "confirmReplace") {
+      return;
+    }
+
+    const { local, remote } = authHandoff;
+    const boardToSave = reconcileBoard(local, items, seasonYear, season);
+    setAuthHandoff({ status: "loading" });
+    setBoard(boardToSave);
+
+    try {
+      const putResult = await putRemoteBoard(boardToSave, remote.updatedAt);
+      if (putResult === "conflict") {
+        const latest = await fetchRemoteBoardForHandoff(seasonYear, season);
+        if (latest) {
+          setAuthHandoff({
+            status: "conflict",
+            local,
+            remote: latest
+          });
+          setBoard(reconcileBoard(local, items, seasonYear, season));
+          return;
+        }
+        setAuthHandoff({ status: "error", local, remote });
+        return;
+      }
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(boardToSave));
+      } catch {
+        // ignore quota
+      }
+      setSaveState("saved");
+      // Explicit PUT already done with expectedUpdatedAt; skip autosave echo.
+      skipPersistOnceRef.current = true;
+      finishHandoffWithBoard(boardToSave, items, true);
+    } catch {
+      setAuthHandoff({ status: "error", local, remote });
+    }
+  }
+
+  async function handleRetryShareHandoff() {
+    if (authHandoff.status !== "error") {
+      return;
+    }
+    setAuthHandoff({ status: "loading" });
+    const runId = handoffRunIdRef.current + 1;
+    handoffRunIdRef.current = runId;
+    const localBoard = readStoredBoard(storageKey) ?? authHandoff.local;
+    const flightKey = `retry|${storageKey}|${runId}`;
+    await resolveShareHandoff(localBoard, items, flightKey, runId);
   }
 
   function handleAutoPublicTier() {
@@ -765,7 +1268,7 @@ export function TierBoardApp({
   }
 
   async function handleCreateShare() {
-    if (!board || !items.length) {
+    if (!board || !items.length || isHandoffLocked || sharing) {
       return;
     }
 
@@ -774,48 +1277,21 @@ export function TierBoardApp({
       return;
     }
 
-    setSharing(true);
-    setError(null);
+    await postShareFromBoard(board, items);
+  }
 
-    try {
-      const response = await fetch("/api/shares", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ board, items })
+  function handleGoogleLoginFromPrompt() {
+    if (loginPrompt === "share" && board) {
+      writePendingShareIntent({
+        action: "share",
+        seasonYear: board.seasonYear,
+        season: board.season,
+        storageKey,
+        boardUpdatedAt: board.updatedAt,
+        createdAt: new Date().toISOString()
       });
-      const payload = (await response.json()) as ShareApiResponse;
-
-      if (!response.ok || !payload.shareId) {
-        throw new Error(payload.error ?? "シェアの作成に失敗しました。");
-      }
-
-      track({ name: "tier_share_create" });
-      const nextShareUrl = `${window.location.origin}/share/${payload.shareId}`;
-      setShareUrl(nextShareUrl);
-      const outcome = await shareOrCopyUrl({
-        url: nextShareUrl,
-        title: "今期アニメTier表",
-        text: "私の今期アニメTier表をシェアします"
-      });
-      setShareOutcome(outcome);
-
-      if (outcome === "copied") {
-        if (copyConfirmTimeoutRef.current !== null) {
-          window.clearTimeout(copyConfirmTimeoutRef.current);
-        }
-        setCopyConfirm(true);
-        copyConfirmTimeoutRef.current = window.setTimeout(() => {
-          setCopyConfirm(false);
-          copyConfirmTimeoutRef.current = null;
-        }, 2000);
-      }
-    } catch (shareError) {
-      setError(shareError instanceof Error ? shareError.message : String(shareError));
-    } finally {
-      setSharing(false);
     }
+    void signIn("google");
   }
 
   return (
@@ -906,7 +1382,9 @@ export function TierBoardApp({
             className={copyConfirm ? "command-button copy-confirm" : "command-button"}
             type="button"
             onClick={() => void handleCreateShare()}
-            disabled={!board || sharing || loading || !items.length}
+            disabled={
+              !board || sharing || loading || !items.length || isHandoffLocked
+            }
             title="共有URLを作成"
           >
             {sharing ? (
@@ -975,7 +1453,7 @@ export function TierBoardApp({
                         handleAutoPublicTier();
                       }
                     }}
-                    disabled={!board || loading || !items.length}
+                    disabled={!board || loading || !items.length || isHandoffLocked}
                     title="人気順で自動的にTier配置"
                   >
                     <Sparkles size={16} aria-hidden="true" />
@@ -995,7 +1473,7 @@ export function TierBoardApp({
                         handleReset();
                       }
                     }}
-                    disabled={!board}
+                    disabled={!board || isHandoffLocked}
                     title="Tier表をリセット"
                   >
                     <RotateCcw size={16} aria-hidden="true" />
@@ -1020,30 +1498,164 @@ export function TierBoardApp({
             <p>
               {loginPrompt === "status"
                 ? "視聴ステータスを保存するにはログインしてください。Tier表の編集はログインなしで続けられます。"
-                : "Tier表を共有するにはログインしてください。作成したTier表はそのまま残ります。"}
+                : "Tier表を共有するにはログインしてください。作成したTier表はそのまま引き継がれます。"}
             </p>
           </div>
           <div className="tier-login-prompt-actions">
             <button
               className="command-button emphasis-button"
               type="button"
-              onClick={() => void signIn("google")}
+              onClick={handleGoogleLoginFromPrompt}
             >
               Googleでログイン
             </button>
             <button
+              ref={loginPromptCloseRef}
               className="command-button tier-login-prompt-close"
               type="button"
               onClick={() => setLoginPrompt(null)}
-              aria-label="閉じる"
             >
-              ×
+              閉じる
             </button>
           </div>
         </div>
       ) : null}
 
+      {authHandoff.status === "loading" ? (
+        <div className="notice" role="status" aria-live="polite">
+          Tier表を引き継いでいます…
+        </div>
+      ) : null}
+
+      {authHandoff.status === "error" ? (
+        <div className="notice error" role="alert">
+          <p>
+            Tier表を引き継げませんでした。通信環境を確認して再度お試しください。
+          </p>
+          <div className="tier-login-prompt-actions">
+            <button
+              className="command-button emphasis-button"
+              type="button"
+              onClick={() => void handleRetryShareHandoff()}
+            >
+              再試行
+            </button>
+            <button
+              className="command-button"
+              type="button"
+              onClick={handleCancelShareHandoff}
+            >
+              共有をやめる
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {authHandoff.status === "conflict" ||
+      authHandoff.status === "confirmReplace" ? (
+        <div
+          ref={conflictDialogRef}
+          className="tier-login-prompt"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tier-auth-conflict-title"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              handleCancelShareHandoff();
+              return;
+            }
+            if (event.key !== "Tab" || !conflictDialogRef.current) {
+              return;
+            }
+            const focusable = conflictDialogRef.current.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
+            if (focusable.length === 0) {
+              return;
+            }
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
+          }}
+        >
+          <div className="tier-login-prompt-content">
+            <strong id="tier-auth-conflict-title">保存済みのTier表があります</strong>
+            {authHandoff.status === "confirmReplace" ? (
+              <p>アカウントに保存済みのTier表を置き換えます。よろしいですか？</p>
+            ) : (
+              <p>
+                この端末のTier表とアカウントに保存済みのTier表が異なります。どちらを使いますか？
+              </p>
+            )}
+          </div>
+          <div className="tier-login-prompt-actions">
+            {authHandoff.status === "confirmReplace" ? (
+              <>
+                <button
+                  ref={conflictInitialFocusRef}
+                  className="command-button emphasis-button"
+                  type="button"
+                  onClick={() => void handleConfirmReplaceWithLocal()}
+                >
+                  置き換えて共有
+                </button>
+                <button
+                  className="command-button"
+                  type="button"
+                  onClick={() =>
+                    setAuthHandoff({
+                      status: "conflict",
+                      local: authHandoff.local,
+                      remote: authHandoff.remote
+                    })
+                  }
+                >
+                  戻る
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  ref={conflictInitialFocusRef}
+                  className="command-button emphasis-button"
+                  type="button"
+                  onClick={handleRequestUseLocalBoard}
+                >
+                  この端末のTier表を使う
+                </button>
+                <button
+                  className="command-button"
+                  type="button"
+                  onClick={handleUseRemoteBoard}
+                >
+                  アカウントのTier表を使う
+                </button>
+                <button
+                  className="command-button"
+                  type="button"
+                  onClick={handleCancelShareHandoff}
+                >
+                  共有をやめる
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <main className="app-main">
+        {handoffNotice ? (
+          <div className="notice warning" role="status" aria-live="polite">
+            {handoffNotice}
+          </div>
+        ) : null}
         {warning ? (
           <div className="notice warning" role="status" aria-live="polite">
             {warning}
@@ -2171,19 +2783,175 @@ async function readRemoteBoard(
   return payload.board && isBoardState(payload.board) ? payload.board : null;
 }
 
-async function saveRemoteBoard(board: BoardState, signal: AbortSignal): Promise<void> {
+/** GET that distinguishes transport/API failure from remote-null. */
+async function fetchRemoteBoardForHandoff(
+  year: number,
+  season: AnimeSeason
+): Promise<BoardState | null> {
+  const response = await fetch(`/api/boards?year=${year}&season=${season}`, {
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load remote board.");
+  }
+
+  const payload = (await response.json()) as BoardApiResponse;
+  if (payload.board == null) {
+    return null;
+  }
+  if (!isBoardState(payload.board)) {
+    throw new Error("Invalid remote board.");
+  }
+  return payload.board;
+}
+
+async function putRemoteBoard(
+  board: BoardState,
+  expectedUpdatedAt: string | null,
+  signal?: AbortSignal
+): Promise<"saved" | "conflict"> {
   const response = await fetch("/api/boards", {
     method: "PUT",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ board }),
+    body: JSON.stringify({ board, expectedUpdatedAt }),
     signal
   });
+
+  if (response.status === 409) {
+    return "conflict";
+  }
 
   if (!response.ok) {
     throw new Error("Failed to save board.");
   }
+
+  return "saved";
+}
+
+async function saveRemoteBoard(board: BoardState, signal: AbortSignal): Promise<void> {
+  const result = await putRemoteBoard(board, null, signal);
+  if (result === "conflict") {
+    throw new Error("Failed to save board.");
+  }
+}
+
+function boardsContentEqual(a: BoardState, b: BoardState): boolean {
+  return (
+    JSON.stringify(boardContentFingerprint(a)) ===
+    JSON.stringify(boardContentFingerprint(b))
+  );
+}
+
+function boardContentFingerprint(board: BoardState) {
+  return {
+    version: board.version,
+    season: board.season,
+    seasonYear: board.seasonYear,
+    tiers: board.tiers.map((tier) => ({
+      id: tier.id,
+      label: tier.label,
+      color: tier.color,
+      itemIds: tier.itemIds,
+      locked: tier.locked ?? false
+    }))
+  };
+}
+
+function writePendingShareIntent(intent: PendingShareIntent): void {
+  try {
+    sessionStorage.setItem(PENDING_SHARE_INTENT_KEY, JSON.stringify(intent));
+  } catch {
+    // quota / private mode — share resume simply will not auto-run
+  }
+}
+
+function clearPendingShareIntent(): void {
+  try {
+    sessionStorage.removeItem(PENDING_SHARE_INTENT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function readRawPendingShareIntent(): unknown | null {
+  try {
+    const raw = sessionStorage.getItem(PENDING_SHARE_INTENT_KEY);
+    if (!raw) {
+      return null;
+    }
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function isPendingShareIntent(value: unknown): value is PendingShareIntent {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const candidate = value as Partial<PendingShareIntent>;
+  return (
+    candidate.action === "share" &&
+    typeof candidate.seasonYear === "number" &&
+    typeof candidate.season === "string" &&
+    typeof candidate.storageKey === "string" &&
+    typeof candidate.boardUpdatedAt === "string" &&
+    typeof candidate.createdAt === "string"
+  );
+}
+
+/**
+ * Classify pending intent for the current board context.
+ * expired / invalid / valid — invalid covers broken JSON, unknown action, season mismatch.
+ */
+function classifyPendingShareIntent(
+  seasonYear: number,
+  season: AnimeSeason,
+  storageKey: string
+): "none" | "valid" | "expired" | "invalid" {
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(PENDING_SHARE_INTENT_KEY);
+  } catch {
+    return "none";
+  }
+
+  if (!raw) {
+    return "none";
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    return "invalid";
+  }
+
+  if (!isPendingShareIntent(parsed)) {
+    return "invalid";
+  }
+
+  if (
+    parsed.seasonYear !== seasonYear ||
+    parsed.season !== season ||
+    parsed.storageKey !== storageKey
+  ) {
+    return "invalid";
+  }
+
+  const createdAtMs = Date.parse(parsed.createdAt);
+  if (!Number.isFinite(createdAtMs)) {
+    return "invalid";
+  }
+
+  if (Date.now() - createdAtMs > PENDING_SHARE_INTENT_TTL_MS) {
+    return "expired";
+  }
+
+  return "valid";
 }
 
 function getSaveStateLabel(state: "local" | "saving" | "saved" | "error"): string {
