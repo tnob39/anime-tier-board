@@ -10,18 +10,29 @@ import { getAnimePopularity as getPopularity } from "@/lib/home-seasonal-add";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import { STREAMING_SERVICES } from "@/lib/streaming-services";
 import type { UserSubscription } from "@/lib/subscriptions";
-import type { AnimeItem } from "@/lib/types";
+import type { AnimeItem, SeasonalFreshness } from "@/lib/types";
 
 type SeasonalApiResponse = {
   year: number;
   items: AnimeItem[];
+  source?: string;
+  freshness?: SeasonalFreshness | string;
+  fetchedAt?: string;
   warning?: string;
   error?: string;
 };
 
 type SortMode = "fit" | "popularity" | "score";
 
+type ExploreNotice = {
+  text: string;
+  role: "status" | "alert";
+};
+
 const PAGE_SIZE = 50;
+
+const UNAVAILABLE_NOTICE_TEXT =
+  "季節データを取得できませんでした。時間をおいて「さがす」を押してください。";
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -30,6 +41,298 @@ const statusLabels: Record<ViewingStatus, string> = {
   paused: "一時停止",
   dropped: "中止"
 };
+
+/** Format ISO fetchedAt for ja-JP / Asia/Tokyo display. Returns null if unusable. */
+export function formatSeasonalFetchedAtJa(fetchedAt: string): string | null {
+  const date = new Date(fetchedAt);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === null || value === undefined || typeof value === "string";
+}
+
+function isOptionalNumber(value: unknown): boolean {
+  return value === null || value === undefined || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isOptionalBoolean(value: unknown): boolean {
+  return value === null || value === undefined || typeof value === "boolean";
+}
+
+function isStringArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+/** titles.* values consumed by title search (toLowerCase). */
+function isSafeTitles(value: unknown): boolean {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+  for (const key of ["native", "userPreferred", "romaji", "english"] as const) {
+    if (key in value && !isOptionalString(value[key])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** studios[].name used by ranking / reason copy. */
+function isSafeStudios(value: unknown): boolean {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  for (const entry of value) {
+    if (!isPlainObject(entry) || typeof entry.name !== "string") {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** voiceActors[].name used by ranking / reason copy. */
+function isSafeVoiceActors(value: unknown): boolean {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  for (const entry of value) {
+    if (!isPlainObject(entry) || typeof entry.name !== "string") {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** streamingPlatforms name/url used by pills + instant-watch provider id map. */
+function isSafeStreamingPlatforms(value: unknown): boolean {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  for (const entry of value) {
+    if (!isPlainObject(entry)) {
+      return false;
+    }
+    if (typeof entry.name !== "string" || typeof entry.url !== "string") {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** streamingEpisodes url/site used by pills + instant-watch fallback. */
+function isSafeStreamingEpisodes(value: unknown): boolean {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  for (const entry of value) {
+    if (!isPlainObject(entry)) {
+      return false;
+    }
+    if (typeof entry.url !== "string") {
+      return false;
+    }
+    if ("site" in entry && !isOptionalString(entry.site)) {
+      return false;
+    }
+    if ("title" in entry && !isOptionalString(entry.title)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** streamingProvidersJp.flatrate / providerLink used by pills + filters. */
+function isSafeStreamingProvidersJp(value: unknown): boolean {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+  if (!Array.isArray(value.flatrate)) {
+    return false;
+  }
+  for (const provider of value.flatrate) {
+    if (!isPlainObject(provider)) {
+      return false;
+    }
+    if (typeof provider.id !== "number" || !Number.isFinite(provider.id)) {
+      return false;
+    }
+    if (typeof provider.name !== "string") {
+      return false;
+    }
+    if ("logoUrl" in provider && provider.logoUrl !== null && typeof provider.logoUrl !== "string") {
+      return false;
+    }
+  }
+  if ("providerLink" in value && !isOptionalString(value.providerLink)) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Safe shape gate for seasonal cards. Any null/non-object item, missing
+ * required strings, or malformed nested values consumed by filters / ranking /
+ * rendering makes the whole payload unavailable (no partial render / pageerror).
+ */
+function isSafeSeasonalItem(item: unknown): item is AnimeItem {
+  if (!isPlainObject(item)) {
+    return false;
+  }
+  for (const key of ["id", "title", "source", "imageUrl", "proxiedImageUrl", "siteUrl"] as const) {
+    if (typeof item[key] !== "string") {
+      return false;
+    }
+  }
+  if (!isSafeTitles(item.titles)) {
+    return false;
+  }
+
+  // Nested fields consumed by filters / ranking / rendering (when present).
+  if (item.genres !== undefined && !isStringArray(item.genres)) {
+    return false;
+  }
+  if ("format" in item && !isOptionalString(item.format)) {
+    return false;
+  }
+  if (item.studios !== undefined && !isSafeStudios(item.studios)) {
+    return false;
+  }
+  if (item.voiceActors !== undefined && !isSafeVoiceActors(item.voiceActors)) {
+    return false;
+  }
+  if (item.streamingPlatforms !== undefined && !isSafeStreamingPlatforms(item.streamingPlatforms)) {
+    return false;
+  }
+  if (item.streamingEpisodes !== undefined && !isSafeStreamingEpisodes(item.streamingEpisodes)) {
+    return false;
+  }
+  if (item.streamingProvidersJp !== undefined && !isSafeStreamingProvidersJp(item.streamingProvidersJp)) {
+    return false;
+  }
+
+  // Other scalars / nests actually read by explore sort / filter / badges.
+  if ("score" in item && !isOptionalNumber(item.score)) {
+    return false;
+  }
+  if ("popularity" in item && !isOptionalNumber(item.popularity)) {
+    return false;
+  }
+  if ("seasonYear" in item && !isOptionalNumber(item.seasonYear)) {
+    return false;
+  }
+  if ("isRebroadcast" in item && !isOptionalBoolean(item.isRebroadcast)) {
+    return false;
+  }
+  if (item.reputation !== undefined && item.reputation !== null) {
+    if (!isPlainObject(item.reputation)) {
+      return false;
+    }
+    for (const key of ["score", "scoreMax", "popularity", "members"] as const) {
+      if (key in item.reputation && !isOptionalNumber(item.reputation[key])) {
+        return false;
+      }
+    }
+  }
+  if (item.airing !== undefined && item.airing !== null) {
+    if (!isPlainObject(item.airing)) {
+      return false;
+    }
+    if ("startDate" in item.airing && !isOptionalString(item.airing.startDate)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Consume success payload freshness/source/fetchedAt only — never infer age.
+ * Malformed success payloads and non-OK responses normalize to unavailable.
+ */
+export function resolveSeasonalFreshnessView(args: {
+  ok: boolean;
+  payload: unknown;
+}): {
+  items: AnimeItem[];
+  notice: ExploreNotice;
+} {
+  const unavailable = {
+    items: [] as AnimeItem[],
+    notice: {
+      text: UNAVAILABLE_NOTICE_TEXT,
+      role: "alert" as const
+    }
+  };
+
+  if (!args.ok || args.payload == null || typeof args.payload !== "object") {
+    return unavailable;
+  }
+
+  const payload = args.payload as SeasonalApiResponse;
+  const freshness = payload.freshness;
+
+  if (freshness === "unavailable") {
+    return unavailable;
+  }
+
+  if (freshness !== "fresh" && freshness !== "stale") {
+    return unavailable;
+  }
+
+  if (!Array.isArray(payload.items)) {
+    return unavailable;
+  }
+
+  // One bad item → clear entire list (never hand partial/unsafe rows to the grid).
+  if (!payload.items.every(isSafeSeasonalItem)) {
+    return unavailable;
+  }
+
+  const source = typeof payload.source === "string" ? payload.source.trim() : "";
+  if (!source) {
+    return unavailable;
+  }
+
+  const fetchedAtRaw = typeof payload.fetchedAt === "string" ? payload.fetchedAt : "";
+  const formatted = formatSeasonalFetchedAtJa(fetchedAtRaw);
+  if (!formatted) {
+    return unavailable;
+  }
+
+  const items = payload.items;
+
+  if (freshness === "fresh") {
+    return {
+      items,
+      notice: {
+        text: `最新の季節データです。データ元: ${source} / 最終取得: ${formatted}`,
+        role: "status"
+      }
+    };
+  }
+
+  return {
+    items,
+    notice: {
+      text: `データを更新できていません（キャッシュ表示・最大7日）。データ元: ${source} / 最終取得: ${formatted}`,
+      role: "status"
+    }
+  };
+}
 
 export function ExploreClient({
   initialStatuses,
@@ -47,7 +350,7 @@ export function ExploreClient({
   );
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<ExploreNotice | null>(null);
   const [hideMovies, setHideMovies] = useState(false);
   const [hideRerunCandidates, setHideRerunCandidates] = useState(false);
   const [onlyInstantWatch, setOnlyInstantWatch] = useState(false);
@@ -133,23 +436,32 @@ export function ExploreClient({
 
   async function loadYear() {
     setLoading(true);
-    setMessage(null);
+    setNotice(null);
 
     try {
       const response = await fetch(`/api/anime/seasonal?year=${year}&season=all`, {
         cache: "no-store"
       });
-      const payload = (await response.json()) as SeasonalApiResponse;
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "作品の取得に失敗しました。");
+      let payload: unknown = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
       }
 
-      setItems(payload.items);
-      setMessage(payload.warning ?? null);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "作品の取得に失敗しました。");
+      const resolved = resolveSeasonalFreshnessView({
+        ok: response.ok,
+        payload
+      });
+      setItems(resolved.items);
+      setNotice(resolved.notice);
+    } catch {
+      // Network/transport failure — same unavailable UX; さがす is the only retry.
       setItems([]);
+      setNotice({
+        text: UNAVAILABLE_NOTICE_TEXT,
+        role: "alert"
+      });
     } finally {
       setLoading(false);
     }
@@ -163,7 +475,7 @@ export function ExploreClient({
 
   async function addToWatchlist(item: AnimeItem) {
     setSavingId(item.id);
-    setMessage(null);
+    setNotice(null);
 
     try {
       const response = await fetch("/api/statuses", {
@@ -180,7 +492,10 @@ export function ExploreClient({
 
       setStatusMap((current) => ({ ...current, [item.id]: "planned" }));
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "視聴管理への追加に失敗しました。");
+      setNotice({
+        text: error instanceof Error ? error.message : "視聴管理への追加に失敗しました。",
+        role: "status"
+      });
     } finally {
       setSavingId(null);
     }
@@ -323,9 +638,13 @@ export function ExploreClient({
         </button>
       </section>
 
-      {message ? (
-        <div className="notice warning" role="status" aria-live="polite">
-          {message}
+      {notice ? (
+        <div
+          className="notice warning"
+          role={notice.role}
+          aria-live={notice.role === "alert" ? "assertive" : "polite"}
+        >
+          {notice.text}
         </div>
       ) : null}
 
