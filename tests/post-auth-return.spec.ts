@@ -79,3 +79,31 @@ test.describe("post-auth return (unauthenticated protected gates)", () => {
     expect(["/watchlist", `${requestUrl.origin}/watchlist`]).toContain(callbackUrl);
   });
 });
+
+test.describe("guest home first entry (no WelcomeModal dialog)", () => {
+  test("guest / shows HomeGuest CTAs and no welcome dialog", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page).toHaveURL((url) => new URL(url).pathname === "/");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "ログインして始める" })
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "使い方を見る" })).toBeVisible();
+  });
+
+  test("使い方を見る navigates to /guide with numanieをはじめよう", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "使い方を見る" })).toBeVisible();
+
+    await Promise.all([
+      page.waitForURL((url) => new URL(url).pathname === "/guide"),
+      page.getByRole("link", { name: "使い方を見る" }).click(),
+    ]);
+
+    await expect(
+      page.getByRole("heading", { name: "numanieをはじめよう" })
+    ).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+});
