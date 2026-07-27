@@ -2860,42 +2860,6 @@ button:disabled {
   }
 }
 
-.watchlist-save-button {
-  width: 100%;
-  margin-top: 2px;
-}
-
-.watchlist-field {
-  display: grid;
-  gap: 5px;
-}
-
-.watchlist-field span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.watchlist-field select,
-.watchlist-field textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink);
-}
-
-.watchlist-field select {
-  min-height: 36px;
-  padding: 0 9px;
-}
-
-.watchlist-field textarea {
-  min-height: 64px;
-  resize: vertical;
-  padding: 8px 9px;
-}
-
 .watchlist-empty {
   display: grid;
   justify-items: start;
