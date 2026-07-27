@@ -19,6 +19,7 @@
   --changelog-tag-fix: #f76f4f;
   --changelog-tag-perf: #4fc48e;
   --changelog-tag-refactor: #a07ef7;
+  --nav-updates-dot: #f76f4f;
   --info: #a5b4fc;
   --info-soft: #241f42;
   --accent-ink: #06231d;
@@ -180,6 +181,7 @@
   --changelog-tag-fix: #f76f4f;
   --changelog-tag-perf: #4fc48e;
   --changelog-tag-refactor: #a07ef7;
+  --nav-updates-dot: #f76f4f;
   --info: #37306a;
   --info-soft: #f2f0ff;
   --accent-ink: #ffffff;
@@ -1908,7 +1910,7 @@ button:disabled {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #f76f4f;
+  background: var(--nav-updates-dot);
   border: 1.5px solid var(--bg);
 }
 
