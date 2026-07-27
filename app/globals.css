@@ -1213,9 +1213,9 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: var(--watchlist-provider-surface);
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(20, 26, 32, 0.35);
+  box-shadow: 0 1px 3px var(--watchlist-provider-shadow);
 }
 
 .share-tier-provider-badge img {
@@ -1233,9 +1233,9 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
+  background: var(--watchlist-provider-surface);
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(20, 26, 32, 0.35);
+  box-shadow: 0 1px 3px var(--watchlist-provider-shadow);
   z-index: 2;
 }
 
