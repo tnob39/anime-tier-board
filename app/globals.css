@@ -1958,7 +1958,7 @@ button:disabled {
 }
 
 .status-chip-group.is-compact .status-chip {
-  min-height: 28px;
+  min-height: 44px;
   padding: 0 8px;
   font-size: 10px;
 }
