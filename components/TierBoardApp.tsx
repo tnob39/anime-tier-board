@@ -64,6 +64,15 @@ const MOVE_HINT_STORAGE_KEY = "numanie:tier:move-hint-seen";
 /** Fixed sessionStorage key for guest→auth share resume (metadata only). */
 const PENDING_SHARE_INTENT_KEY = "anime-tier-board:pending-share-intent:v1";
 const PENDING_SHARE_INTENT_VERSION = 1;
+/** Pending share intent is valid only within 10 minutes of createdAt. */
+const PENDING_SHARE_INTENT_MAX_AGE_MS = 10 * 60 * 1000;
+
+const AUTH_RETURN_STATUS_EVALUATING = "Tier表を引き継いでいます…";
+const AUTH_RETURN_STATUS_PROTECTED =
+  "ログイン前のTier表を保持しています。「共有」を押して共有を続けてください。";
+const AUTH_RETURN_STATUS_EXPIRED =
+  "共有の再開期限が切れました。もう一度「共有」を押してください。";
+const SHARE_CREATE_ERROR_MESSAGE = "シェアの作成に失敗しました。";
 
 type TierRow = {
   id: string;
@@ -81,6 +90,11 @@ type PendingShareIntent = {
   season: AnimeSeason;
   createdAt: string;
 };
+
+/** Auth-return pending-share evaluation phase (P0-B). */
+type AuthReturnPhase = "pending" | "evaluating" | "protected" | "expired" | "none";
+
+type AuthReturnShareDecision = "none" | "valid" | "expired" | "invalid";
 
 type BoardState = {
   version: typeof STORAGE_VERSION;
@@ -213,6 +227,19 @@ export function TierBoardApp({
   const [moveAnnouncement, setMoveAnnouncement] = useState<string | null>(null);
   const moveAnnouncementTimeoutRef = useRef<number | null>(null);
   const dragOriginTierIdRef = useRef<string | null>(null);
+  /** pending until session settles; evaluating/protected/expired/none after auth-return guard. */
+  const [authReturnPhase, setAuthReturnPhase] = useState<AuthReturnPhase>("pending");
+  /**
+   * Suppress automatic remote board/status traffic while a recognized pending intent
+   * (valid / expired / invalid) keeps the guest local board until explicit Share.
+   */
+  const protectLocalBoardRef = useRef(false);
+  const authReturnPhaseRef = useRef<AuthReturnPhase>("pending");
+  authReturnPhaseRef.current = authReturnPhase;
+  /** Synchronous Share in-flight lock (state `sharing` alone can miss double-activation). */
+  const shareInFlightRef = useRef(false);
+  /** Canonical pending|evaluating lock for handlers + UI (single source of truth). */
+  const isAuthReturnLocked = isAuthReturnPhaseLocked(authReturnPhase);
 
   useEffect(() => {
     setMoveHintSeen(window.localStorage.getItem(MOVE_HINT_STORAGE_KEY) === "1");
@@ -253,6 +280,9 @@ export function TierBoardApp({
 
   const handleOpenMoveMenu = useCallback(
     (itemId: string) => {
+      if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+        return;
+      }
       dismissMoveHint();
       setMoveMenuItemId(itemId);
     },
@@ -335,8 +365,18 @@ export function TierBoardApp({
     return Array.from({ length: 8 }, (_, index) => start + index);
   }, [currentSeason.year]);
 
+  // True once auth-return evaluation finished (or guest). Leaving protected→none must not
+  // re-trigger loadAnime (would remote-GET and overwrite the preserved local board).
+  const authReturnReady =
+    authStatus !== "authenticated" || !isAuthReturnPhaseLocked(authReturnPhase);
+
   const loadAnime = useCallback(async () => {
     if (authStatus === "loading") {
+      return;
+    }
+
+    // Wait for pending-share auth-return evaluation before any board source choice.
+    if (!authReturnReady) {
       return;
     }
 
@@ -347,9 +387,11 @@ export function TierBoardApp({
     try {
       const payload = await fetchSeasonalAnimeClient(seasonYear, season);
       const nextItems = payload.items;
-      const storedBoard = isAuthenticated
-        ? await readRemoteBoard(seasonYear, season)
-        : readStoredBoard(storageKey);
+      // Guarded auth-return: never use remote as the board source (local only).
+      const storedBoard =
+        isAuthenticated && !protectLocalBoardRef.current
+          ? await readRemoteBoard(seasonYear, season)
+          : readStoredBoard(storageKey);
       const nextBoard = reconcileBoard(
         storedBoard ?? createDefaultBoard(seasonYear, season, nextItems),
         nextItems,
@@ -362,12 +404,18 @@ export function TierBoardApp({
       setWarning(payload.warning ?? payload.enrichWarning ?? null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
+      if (protectLocalBoardRef.current) {
+        // Guarded seasonal failure: keep existing local board/storage and guard.
+        // Never write a default empty board that would clobber guest layout.
+        setBoard((current) => current ?? readStoredBoard(storageKey));
+        return;
+      }
       setItems([]);
       setBoard(createDefaultBoard(seasonYear, season, []));
     } finally {
       setLoading(false);
     }
-  }, [authStatus, isAuthenticated, season, seasonYear, storageKey]);
+  }, [authReturnReady, authStatus, isAuthenticated, season, seasonYear, storageKey]);
 
   useEffect(() => {
     // For the very first load of the seeded current season, fetch will hit cache instantly.
@@ -375,9 +423,100 @@ export function TierBoardApp({
     void loadAnime();
   }, [loadAnime]);
 
+  // Auth-return guard: evaluate metadata-only pending share intent before remote board load.
+  useEffect(() => {
+    if (authStatus === "loading") {
+      return;
+    }
+
+    if (authStatus !== "authenticated") {
+      protectLocalBoardRef.current = false;
+      setAuthReturnPhase("none");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function runAuthReturnGuard() {
+      let hasIntent = false;
+      try {
+        hasIntent = sessionStorage.getItem(PENDING_SHARE_INTENT_KEY) != null;
+      } catch {
+        hasIntent = false;
+      }
+
+      if (!hasIntent) {
+        if (!cancelled) {
+          protectLocalBoardRef.current = false;
+          setAuthReturnPhase("none");
+        }
+        return;
+      }
+
+      // Recognized pending-intent key: local-only guard immediately (before any await).
+      // Valid / expired / invalid all keep this guard until explicit Share success.
+      protectLocalBoardRef.current = true;
+
+      const evaluation = evaluateAuthReturnShareIntent();
+      const decision = evaluation.decision;
+
+      // Valid/expired require current year+season only; never retarget UI from mismatched intent.
+      if (
+        (decision === "valid" || decision === "expired") &&
+        evaluation.year != null &&
+        evaluation.season != null
+      ) {
+        setSeasonYear(evaluation.year);
+        setSeason(evaluation.season);
+      }
+
+      // Enter evaluating before any final decision so the status can commit/paint.
+      if (!cancelled) {
+        setAuthReturnPhase("evaluating");
+      }
+
+      // Paint-safe boundary (macrotask + double rAF) + optional E2E decision gate.
+      // Must await out of the effect so React can commit evaluating first (no flushSync in lifecycle).
+      await waitForAuthReturnEvaluatingBoundary();
+
+      if (cancelled) {
+        return;
+      }
+
+      if (decision === "valid") {
+        protectLocalBoardRef.current = true;
+        setAuthReturnPhase("protected");
+        return;
+      }
+
+      if (decision === "expired") {
+        clearPendingShareIntent();
+        protectLocalBoardRef.current = true;
+        setAuthReturnPhase("expired");
+        return;
+      }
+
+      // invalid (or unexpected): consume intent, keep local-only guard, no protected-status UI.
+      clearPendingShareIntent();
+      protectLocalBoardRef.current = true;
+      setAuthReturnPhase("none");
+    }
+
+    void runAuthReturnGuard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       setStatusMap({});
+      return;
+    }
+
+    // Wait for auth-return decision; while guarded, never automatic statuses GET.
+    if (!authReturnReady || protectLocalBoardRef.current) {
       return;
     }
 
@@ -422,7 +561,7 @@ export function TierBoardApp({
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated]);
+  }, [authReturnReady, authReturnPhase, isAuthenticated]);
 
   useEffect(() => {
     if (!board) {
@@ -431,13 +570,18 @@ export function TierBoardApp({
 
     localStorage.setItem(storageKey, JSON.stringify(board));
 
-    if (!isAuthenticated) {
+    // Protected auth-return: localStorage only — never PUT / autosave.
+    if (!isAuthenticated || protectLocalBoardRef.current) {
       setSaveState("local");
       return;
     }
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
+      if (protectLocalBoardRef.current) {
+        setSaveState("local");
+        return;
+      }
       setSaveState("saving");
       setSaveSuccessVisible(false);
       if (saveSuccessTimeoutRef.current !== null) {
@@ -467,7 +611,12 @@ export function TierBoardApp({
   }, [board, isAuthenticated, storageKey]);
 
   async function handleRetrySave() {
-    if (!board || retryingSave) {
+    // Phase lock first: pending|evaluating must never remote-PUT, including retry.
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+    // Protected / local-only guard: keep guest board offline until explicit Share success.
+    if (!board || retryingSave || protectLocalBoardRef.current) {
       return;
     }
 
@@ -493,6 +642,11 @@ export function TierBoardApp({
   }
 
   function updateBoard(updater: (current: BoardState) => BoardState) {
+    // Lock layout mutations until auth-return decision completes.
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+
     setBoard((current) => {
       if (!current) {
         return current;
@@ -512,6 +666,10 @@ export function TierBoardApp({
   }
 
   function handleDragStart(event: DragStartEvent) {
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+
     const activeId = String(event.active.id);
 
     dragOriginTierIdRef.current = board
@@ -521,6 +679,10 @@ export function TierBoardApp({
   }
 
   function handleDragOver(event: DragOverEvent) {
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+
     const activeId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : null;
 
@@ -541,6 +703,12 @@ export function TierBoardApp({
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      setActiveItemId(null);
+      dragOriginTierIdRef.current = null;
+      return;
+    }
+
     const activeId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : null;
     const originTierId = dragOriginTierIdRef.current;
@@ -694,6 +862,11 @@ export function TierBoardApp({
   }
 
   async function handleStatusChange(item: AnimeItem, status: ViewingStatus | null) {
+    // Phase lock first: pending|evaluating must never write viewing status remotely/locally.
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+
     if (!isAuthenticated) {
       setLoginPrompt("status");
       return;
@@ -734,12 +907,15 @@ export function TierBoardApp({
   }
 
   function handleReset() {
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
     localStorage.removeItem(storageKey);
     setBoard(createDefaultBoard(seasonYear, season, items));
   }
 
   function handleAutoPublicTier() {
-    if (!items.length) {
+    if (!items.length || isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
       return;
     }
 
@@ -777,7 +953,12 @@ export function TierBoardApp({
   }
 
   async function handleCreateShare() {
-    if (!board || !items.length) {
+    if (!board || !items.length || isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+
+    // Synchronous in-flight lock prevents double activation before React re-render.
+    if (shareInFlightRef.current) {
       return;
     }
 
@@ -786,8 +967,17 @@ export function TierBoardApp({
       return;
     }
 
+    shareInFlightRef.current = true;
+
+    // Explicit Share only: atomically consume pending intent before the single POST.
+    clearPendingShareIntent();
+
     setSharing(true);
     setError(null);
+
+    // Capture the displayed local board for the POST body (never remote/PUT).
+    const shareBoard = board;
+    const shareItems = items;
 
     try {
       const response = await fetch("/api/shares", {
@@ -795,12 +985,17 @@ export function TierBoardApp({
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ board, items })
+        body: JSON.stringify({ board: shareBoard, items: shareItems })
       });
-      const payload = (await response.json()) as ShareApiResponse;
+      let payload: ShareApiResponse = {};
+      try {
+        payload = (await response.json()) as ShareApiResponse;
+      } catch {
+        payload = {};
+      }
 
       if (!response.ok || !payload.shareId) {
-        throw new Error(payload.error ?? "シェアの作成に失敗しました。");
+        throw new Error(SHARE_CREATE_ERROR_MESSAGE);
       }
 
       track({ name: "tier_share_create" });
@@ -823,9 +1018,17 @@ export function TierBoardApp({
           copyConfirmTimeoutRef.current = null;
         }, 2000);
       }
-    } catch (shareError) {
-      setError(shareError instanceof Error ? shareError.message : String(shareError));
+
+      // Success only: leave guard. Failure keeps local board + guard (no remote GET/PUT).
+      if (protectLocalBoardRef.current) {
+        protectLocalBoardRef.current = false;
+        setAuthReturnPhase("none");
+      }
+    } catch {
+      // Fixed copy; local board unchanged; no automatic retry; stay guarded if still in guard.
+      setError(SHARE_CREATE_ERROR_MESSAGE);
     } finally {
+      shareInFlightRef.current = false;
       setSharing(false);
     }
   }
@@ -867,7 +1070,7 @@ export function TierBoardApp({
                   type="button"
                   className="save-retry-button"
                   onClick={handleRetrySave}
-                  disabled={retryingSave}
+                  disabled={retryingSave || isAuthReturnLocked}
                 >
                   {retryingSave ? "再試行中..." : "再試行"}
                 </button>
@@ -888,7 +1091,13 @@ export function TierBoardApp({
             <span>年</span>
             <select
               value={seasonYear}
-              onChange={(event) => setSeasonYear(Number(event.target.value))}
+              onChange={(event) => {
+                if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+                  return;
+                }
+                setSeasonYear(Number(event.target.value));
+              }}
+              disabled={isAuthReturnLocked}
             >
               {yearOptions.map((year) => (
                 <option key={year} value={year}>
@@ -902,7 +1111,13 @@ export function TierBoardApp({
             <span>期</span>
             <select
               value={season}
-              onChange={(event) => setSeason(event.target.value as AnimeSeason)}
+              onChange={(event) => {
+                if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+                  return;
+                }
+                setSeason(event.target.value as AnimeSeason);
+              }}
+              disabled={isAuthReturnLocked}
             >
               {SEASONS.map((option) => (
                 <option key={option} value={option}>
@@ -916,7 +1131,7 @@ export function TierBoardApp({
             className="command-button"
             type="button"
             onClick={() => void loadAnime()}
-            disabled={loading}
+            disabled={loading || isAuthReturnLocked}
             title="再取得"
           >
             {loading ? (
@@ -931,7 +1146,9 @@ export function TierBoardApp({
             className={copyConfirm ? "command-button copy-confirm" : "command-button"}
             type="button"
             onClick={() => void handleCreateShare()}
-            disabled={!board || sharing || loading || !items.length}
+            disabled={
+              !board || sharing || loading || !items.length || isAuthReturnLocked
+            }
             title="共有URLを作成"
           >
             {sharing ? (
@@ -1000,7 +1217,9 @@ export function TierBoardApp({
                         handleAutoPublicTier();
                       }
                     }}
-                    disabled={!board || loading || !items.length}
+                    disabled={
+                      !board || loading || !items.length || isAuthReturnLocked
+                    }
                     title="人気順で自動的にTier配置"
                   >
                     <Sparkles size={16} aria-hidden="true" />
@@ -1020,7 +1239,7 @@ export function TierBoardApp({
                         handleReset();
                       }
                     }}
-                    disabled={!board}
+                    disabled={!board || isAuthReturnLocked}
                     title="Tier表をリセット"
                   >
                     <RotateCcw size={16} aria-hidden="true" />
@@ -1069,6 +1288,21 @@ export function TierBoardApp({
       ) : null}
 
       <main className="app-main">
+        {authReturnPhase === "evaluating" ? (
+          <div className="notice" role="status" aria-live="polite">
+            {AUTH_RETURN_STATUS_EVALUATING}
+          </div>
+        ) : null}
+        {authReturnPhase === "protected" ? (
+          <div className="notice" role="status" aria-live="polite">
+            {AUTH_RETURN_STATUS_PROTECTED}
+          </div>
+        ) : null}
+        {authReturnPhase === "expired" ? (
+          <div className="notice" role="status" aria-live="polite">
+            {AUTH_RETURN_STATUS_EXPIRED}
+          </div>
+        ) : null}
         {warning ? (
           <div className="notice warning" role="status" aria-live="polite">
             {warning}
@@ -1123,7 +1357,8 @@ export function TierBoardApp({
                       key={tier.id}
                       tier={tier}
                       itemMap={itemMap}
-                      editable
+                      editable={!isAuthReturnLocked}
+                      statusDisabled={isAuthReturnLocked}
                       onRename={handleRenameTier}
                       onColor={handleColorTier}
                       onDelete={handleDeleteTier}
@@ -1139,7 +1374,7 @@ export function TierBoardApp({
               className="command-button tier-add-button"
               type="button"
               onClick={handleAddTier}
-              disabled={!board}
+              disabled={!board || isAuthReturnLocked}
               title="Tierを追加"
             >
               <Plus size={18} aria-hidden="true" />
@@ -1179,6 +1414,8 @@ export function TierBoardApp({
                 tier={unrankedTier}
                 itemMap={itemMap}
                 pool
+                editable={!isAuthReturnLocked}
+                statusDisabled={isAuthReturnLocked}
                 onRename={handleRenameTier}
                 onColor={handleColorTier}
                 onDelete={handleDeleteTier}
@@ -1201,6 +1438,7 @@ export function TierBoardApp({
             tiers={board.tiers}
             currentTierId={moveMenuCurrentTierId}
             status={statusMap[moveMenuItem.id] ?? null}
+            statusDisabled={isAuthReturnLocked}
             onMove={handleMoveItemToTier}
             onStatusChange={handleStatusChange}
             onClose={() => setMoveMenuItemId(null)}
@@ -1216,6 +1454,7 @@ function MoveItemSheet({
   tiers,
   currentTierId,
   status,
+  statusDisabled = false,
   onMove,
   onStatusChange,
   onClose
@@ -1224,6 +1463,7 @@ function MoveItemSheet({
   tiers: TierRow[];
   currentTierId: string | null;
   status: ViewingStatus | null;
+  statusDisabled?: boolean;
   onMove: (itemId: string, tierId: string) => void;
   onStatusChange: (item: AnimeItem, status: ViewingStatus | null) => void;
   onClose: () => void;
@@ -1290,6 +1530,7 @@ function MoveItemSheet({
         <StatusChips
           className="move-status-chips"
           status={status}
+          disabled={statusDisabled}
           onChange={(nextStatus) => onStatusChange(item, nextStatus)}
         />
 
@@ -1331,6 +1572,7 @@ function TierLane({
   itemMap,
   editable = false,
   pool = false,
+  statusDisabled = false,
   onRename,
   onColor,
   onDelete,
@@ -1342,6 +1584,7 @@ function TierLane({
   itemMap: Map<string, AnimeItem>;
   editable?: boolean;
   pool?: boolean;
+  statusDisabled?: boolean;
   onRename: (tierId: string, label: string) => void;
   onColor: (tierId: string, color: string) => void;
   onDelete: (tierId: string) => void;
@@ -1381,6 +1624,7 @@ function TierLane({
           <input
             value={tier.label}
             aria-label={`${tier.label}の名前`}
+            disabled={!editable}
             onChange={(event) => onRename(tier.id, event.target.value)}
           />
         )}
@@ -1403,6 +1647,7 @@ function TierLane({
                 compact={!pool}
                 onOpenMoveMenu={onOpenMoveMenu}
                 status={statusMap[item.id] ?? null}
+                statusDisabled={statusDisabled}
                 onStatusChange={onStatusChange}
               />
             ))
@@ -1452,12 +1697,14 @@ function SortableAnimeCard({
   compact = false,
   onOpenMoveMenu,
   status,
+  statusDisabled = false,
   onStatusChange
 }: {
   item: AnimeItem;
   compact?: boolean;
   onOpenMoveMenu: (itemId: string) => void;
   status: ViewingStatus | null;
+  statusDisabled?: boolean;
   onStatusChange: (item: AnimeItem, status: ViewingStatus | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -1492,6 +1739,7 @@ function SortableAnimeCard({
         item={item}
         compact={compact}
         status={status}
+        statusDisabled={statusDisabled}
         onStatusChange={onStatusChange}
       />
     </div>
@@ -1503,12 +1751,14 @@ function AnimeCard({
   overlay = false,
   compact = false,
   status = null,
+  statusDisabled = false,
   onStatusChange
 }: {
   item: AnimeItem;
   overlay?: boolean;
   compact?: boolean;
   status?: ViewingStatus | null;
+  statusDisabled?: boolean;
   onStatusChange?: (item: AnimeItem, status: ViewingStatus | null) => void;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -1565,15 +1815,20 @@ function AnimeCard({
             <StatusChips
               status={status}
               compact
+              disabled={statusDisabled}
               onChange={(nextStatus) => onStatusChange(item, nextStatus)}
             />
           ) : (
             <button
               className="status-chip quick-add-planned"
               type="button"
+              disabled={statusDisabled}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => {
                 event.stopPropagation();
+                if (statusDisabled) {
+                  return;
+                }
                 onStatusChange(item, "planned");
               }}
             >
@@ -1591,11 +1846,13 @@ function StatusChips({
   status,
   compact = false,
   className = "",
+  disabled = false,
   onChange
 }: {
   status: ViewingStatus | null;
   compact?: boolean;
   className?: string;
+  disabled?: boolean;
   onChange: (status: ViewingStatus | null) => void;
 }) {
   return (
@@ -1611,7 +1868,13 @@ function StatusChips({
         className={!status ? "status-chip is-active" : "status-chip"}
         type="button"
         aria-pressed={!status}
-        onClick={() => onChange(null)}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) {
+            return;
+          }
+          onChange(null);
+        }}
       >
         未設定
       </button>
@@ -1621,7 +1884,13 @@ function StatusChips({
           className={status === option.value ? "status-chip is-active" : "status-chip"}
           type="button"
           aria-pressed={status === option.value}
-          onClick={() => onChange(option.value)}
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) {
+              return;
+            }
+            onChange(option.value);
+          }}
         >
           {option.label}
         </button>
@@ -2186,6 +2455,175 @@ function writePendingShareIntent(intent: PendingShareIntent): void {
   } catch {
     // quota / private mode: later readers simply see no intent
   }
+}
+
+function clearPendingShareIntent(): void {
+  try {
+    sessionStorage.removeItem(PENDING_SHARE_INTENT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** Exact metadata-only schema; reject extra keys and wrong shapes. */
+function isExactPendingShareIntent(value: unknown): value is PendingShareIntent {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const keys = Object.keys(value).sort();
+  if (
+    keys.length !== 5 ||
+    keys[0] !== "action" ||
+    keys[1] !== "createdAt" ||
+    keys[2] !== "season" ||
+    keys[3] !== "version" ||
+    keys[4] !== "year"
+  ) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    candidate.version === PENDING_SHARE_INTENT_VERSION &&
+    candidate.action === "share" &&
+    typeof candidate.year === "number" &&
+    Number.isFinite(candidate.year) &&
+    typeof candidate.season === "string" &&
+    (SEASONS as readonly string[]).includes(candidate.season) &&
+    typeof candidate.createdAt === "string"
+  );
+}
+
+type AuthReturnShareEvaluation = {
+  decision: AuthReturnShareDecision;
+  /** Present when schema yields year/season (valid/expired are always current). */
+  year?: number;
+  season?: AnimeSeason;
+};
+
+/** Contract mutations stay locked for both pre-decision phases. */
+function isAuthReturnPhaseLocked(phase: AuthReturnPhase): boolean {
+  return phase === "pending" || phase === "evaluating";
+}
+
+/**
+ * Optional E2E hooks (Chromium/Mobile Chrome) so tests can observe evaluating paint
+ * and hold the decision boundary without changing production policy.
+ */
+type AuthReturnWindowHooks = {
+  __ATB704_AUTH_RETURN_DECISION_GATE__?: Promise<void> | null;
+  __ATB704_AUTH_RETURN_EVALUATING_PAINTED__?: () => void;
+};
+
+/**
+ * Yield past the current effect turn so React can commit `evaluating`, then wait
+ * for a real browser paint (double rAF). Compatible with client components / useEffect.
+ */
+function waitForBrowserPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve();
+      return;
+    }
+    // Macrotask first: lets React process the evaluating setState from useEffect.
+    window.setTimeout(() => {
+      if (typeof window.requestAnimationFrame !== "function") {
+        resolve();
+        return;
+      }
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          resolve();
+        });
+      });
+    }, 0);
+  });
+}
+
+/**
+ * After setState(evaluating): wait for commit+paint, notify optional test hooks,
+ * then await an optional decision gate before valid/expired/invalid final phase.
+ */
+async function waitForAuthReturnEvaluatingBoundary(): Promise<void> {
+  await waitForBrowserPaint();
+
+  const hooks = window as unknown as AuthReturnWindowHooks;
+  try {
+    hooks.__ATB704_AUTH_RETURN_EVALUATING_PAINTED__?.();
+  } catch {
+    // Test hooks must never break production evaluation.
+  }
+
+  const gate = hooks.__ATB704_AUTH_RETURN_DECISION_GATE__;
+  if (gate != null && typeof (gate as PromiseLike<void>).then === "function") {
+    await gate;
+  }
+}
+
+/**
+ * Evaluate pending share intent on authenticated return.
+ * Valid only: exact schema, CURRENT year and CURRENT season, parseable non-future
+ * createdAt within 10 minutes, and an existing valid matching local board.
+ * Past/future year or season mismatch is invalid (local-only, not protected).
+ */
+function evaluateAuthReturnShareIntent(): AuthReturnShareEvaluation {
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(PENDING_SHARE_INTENT_KEY);
+  } catch {
+    return { decision: "none" };
+  }
+
+  if (raw == null) {
+    return { decision: "none" };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { decision: "invalid" };
+  }
+
+  if (!isExactPendingShareIntent(parsed)) {
+    return { decision: "invalid" };
+  }
+
+  const year = parsed.year;
+  const season = parsed.season as AnimeSeason;
+  const withSeason = { year, season };
+  const current = getCurrentAnimeSeason();
+
+  // Past/future year or non-current season → invalid (never protected).
+  if (year !== current.year || season !== current.season) {
+    return { decision: "invalid", ...withSeason };
+  }
+
+  const createdMs = Date.parse(parsed.createdAt);
+  if (!Number.isFinite(createdMs)) {
+    return { decision: "invalid", ...withSeason };
+  }
+
+  const now = Date.now();
+  if (createdMs > now) {
+    return { decision: "invalid", ...withSeason };
+  }
+
+  if (now - createdMs > PENDING_SHARE_INTENT_MAX_AGE_MS) {
+    return { decision: "expired", ...withSeason };
+  }
+
+  const localBoard = readStoredBoard(getStorageKey(year, season));
+  if (
+    !localBoard ||
+    localBoard.seasonYear !== year ||
+    localBoard.season !== season
+  ) {
+    return { decision: "invalid", ...withSeason };
+  }
+
+  return { decision: "valid", ...withSeason };
 }
 
 async function readRemoteBoard(
