@@ -61,6 +61,9 @@ const STORAGE_VERSION = 1;
 const STORAGE_PREFIX = "anime-tier-board:v1";
 const UNRANKED_TIER_ID = "tier-unranked";
 const MOVE_HINT_STORAGE_KEY = "numanie:tier:move-hint-seen";
+/** Fixed sessionStorage key for guest→auth share resume (metadata only). */
+const PENDING_SHARE_INTENT_KEY = "anime-tier-board:pending-share-intent:v1";
+const PENDING_SHARE_INTENT_VERSION = 1;
 
 type TierRow = {
   id: string;
@@ -68,6 +71,15 @@ type TierRow = {
   color: string;
   itemIds: string[];
   locked?: boolean;
+};
+
+/** Metadata-only pending share intent (no board body / anime / URL / token). */
+type PendingShareIntent = {
+  version: typeof PENDING_SHARE_INTENT_VERSION;
+  action: "share";
+  year: number;
+  season: AnimeSeason;
+  createdAt: string;
 };
 
 type BoardState = {
@@ -818,6 +830,19 @@ export function TierBoardApp({
     }
   }
 
+  function handleGoogleLoginFromPrompt() {
+    if (loginPrompt === "share") {
+      writePendingShareIntent({
+        version: PENDING_SHARE_INTENT_VERSION,
+        action: "share",
+        year: seasonYear,
+        season,
+        createdAt: new Date().toISOString()
+      });
+    }
+    void signIn("google");
+  }
+
   return (
     <div className={moveHintSeen ? "app-shell move-hint-seen" : "app-shell"}>
       {moveAnnouncement ? (
@@ -1027,7 +1052,7 @@ export function TierBoardApp({
             <button
               className="command-button emphasis-button"
               type="button"
-              onClick={() => void signIn("google")}
+              onClick={handleGoogleLoginFromPrompt}
             >
               Googleでログイン
             </button>
@@ -2153,6 +2178,14 @@ function isTierId(tiers: TierRow[], id: string): boolean {
 
 function getStorageKey(year: number, season: AnimeSeason): string {
   return `${STORAGE_PREFIX}:${year}:${season}`;
+}
+
+function writePendingShareIntent(intent: PendingShareIntent): void {
+  try {
+    sessionStorage.setItem(PENDING_SHARE_INTENT_KEY, JSON.stringify(intent));
+  } catch {
+    // quota / private mode: later readers simply see no intent
+  }
 }
 
 async function readRemoteBoard(
