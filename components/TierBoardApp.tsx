@@ -47,10 +47,7 @@ import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { track } from "@/lib/analytics";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import { getAnimePopularity } from "@/lib/anime-popularity";
-import {
-  fetchSeasonalAnimeClient,
-  seedSeasonalAnimeCache,
-} from "@/lib/seasonal-anime-client-cache";
+import { fetchSeasonalAnimeClient } from "@/lib/seasonal-anime-client-cache";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
@@ -193,19 +190,9 @@ export function TierBoardApp({
   }, [toolbarMenuOpen]);
   const currentSeason = useMemo(() => getCurrentAnimeSeason(), []);
 
-  // Seed from SSR-provided data for current season (enables instant cache hit on direct/reload)
-  const seededRef = useRef(false);
-  if (
-    !seededRef.current &&
-    initialSeasonalAnime &&
-    initialSeasonalAnime.length > 0
-  ) {
-    const seedYear = initialYear ?? currentSeason.year;
-    const seedSeason = initialSeason ?? currentSeason.season;
-    seedSeasonalAnimeCache(seedYear, seedSeason, initialSeasonalAnime);
-    seededRef.current = true;
-  }
-
+  // Prefill paint from SSR only. Do not seed the client seasonal cache:
+  // loadAnime must revalidate via /api/anime/seasonal so route mocks (E2E) and
+  // post-auth handoff always reconcile against the network response.
   const startYear = initialYear ?? currentSeason.year;
   const startSeason = initialSeason ?? currentSeason.season;
   const hasValidSeed =
@@ -618,12 +605,14 @@ export function TierBoardApp({
         }, 2000);
       }
 
-      if (!isStale()) {
-        if (outcome.kind === "auto-share" || outcome.kind === "idle") {
-          setBoard(outcome.board);
-        }
-        applyShareHandoffOutcome(outcome, nextItems, flightKey);
+      if (isStale()) {
+        return;
       }
+
+      if (outcome.kind === "auto-share" || outcome.kind === "idle") {
+        setBoard(outcome.board);
+      }
+      applyShareHandoffOutcome(outcome, nextItems, flightKey);
     },
     [applyShareHandoffOutcome, season, seasonYear]
   );
@@ -1506,6 +1495,7 @@ export function TierBoardApp({
               className="command-button emphasis-button"
               type="button"
               onClick={handleGoogleLoginFromPrompt}
+              data-testid="tier-login-prompt-google"
             >
               Googleでログイン
             </button>
