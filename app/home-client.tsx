@@ -297,6 +297,7 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
         onSelectSeasonScope={handleSelectSeasonScope}
         loading={seasonScope === "next" && nextSeasonLoading}
         error={seasonScope === "next" ? nextSeasonError : null}
+        showImages={hydrated && mode === "visual"}
       />
     </>
   );

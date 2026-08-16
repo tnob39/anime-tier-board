@@ -20,6 +20,8 @@ type HomeAddSectionProps = {
   onSelectSeasonScope: (scope: SeasonScope) => void;
   loading?: boolean;
   error?: string | null;
+  /** true only when DisplayMode is hydrated and mode === "visual" */
+  showImages?: boolean;
 };
 
 const SEASON_SCOPE_HEADING: Record<SeasonScope, string> = {
@@ -34,6 +36,7 @@ export default function HomeAddSection({
   onSelectSeasonScope,
   loading = false,
   error = null,
+  showImages = false,
 }: HomeAddSectionProps) {
   const { data: session } = useSession();
   const isOwner = isOwnerEmail(session?.user?.email);
@@ -94,36 +97,42 @@ export default function HomeAddSection({
         <div className="home-add-lane" role="list">
           {items.slice(0, 30).map((item) => {
             const isSaving = savingId === item.id;
-            const coverImage = item.proxiedImageUrl || item.imageUrl || null;
-            const provider = item.streamingProvidersJp?.flatrate?.[0] ?? null;
+            const coverImage = showImages ? item.proxiedImageUrl || item.imageUrl || null : null;
+            const provider = showImages ? item.streamingProvidersJp?.flatrate?.[0] ?? null : null;
 
             return (
-              <div key={item.id} className="home-add-card" role="listitem">
-                <div className="home-add-card-poster">
-                  {coverImage ? (
-                    <Image
-                      src={coverImage}
-                      alt={item.title}
-                      width={92}
-                      height={130}
-                      className="home-add-card-img"
-                      unoptimized
-                    />
-                  ) : (
-                    <AnimeCardPlaceholder title={item.title} className="home-add-card-placeholder" />
-                  )}
-                  {provider?.logoUrl ? (
-                    <span className="card-provider-badge" title={provider.name}>
-                      <img
-                        src={provider.logoUrl}
-                        alt={provider.name}
-                        width={16}
-                        height={16}
-                        loading="lazy"
+              <div
+                key={item.id}
+                className={showImages ? "home-add-card" : "home-add-card home-add-card--simple"}
+                role="listitem"
+              >
+                {showImages ? (
+                  <div className="home-add-card-poster">
+                    {coverImage ? (
+                      <Image
+                        src={coverImage}
+                        alt={item.title}
+                        width={92}
+                        height={130}
+                        className="home-add-card-img"
+                        unoptimized
                       />
-                    </span>
-                  ) : null}
-                </div>
+                    ) : (
+                      <AnimeCardPlaceholder title={item.title} className="home-add-card-placeholder" />
+                    )}
+                    {provider?.logoUrl ? (
+                      <span className="card-provider-badge" title={provider.name}>
+                        <img
+                          src={provider.logoUrl}
+                          alt={provider.name}
+                          width={16}
+                          height={16}
+                          loading="lazy"
+                        />
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
                 <p className="home-add-card-title">{item.title}</p>
                 <div className="home-add-card-actions">
                   <button
