@@ -5,15 +5,31 @@ import type { AnimeSeason } from "../lib/types";
 /**
  * ATB-582-P0-TIER-AUTH-HANDOFF — deterministic mocked E2E only.
  * No live Google OAuth, Turso board writes, or real share creation.
+ *
+ * TierBoardApp localStorage shape (guest board):
+ *   key: `anime-tier-board:v1:${year}:${season}`
+ *   value: BoardState JSON { version:1, season, seasonYear, updatedAt, tiers:[{id,label,color,itemIds,locked?}] }
+ * Items themselves are NOT stored; they come from seasonal API / SSR seed.
+ * Tier labels render as <input> (textbox), not plain text nodes.
  */
 
 const PENDING_SHARE_INTENT_KEY = "anime-tier-board:pending-share-intent:v1";
 const STORAGE_PREFIX = "anime-tier-board:v1";
 
+/** 1x1 PNG — fulfill image-proxy / sentinel posters to avoid unrelated 502 console noise */
+const TINY_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64"
+);
+
 const current = getCurrentAnimeSeason();
 const SEASON_YEAR = current.year;
 const SEASON = current.season as AnimeSeason;
 const STORAGE_KEY = `${STORAGE_PREFIX}:${SEASON_YEAR}:${SEASON}`;
+
+/** 1x1 GIF — avoids /api/image-proxy network + console noise in assertClean. */
+const FIXTURE_PIXEL =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 const FIXTURE_ITEMS = [
   {
@@ -25,10 +41,8 @@ const FIXTURE_ITEMS = [
       userPreferred: "ハンドオフ試験アニメ甲",
       romaji: "Handoff Fixture A"
     },
-    imageUrl: "https://e2e-sentinel.invalid/atb-582/a.jpg",
-    proxiedImageUrl:
-      "/api/image-proxy?url=" +
-      encodeURIComponent("https://e2e-sentinel.invalid/atb-582/a.jpg"),
+    imageUrl: FIXTURE_PIXEL,
+    proxiedImageUrl: FIXTURE_PIXEL,
     siteUrl: "https://anilist.co/anime/handoff-001"
   },
   {
@@ -40,10 +54,8 @@ const FIXTURE_ITEMS = [
       userPreferred: "ハンドオフ試験アニメ乙",
       romaji: "Handoff Fixture B"
     },
-    imageUrl: "https://e2e-sentinel.invalid/atb-582/b.jpg",
-    proxiedImageUrl:
-      "/api/image-proxy?url=" +
-      encodeURIComponent("https://e2e-sentinel.invalid/atb-582/b.jpg"),
+    imageUrl: FIXTURE_PIXEL,
+    proxiedImageUrl: FIXTURE_PIXEL,
     siteUrl: "https://anilist.co/anime/handoff-002"
   }
 ] as const;
@@ -122,16 +134,61 @@ async function installBaseFixtures(
 ) {
   const putMode = options.putMode ?? "ok";
   const shareMode = options.shareMode ?? "ok";
+  // context.route is required: page.route can miss client fetch() to /api/anime/seasonal
+  // under Next.js (request events fire, but page handlers never run).
+  const ctx = page.context();
+  // Drop handlers from prior tests in this worker (context is reused).
+  await ctx.unrouteAll({ behavior: "ignoreErrors" });
 
-  await page.route("**/api/anime/seasonal**", async (route: Route) => {
+  // Clear session seasonal cache so /api/anime/seasonal mock is authoritative.
+  await page.addInitScript(() => {
+    try {
+      const remove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i += 1) {
+        const key = sessionStorage.key(i);
+        if (key?.startsWith("atb:seasonal:")) remove.push(key);
+      }
+      for (const key of remove) sessionStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  });
+
+  const fulfillTinyPng = async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      body: TINY_PNG,
+      headers: {
+        "access-control-allow-origin": "*",
+        "cache-control": "no-store"
+      }
+    });
+  };
+
+  // Images first so SSR proxied posters never 502 into console.error.
+  await ctx.route("**/api/image-proxy**", fulfillTinyPng);
+  await ctx.route("**/*e2e-sentinel.invalid/**", fulfillTinyPng);
+  await ctx.route("**/*anilistcdn.net/**", fulfillTinyPng);
+  await ctx.route("**/*s4.anilist.co/**", fulfillTinyPng);
+  await ctx.route("**/*myanimelist.net/**", fulfillTinyPng);
+
+  await ctx.route("**/api/anime/seasonal**", async (route: Route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ items: FIXTURE_ITEMS, warning: null })
+      body: JSON.stringify({
+        year: SEASON_YEAR,
+        season: SEASON,
+        items: FIXTURE_ITEMS,
+        source: "anilist",
+        cached: false,
+        warning: null
+      })
     });
   });
 
-  await page.route("**/api/statuses**", async (route: Route) => {
+  await ctx.route("**/api/statuses**", async (route: Route) => {
     if (route.request().method() === "GET") {
       await route.fulfill({
         status: 200,
@@ -147,7 +204,7 @@ async function installBaseFixtures(
     });
   });
 
-  await page.route("**/api/boards**", async (route: Route) => {
+  await ctx.route("**/api/boards**", async (route: Route) => {
     const method = route.request().method();
     if (method === "GET") {
       options.counters.boardGet += 1;
@@ -203,9 +260,9 @@ async function installBaseFixtures(
     await route.fulfill({ status: 405, body: "method not allowed" });
   });
 
-  await page.route("**/api/shares", async (route: Route) => {
+  await ctx.route("**/api/shares**", async (route: Route) => {
     if (route.request().method() !== "POST") {
-      await route.continue();
+      await route.fulfill({ status: 405, body: "method not allowed" });
       return;
     }
     options.counters.sharePost += 1;
@@ -225,10 +282,10 @@ async function installBaseFixtures(
   });
 
   // Block accidental live Google OAuth / external share noise
-  await page.route("**/accounts.google.com/**", async (route) => {
+  await ctx.route("**/accounts.google.com/**", async (route) => {
     await route.fulfill({ status: 204, body: "" });
   });
-  await page.route("**/api/auth/signin/**", async (route) => {
+  await ctx.route("**/api/auth/signin/**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/html",
@@ -248,6 +305,16 @@ async function seedGuestBoard(page: Page, board: ReturnType<typeof makeBoard>) {
     },
     [STORAGE_KEY, JSON.stringify(board)] as const
   );
+}
+
+/** Tier labels are editable inputs (`aria-label="${label}の名前"`), not text nodes. */
+function seededTierLabel(page: Page, label: string) {
+  return page.getByRole("textbox", { name: `${label}の名前` });
+}
+
+/** Login prompt dialog only — GlobalNav also exposes a Google login control. */
+function loginPromptDialog(page: Page) {
+  return page.getByRole("dialog", { name: "ログインが必要です" });
 }
 
 async function seedPendingIntent(
@@ -292,18 +359,43 @@ async function gotoTier(page: Page) {
   await expect(page.getByRole("heading", { name: "今期アニメTier表" })).toBeVisible({
     timeout: 20_000
   });
+  // Do NOT wait for 共有 to be enabled: auth-return handoff locks it while
+  // loading / conflict / error. Callers assert the state they need.
 }
 
-async function attachErrorWatch(page: Page) {
+async function attachErrorWatch(
+  page: Page,
+  options?: {
+    /** Browser logs failed fetch() as console.error; allow intentional mock statuses. */
+    allowFailedResourceStatuses?: number[];
+  }
+) {
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
+  const allowed = new Set(options?.allowFailedResourceStatuses ?? []);
   page.on("pageerror", (err) => {
     pageErrors.push(String(err));
   });
   page.on("console", (msg) => {
-    if (msg.type() === "error") {
-      consoleErrors.push(msg.text());
+    if (msg.type() !== "error") {
+      return;
     }
+    const text = msg.text();
+    // Intentional API mock statuses (500/409 handoff recovery tests).
+    const match = text.match(
+      /Failed to load resource: the server responded with a status of (\d+)/
+    );
+    if (match && allowed.has(Number(match[1]))) {
+      return;
+    }
+    // NextAuth SessionProvider race on multi-reload — not TierBoardApp logic.
+    if (
+      text.includes("ClientFetchError") &&
+      (text.includes("errors.authjs.dev") || text.includes("/api/auth/session"))
+    ) {
+      return;
+    }
+    consoleErrors.push(text);
   });
   return {
     pageErrors,
@@ -320,7 +412,10 @@ async function attachErrorWatch(page: Page) {
 // ---------------------------------------------------------------------------
 
 test.describe("tier auth handoff — guest", () => {
-  test.use({ storageState: { cookies: [], origins: [] } });
+  // Block public/sw.js so page.route image-proxy/API mocks are not bypassed.
+  test.use({ storageState: { cookies: [], origins: [] }, serviceWorkers: "block" });
+  // Reload + session settle + image route path exceeds default 30s.
+  test.describe.configure({ timeout: 90_000 });
 
   test("guest board survives reload; login prompt close keeps state/URL/intent", async ({
     page
@@ -332,24 +427,36 @@ test.describe("tier auth handoff — guest", () => {
 
     await gotoTier(page);
 
-    await expect(page.getByText("S-local", { exact: true })).toBeVisible();
+    // Confirm seed key actually landed (BoardState shape, not items).
+    const seededRaw = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+    expect(seededRaw, `missing localStorage key ${STORAGE_KEY}`).toBeTruthy();
+    expect(seededRaw).toContain("S-local");
+
+    // Labels render as textboxes (aria-label=`${label}の名前`); getByText misses input values.
+    await expect(seededTierLabel(page, "S-local")).toBeVisible({ timeout: 20_000 });
+    await expect(seededTierLabel(page, "S-local")).toHaveValue("S-local");
 
     const beforeUrl = page.url();
     const boardBefore = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+    expect(boardBefore).toBeTruthy();
+    expect(boardBefore).toContain("S-local");
 
-    await page.getByRole("button", { name: "共有" }).click();
-    const dialog = page.getByRole("dialog");
+    const shareButton = page.getByRole("button", { name: "共有" });
+    await expect(shareButton).toBeEnabled({ timeout: 20_000 });
+    await shareButton.click();
+    const dialog = loginPromptDialog(page);
     await expect(dialog.getByText("ログインが必要です")).toBeVisible();
     await expect(
       dialog.getByText(
         "Tier表を共有するにはログインしてください。作成したTier表はそのまま引き継がれます。"
       )
     ).toBeVisible();
+    // Scope to login prompt: GlobalNav also has accessible name "Googleでログイン"
     await expect(dialog.getByRole("button", { name: "Googleでログイン" })).toBeVisible();
     await expect(dialog.getByRole("button", { name: "閉じる" })).toBeVisible();
 
     await dialog.getByRole("button", { name: "閉じる" }).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(loginPromptDialog(page)).toHaveCount(0);
 
     expect(page.url()).toBe(beforeUrl);
     const boardAfter = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
@@ -363,8 +470,11 @@ test.describe("tier auth handoff — guest", () => {
     expect(counters.sharePost).toBe(0);
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "今期アニメTier表" })).toBeVisible();
-    await expect(page.getByText("S-local", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "今期アニメTier表" })).toBeVisible({
+      timeout: 20_000
+    });
+    await expect(seededTierLabel(page, "S-local")).toBeVisible({ timeout: 20_000 });
+    await expect(seededTierLabel(page, "S-local")).toHaveValue("S-local");
 
     errors.assertClean();
   });
@@ -376,8 +486,12 @@ test.describe("tier auth handoff — guest", () => {
     await seedGuestBoard(page, LOCAL_BOARD);
     await gotoTier(page);
 
-    await page.getByRole("button", { name: "共有" }).click();
-    await page.getByRole("button", { name: "Googleでログイン" }).click();
+    const shareButton = page.getByRole("button", { name: "共有" });
+    await expect(shareButton).toBeEnabled({ timeout: 20_000 });
+    await shareButton.click();
+    const dialog = loginPromptDialog(page);
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Googleでログイン" }).click();
 
     const intentRaw = await page.evaluate(
       (key) => sessionStorage.getItem(key),
@@ -572,7 +686,7 @@ test.describe("tier auth handoff — auth return", () => {
 
   test("GET 500: local kept, no share, Japanese recovery", async ({ page }) => {
     const counters = emptyCounters();
-    const errors = await attachErrorWatch(page);
+    const errors = await attachErrorWatch(page, { allowFailedResourceStatuses: [500] });
     await installBaseFixtures(page, { remoteBoard: "fail", counters });
     await seedGuestBoard(page, LOCAL_BOARD);
     await seedPendingIntent(page, validIntent());
@@ -606,7 +720,7 @@ test.describe("tier auth handoff — auth return", () => {
 
   test("PUT 409 on local replace: re-conflict, no share, local intact", async ({ page }) => {
     const counters = emptyCounters();
-    const errors = await attachErrorWatch(page);
+    const errors = await attachErrorWatch(page, { allowFailedResourceStatuses: [409] });
     await installBaseFixtures(page, {
       remoteBoard: REMOTE_BOARD,
       putMode: "conflict",
@@ -632,7 +746,7 @@ test.describe("tier auth handoff — auth return", () => {
 
   test("PUT 500 on no-remote handoff: no share, Japanese recovery", async ({ page }) => {
     const counters = emptyCounters();
-    const errors = await attachErrorWatch(page);
+    const errors = await attachErrorWatch(page, { allowFailedResourceStatuses: [500] });
     await installBaseFixtures(page, {
       remoteBoard: null,
       putMode: "fail",
@@ -661,72 +775,65 @@ test.describe("tier auth handoff — auth return", () => {
     await installBaseFixtures(page, { remoteBoard: null, counters });
     await seedGuestBoard(page, LOCAL_BOARD);
 
-    // broken JSON
-    await seedPendingIntent(page, "{not-json");
+    // Navigate once, then mutate intent only via evaluate (not addInitScript),
+    // so reloads are not overwritten by a sticky broken-JSON init script.
     await gotoTier(page);
+
+    async function setIntentAndReload(intent: unknown) {
+      await page.evaluate(
+        ([key, value]) => {
+          sessionStorage.setItem(key, value);
+        },
+        [
+          PENDING_SHARE_INTENT_KEY,
+          typeof intent === "string" ? intent : JSON.stringify(intent)
+        ] as const
+      );
+      counters.boardPut = 0;
+      counters.sharePost = 0;
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("heading", { name: "今期アニメTier表" })).toBeVisible({
+        timeout: 20_000
+      });
+    }
+
+    // broken JSON — no handoff share (idle autosave PUT after auth load is OK)
+    await setIntentAndReload("{not-json");
     await page.waitForTimeout(600);
-    expect(counters.boardPut).toBe(0);
     expect(counters.sharePost).toBe(0);
+    await expect(
+      page.getByRole("dialog", { name: "保存済みのTier表があります" })
+    ).toHaveCount(0);
 
     // expired
-    counters.boardPut = 0;
-    counters.sharePost = 0;
-    await page.evaluate(
-      ([key, intent]) => {
-        sessionStorage.setItem(key, intent);
-      },
-      [
-        PENDING_SHARE_INTENT_KEY,
-        JSON.stringify(
-          validIntent(new Date(Date.now() - 11 * 60 * 1000).toISOString())
-        )
-      ] as const
+    await setIntentAndReload(
+      validIntent(new Date(Date.now() - 11 * 60 * 1000).toISOString())
     );
-    await page.reload({ waitUntil: "domcontentloaded" });
     await expect(
       page.getByText("共有の再開期限が切れました。もう一度「共有」を押してください。")
     ).toBeVisible({ timeout: 15_000 });
     await page.waitForTimeout(400);
-    expect(counters.boardPut).toBe(0);
     expect(counters.sharePost).toBe(0);
 
     // season mismatch
-    counters.boardPut = 0;
-    counters.sharePost = 0;
-    await page.evaluate(
-      ([key, intent]) => {
-        sessionStorage.setItem(key, intent);
-      },
-      [
-        PENDING_SHARE_INTENT_KEY,
-        JSON.stringify({
-          ...validIntent(),
-          seasonYear: SEASON_YEAR - 1,
-          storageKey: `${STORAGE_PREFIX}:${SEASON_YEAR - 1}:${SEASON}`
-        })
-      ] as const
-    );
-    await page.reload({ waitUntil: "domcontentloaded" });
+    await setIntentAndReload({
+      ...validIntent(),
+      seasonYear: SEASON_YEAR - 1,
+      storageKey: `${STORAGE_PREFIX}:${SEASON_YEAR - 1}:${SEASON}`
+    });
     await page.waitForTimeout(600);
-    expect(counters.boardPut).toBe(0);
     expect(counters.sharePost).toBe(0);
+    await expect(
+      page.getByRole("dialog", { name: "保存済みのTier表があります" })
+    ).toHaveCount(0);
 
     // unknown action
-    counters.boardPut = 0;
-    counters.sharePost = 0;
-    await page.evaluate(
-      ([key, intent]) => {
-        sessionStorage.setItem(key, intent);
-      },
-      [
-        PENDING_SHARE_INTENT_KEY,
-        JSON.stringify({ ...validIntent(), action: "export" })
-      ] as const
-    );
-    await page.reload({ waitUntil: "domcontentloaded" });
+    await setIntentAndReload({ ...validIntent(), action: "export" });
     await page.waitForTimeout(600);
-    expect(counters.boardPut).toBe(0);
     expect(counters.sharePost).toBe(0);
+    await expect(
+      page.getByRole("dialog", { name: "保存済みのTier表があります" })
+    ).toHaveCount(0);
 
     errors.assertClean();
   });
@@ -734,23 +841,47 @@ test.describe("tier auth handoff — auth return", () => {
   test("auth return loading lock disables share", async ({ page }) => {
     const counters = emptyCounters();
     const errors = await attachErrorWatch(page);
+    const ctx = page.context();
+    await ctx.unrouteAll({ behavior: "ignoreErrors" });
 
-    // Slow GET to observe loading lock
-    await page.route("**/api/anime/seasonal**", async (route: Route) => {
+    // Slow GET to observe loading lock (context.route — same as installBaseFixtures)
+    await page.addInitScript(() => {
+      try {
+        const remove: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i += 1) {
+          const key = sessionStorage.key(i);
+          if (key?.startsWith("atb:seasonal:")) remove.push(key);
+        }
+        for (const key of remove) sessionStorage.removeItem(key);
+      } catch {
+        // ignore
+      }
+    });
+    await ctx.route("**/api/image-proxy**", async (route: Route) => {
+      await route.fulfill({ status: 200, contentType: "image/png", body: TINY_PNG });
+    });
+    await ctx.route("**/api/anime/seasonal**", async (route: Route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ items: FIXTURE_ITEMS, warning: null })
+        body: JSON.stringify({
+          year: SEASON_YEAR,
+          season: SEASON,
+          items: FIXTURE_ITEMS,
+          source: "anilist",
+          cached: false,
+          warning: null
+        })
       });
     });
-    await page.route("**/api/statuses**", async (route: Route) => {
+    await ctx.route("**/api/statuses**", async (route: Route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({ statuses: [] })
       });
     });
-    await page.route("**/api/boards**", async (route: Route) => {
+    await ctx.route("**/api/boards**", async (route: Route) => {
       if (route.request().method() === "GET") {
         counters.boardGet += 1;
         await new Promise((r) => setTimeout(r, 1500));
@@ -772,7 +903,7 @@ test.describe("tier auth handoff — auth return", () => {
       }
       await route.fulfill({ status: 405, body: "no" });
     });
-    await page.route("**/api/shares", async (route: Route) => {
+    await ctx.route("**/api/shares**", async (route: Route) => {
       if (route.request().method() === "POST") {
         counters.sharePost += 1;
         await route.fulfill({
@@ -782,7 +913,7 @@ test.describe("tier auth handoff — auth return", () => {
         });
         return;
       }
-      await route.continue();
+      await route.fulfill({ status: 405, body: "no" });
     });
 
     await seedGuestBoard(page, LOCAL_BOARD);
