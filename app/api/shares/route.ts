@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { createShare, type SharedBoard } from "@/lib/shares";
-import type { AnimeItem } from "@/lib/types";
-import { SEASONS } from "@/lib/types";
-
-const MAX_SHARE_PAYLOAD_BYTES = 800_000;
+import { createShare } from "@/lib/shares";
+import {
+  MAX_SHARE_PAYLOAD_BYTES,
+  utf8ByteLength,
+  validateSharePayload
+} from "@/lib/board-snapshot";
 
 type SharePayload = {
-  board?: SharedBoard;
-  items?: AnimeItem[];
+  board?: unknown;
+  items?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -20,8 +21,12 @@ export async function POST(request: Request) {
   }
 
   const rawBody = await request.text();
-  if (rawBody.length > MAX_SHARE_PAYLOAD_BYTES) {
-    return NextResponse.json({ error: "Share payload too large" }, { status: 413 });
+  // Measure UTF-8 bytes, not JS UTF-16 string length.
+  if (utf8ByteLength(rawBody) > MAX_SHARE_PAYLOAD_BYTES) {
+    return NextResponse.json(
+      { error: "共有データが大きすぎます。作品数を減らして再度お試しください。" },
+      { status: 413 }
+    );
   }
 
   let payload: SharePayload;
@@ -29,36 +34,18 @@ export async function POST(request: Request) {
   try {
     payload = JSON.parse(rawBody) as SharePayload;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json(
+      { error: "JSONの形式が正しくありません。" },
+      { status: 400 }
+    );
   }
 
-  if (
-    !isSharedBoard(payload.board) ||
-    !Array.isArray(payload.items) ||
-    payload.items.length > 300
-  ) {
-    return NextResponse.json({ error: "Invalid share payload" }, { status: 400 });
+  const validated = validateSharePayload(payload.board, payload.items);
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
 
-  const shareId = await createShare(userId, payload.board, payload.items);
+  const shareId = await createShare(userId, validated.board, validated.items);
 
   return NextResponse.json({ shareId });
-}
-
-function isSharedBoard(value: unknown): value is SharedBoard {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const board = value as Partial<SharedBoard>;
-
-  return (
-    typeof board.version === "number" &&
-    typeof board.seasonYear === "number" &&
-    typeof board.season === "string" &&
-    SEASONS.includes(board.season) &&
-    typeof board.updatedAt === "string" &&
-    Array.isArray(board.tiers) &&
-    board.tiers.length <= 20
-  );
 }

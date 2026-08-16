@@ -32,6 +32,16 @@ export type AnimeItem = {
   genres?: string[];
   studios?: AnimeStudio[];
   voiceActors?: AnimeVoiceActor[];
+  /**
+   * Snapshot-only entry (import/custom board). Not from the seasonal catalog.
+   * Survives local reconciliation and is included in share item payloads.
+   */
+  snapshotOnly?: boolean;
+  /**
+   * Title is an explicit placeholder because the source metadata was uncertain.
+   * Do not fuzzy-match or replace with a different catalog anime.
+   */
+  titleUncertain?: boolean;
 };
 
 export type AnimeStudio = {

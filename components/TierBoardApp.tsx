@@ -53,6 +53,17 @@ import {
 } from "@/lib/seasonal-anime-client-cache";
 import { getCurrentAnimeSeason } from "@/lib/season";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
+import {
+  collectShareItems,
+  createImportShareIntentMarker,
+  importShareIntentStorageKey,
+  mergeBoardItems,
+  parseBoardDefinitionImport,
+  parseImportShareIntentMarker,
+  reconcileBoardWithCatalog,
+  serializeImportShareIntentMarker,
+  shouldEnableRemoteBoardAutosave
+} from "@/lib/board-snapshot";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason } from "@/lib/types";
 import { SEASON_LABELS, SEASONS } from "@/lib/types";
@@ -102,6 +113,8 @@ type BoardState = {
   seasonYear: number;
   tiers: TierRow[];
   updatedAt: string;
+  /** Snapshot-only anime absent from the current seasonal catalog. */
+  extraItems?: AnimeItem[];
 };
 
 type BoardApiResponse = {
@@ -159,6 +172,22 @@ export function TierBoardApp({
   const { status: authStatus } = useSession();
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
   const toolbarMoreButtonRef = useRef<HTMLButtonElement>(null);
+  const [importPanelOpen, setImportPanelOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
+  /** After structured import, prefer local board over remote for the next load. */
+  const preferLocalBoardAfterImportRef = useRef(false);
+  /**
+   * Imported board is local / share-intent only until explicit share POST succeeds.
+   * Blocks remote GET baseline and PUT autosave so the user's remote board is preserved.
+   * Paired with a durable per-year/season localStorage marker (reload-safe).
+   */
+  const importShareIntentOnlyRef = useRef(false);
+  /** Session-only target for import share-intent (covers marker write failure). */
+  const importShareIntentTargetRef = useRef<{
+    year: number;
+    season: AnimeSeason;
+  } | null>(null);
 
   useEffect(() => {
     if (!toolbarMenuOpen) return;
@@ -386,20 +415,38 @@ export function TierBoardApp({
 
     try {
       const payload = await fetchSeasonalAnimeClient(seasonYear, season);
-      const nextItems = payload.items;
-      // Guarded auth-return: never use remote as the board source (local only).
+      const nextSeasonalItems = payload.items;
+      // Sync import share-intent before remote-vs-local choice:
+      // durable marker (reload-safe) OR same-session target (marker write failure).
+      // Other seasons stay unblocked so normal remote board behavior is preserved.
+      const markerActive = hasImportShareIntentMarker(seasonYear, season);
+      const sessionTarget = importShareIntentTargetRef.current;
+      const sessionActive =
+        sessionTarget != null &&
+        sessionTarget.year === seasonYear &&
+        sessionTarget.season === season;
+      if (markerActive && !sessionActive) {
+        importShareIntentTargetRef.current = { year: seasonYear, season };
+      }
+      importShareIntentOnlyRef.current = markerActive || sessionActive;
+      // Guarded auth-return / import share-intent: never use remote as the board source.
+      const forceLocalBoard =
+        protectLocalBoardRef.current ||
+        importShareIntentOnlyRef.current ||
+        preferLocalBoardAfterImportRef.current;
+      preferLocalBoardAfterImportRef.current = false;
       const storedBoard =
-        isAuthenticated && !protectLocalBoardRef.current
+        isAuthenticated && !forceLocalBoard
           ? await readRemoteBoard(seasonYear, season)
           : readStoredBoard(storageKey);
       const nextBoard = reconcileBoard(
-        storedBoard ?? createDefaultBoard(seasonYear, season, nextItems),
-        nextItems,
+        storedBoard ?? createDefaultBoard(seasonYear, season, nextSeasonalItems),
+        nextSeasonalItems,
         seasonYear,
         season
       );
 
-      setItems(nextItems);
+      setItems(mergeBoardItems(nextSeasonalItems, nextBoard.extraItems));
       setBoard(nextBoard);
       setWarning(payload.warning ?? payload.enrichWarning ?? null);
     } catch (loadError) {
@@ -570,15 +617,27 @@ export function TierBoardApp({
 
     localStorage.setItem(storageKey, JSON.stringify(board));
 
-    // Protected auth-return: localStorage only — never PUT / autosave.
-    if (!isAuthenticated || protectLocalBoardRef.current) {
+    // Auth-return / import share-intent: localStorage only — never PUT / autosave.
+    if (
+      !shouldEnableRemoteBoardAutosave({
+        isAuthenticated,
+        protectLocalBoard: protectLocalBoardRef.current,
+        importShareIntentOnly: importShareIntentOnlyRef.current
+      })
+    ) {
       setSaveState("local");
       return;
     }
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
-      if (protectLocalBoardRef.current) {
+      if (
+        !shouldEnableRemoteBoardAutosave({
+          isAuthenticated,
+          protectLocalBoard: protectLocalBoardRef.current,
+          importShareIntentOnly: importShareIntentOnlyRef.current
+        })
+      ) {
         setSaveState("local");
         return;
       }
@@ -615,8 +674,13 @@ export function TierBoardApp({
     if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
       return;
     }
-    // Protected / local-only guard: keep guest board offline until explicit Share success.
-    if (!board || retryingSave || protectLocalBoardRef.current) {
+    // Protected / import share-intent: keep local-only until explicit Share success.
+    if (
+      !board ||
+      retryingSave ||
+      protectLocalBoardRef.current ||
+      importShareIntentOnlyRef.current
+    ) {
       return;
     }
 
@@ -911,7 +975,13 @@ export function TierBoardApp({
       return;
     }
     localStorage.removeItem(storageKey);
-    setBoard(createDefaultBoard(seasonYear, season, items));
+    // Explicit reset: drop import share-intent so normal remote board can load again.
+    clearImportShareIntentMarker(seasonYear, season);
+    importShareIntentTargetRef.current = null;
+    importShareIntentOnlyRef.current = false;
+    const seasonalOnly = items.filter((item) => !item.snapshotOnly);
+    setItems(seasonalOnly);
+    setBoard(createDefaultBoard(seasonYear, season, seasonalOnly));
   }
 
   function handleAutoPublicTier() {
@@ -976,8 +1046,14 @@ export function TierBoardApp({
     setError(null);
 
     // Capture the displayed local board for the POST body (never remote/PUT).
+    // Snapshot-only titles live in share items; board.extraItems is omitted on
+    // the wire so items[] / extraItems[] ids stay disjoint (validateSharePayload).
     const shareBoard = board;
-    const shareItems = items;
+    const shareItems = collectShareItems(shareBoard, items);
+    const shareBoardPayload = {
+      ...shareBoard,
+      extraItems: undefined
+    };
 
     try {
       const response = await fetch("/api/shares", {
@@ -985,7 +1061,7 @@ export function TierBoardApp({
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ board: shareBoard, items: shareItems })
+        body: JSON.stringify({ board: shareBoardPayload, items: shareItems })
       });
       let payload: ShareApiResponse = {};
       try {
@@ -1019,11 +1095,17 @@ export function TierBoardApp({
         }, 2000);
       }
 
-      // Success only: leave guard. Failure keeps local board + guard (no remote GET/PUT).
+      // Success only: leave guards. Failure keeps local board + guards (no remote GET/PUT).
       if (protectLocalBoardRef.current) {
         protectLocalBoardRef.current = false;
         setAuthReturnPhase("none");
       }
+      if (importShareIntentOnlyRef.current) {
+        importShareIntentOnlyRef.current = false;
+      }
+      importShareIntentTargetRef.current = null;
+      // Clear persisted marker only after explicit share POST success.
+      clearImportShareIntentMarker(shareBoard.seasonYear, shareBoard.season);
     } catch {
       // Fixed copy; local board unchanged; no automatic retry; stay guarded if still in guard.
       setError(SHARE_CREATE_ERROR_MESSAGE);
@@ -1046,12 +1128,114 @@ export function TierBoardApp({
     void signIn("google");
   }
 
+  function handleApplyBoardImport() {
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+
+    const result = parseBoardDefinitionImport(
+      importText,
+      items.filter((item) => !item.snapshotOnly),
+      { seasonYear, season }
+    );
+    if (!result.ok) {
+      setImportError(result.error);
+      return;
+    }
+
+    const nextBoard: BoardState = {
+      version: STORAGE_VERSION,
+      season: result.board.season,
+      seasonYear: result.board.seasonYear,
+      tiers: result.board.tiers.map((tier) => ({
+        id: tier.id,
+        label: tier.label,
+        color: tier.color,
+        itemIds: [...tier.itemIds],
+        locked: tier.locked
+      })),
+      updatedAt: result.board.updatedAt,
+      extraItems: result.extraItems.length > 0 ? result.extraItems : undefined
+    };
+
+    // Persist before season state changes so a following loadAnime sees the import.
+    try {
+      localStorage.setItem(
+        getStorageKey(nextBoard.seasonYear, nextBoard.season),
+        JSON.stringify(nextBoard)
+      );
+    } catch {
+      // private mode / quota — in-memory board still applies
+    }
+    preferLocalBoardAfterImportRef.current = true;
+    // Local / share-intent only: do not PUT imported board over the remote board.
+    // Persist so reload keeps local board until explicit share success or reset.
+    writeImportShareIntentMarker(nextBoard.seasonYear, nextBoard.season);
+    importShareIntentTargetRef.current = {
+      year: nextBoard.seasonYear,
+      season: nextBoard.season
+    };
+    importShareIntentOnlyRef.current = true;
+    setSaveState("local");
+
+    setImportError(null);
+    setSeasonYear(nextBoard.seasonYear);
+    setSeason(nextBoard.season);
+    setBoard(nextBoard);
+    setItems(result.items);
+    setImportPanelOpen(false);
+    setToolbarMenuOpen(false);
+    setError(null);
+    setWarning(null);
+  }
+
   return (
     <div className={moveHintSeen ? "app-shell move-hint-seen" : "app-shell"}>
       {moveAnnouncement ? (
         <div className="tier-move-toast" role="status" aria-live="polite">
           {moveAnnouncement}
         </div>
+      ) : null}
+      {importPanelOpen ? (
+        <section className="notice" aria-label="ボード定義の取り込み">
+          <p>
+            7段Tierやカタログ外作品を含むボード定義（JSON）を貼り付けて取り込めます。タイトル不明は
+            titleUncertain: true で明示してください（別作品へ置換しません）。
+          </p>
+          <textarea
+            value={importText}
+            onChange={(event) => setImportText(event.target.value)}
+            rows={8}
+            style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }}
+            placeholder='{"version":1,"season":"SUMMER","seasonYear":2026,"tiers":[...]}'
+            aria-label="ボード定義JSON"
+          />
+          {importError ? (
+            <div className="notice error" role="alert">
+              {importError}
+            </div>
+          ) : null}
+          <div className="share-login-prompt-actions">
+            <button
+              className="command-button emphasis-button"
+              type="button"
+              onClick={handleApplyBoardImport}
+              disabled={!importText.trim() || isAuthReturnLocked}
+            >
+              取り込む
+            </button>
+            <button
+              className="command-button"
+              type="button"
+              onClick={() => {
+                setImportPanelOpen(false);
+                setImportError(null);
+              }}
+            >
+              閉じる
+            </button>
+          </div>
+        </section>
       ) : null}
       <header className="topbar">
         <div className="title-block">
@@ -1244,6 +1428,21 @@ export function TierBoardApp({
                   >
                     <RotateCcw size={16} aria-hidden="true" />
                     <span>リセット</span>
+                  </button>
+
+                  <button
+                    className="toolbar-more-item"
+                    type="button"
+                    onClick={() => {
+                      setImportPanelOpen(true);
+                      setImportError(null);
+                      setToolbarMenuOpen(false);
+                    }}
+                    disabled={isAuthReturnLocked}
+                    title="JSONのボード定義を取り込む"
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                    <span>ボード定義を取り込み</span>
                   </button>
                 </div>
               </>
@@ -2255,62 +2454,34 @@ function reconcileBoard(
   seasonYear: number,
   season: AnimeSeason
 ): BoardState {
-  const knownItemIds = new Set(items.map((item) => item.id));
-  const usedItemIds = new Set<string>();
-  const baseTiers = ensureUnrankedTier(board.tiers);
-  const tiers = baseTiers.map((tier) => {
-    const itemIds = tier.itemIds.filter((id) => {
-      if (!knownItemIds.has(id) || usedItemIds.has(id)) {
-        return false;
-      }
-
-      usedItemIds.add(id);
-      return true;
-    });
-
-    return {
-      ...tier,
-      itemIds
-    };
-  });
-  const unranked = tiers.find((tier) => tier.id === UNRANKED_TIER_ID);
-  const missingItemIds = items
-    .map((item) => item.id)
-    .filter((itemId) => !usedItemIds.has(itemId));
-
-  if (unranked) {
-    unranked.itemIds = [...unranked.itemIds, ...missingItemIds];
-  }
-
-  return {
-    ...board,
-    version: STORAGE_VERSION,
-    season,
+  const reconciled = reconcileBoardWithCatalog(
+    {
+      version: board.version,
+      season: board.season,
+      seasonYear: board.seasonYear,
+      tiers: board.tiers,
+      updatedAt: board.updatedAt,
+      extraItems: board.extraItems
+    },
+    items,
     seasonYear,
-    tiers,
-    updatedAt: new Date().toISOString()
-  };
-}
-
-function ensureUnrankedTier(tiers: TierRow[]): TierRow[] {
-  if (tiers.some((tier) => tier.id === UNRANKED_TIER_ID)) {
-    return tiers;
-  }
-
-  const unrankedTemplate = defaultTierTemplates.find(
-    (tier) => tier.id === UNRANKED_TIER_ID
+    season
   );
 
-  return [
-    ...tiers,
-    {
-      id: UNRANKED_TIER_ID,
-      label: "未分類",
-      color: unrankedTemplate?.color ?? "#9ca3af",
-      itemIds: [],
-      locked: true
-    }
-  ];
+  return {
+    version: STORAGE_VERSION,
+    season: reconciled.season,
+    seasonYear: reconciled.seasonYear,
+    tiers: reconciled.tiers.map((tier) => ({
+      id: tier.id,
+      label: tier.label,
+      color: tier.color,
+      itemIds: [...tier.itemIds],
+      locked: tier.locked
+    })),
+    updatedAt: reconciled.updatedAt,
+    extraItems: reconciled.extraItems
+  };
 }
 
 function moveItemBetweenTiers(
@@ -2681,6 +2852,48 @@ function readStoredBoard(storageKey: string): BoardState | null {
     return parsed;
   } catch {
     return null;
+  }
+}
+
+/** True when a valid per-year/season import-share-intent marker is stored. */
+function hasImportShareIntentMarker(year: number, season: AnimeSeason): boolean {
+  try {
+    const key = importShareIntentStorageKey(year, season);
+    const raw = localStorage.getItem(key);
+    const marker = parseImportShareIntentMarker(raw, year, season);
+    if (!marker) {
+      // Malformed/stale: drop so it cannot stick forever.
+      if (raw != null) {
+        try {
+          localStorage.removeItem(key);
+        } catch {
+          // ignore
+        }
+      }
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function writeImportShareIntentMarker(year: number, season: AnimeSeason): void {
+  try {
+    localStorage.setItem(
+      importShareIntentStorageKey(year, season),
+      serializeImportShareIntentMarker(createImportShareIntentMarker(year, season))
+    );
+  } catch {
+    // private mode / quota — in-memory ref still applies for this session
+  }
+}
+
+function clearImportShareIntentMarker(year: number, season: AnimeSeason): void {
+  try {
+    localStorage.removeItem(importShareIntentStorageKey(year, season));
+  } catch {
+    // ignore
   }
 }
 

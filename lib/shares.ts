@@ -1,29 +1,37 @@
 import { randomBytes } from "node:crypto";
-import { getTursoClient } from "@/lib/turso";
-import type { AnimeStatusRecord, DashboardData } from "@/lib/statuses";
-import type { AnimeItem, AnimeSeason } from "@/lib/types";
+import type { AnimeStatusRecord, DashboardData } from "./statuses.ts";
+import type { AnimeItem } from "./types.ts";
+import { getTursoClient } from "./turso.ts";
+import type { SharedBoard } from "./board-snapshot.ts";
+
+export type {
+  SharedBoard,
+  SharedTierRow,
+  BoardWithSnapshots,
+  BoardImportResult,
+  SharePayloadValidation
+} from "./board-snapshot.ts";
+export {
+  BOARD_UNRANKED_TIER_ID,
+  BOARD_IMPORT_VERSION,
+  UNCERTAIN_TITLE_PLACEHOLDER,
+  MAX_SHARE_PAYLOAD_BYTES,
+  collectShareItems,
+  mergeBoardItems,
+  parseBoardDefinitionImport,
+  reconcileBoardWithCatalog,
+  validateSharePayload,
+  isMinimalAnimeItem,
+  isSnapshotOnlyItem,
+  shouldEnableRemoteBoardAutosave,
+  utf8ByteLength
+} from "./board-snapshot.ts";
 
 export const REACTION_KINDS = ["like", "agree", "surprised", "want_to_watch"] as const;
 
 export type ReactionKind = (typeof REACTION_KINDS)[number];
 
 export type ReactionCounts = Record<ReactionKind, number>;
-
-export type SharedTierRow = {
-  id: string;
-  label: string;
-  color: string;
-  itemIds: string[];
-  locked?: boolean;
-};
-
-export type SharedBoard = {
-  version: number;
-  season: AnimeSeason;
-  seasonYear: number;
-  tiers: SharedTierRow[];
-  updatedAt: string;
-};
 
 export type ShareComment = {
   id: string;
