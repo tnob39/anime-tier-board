@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "season": "SUMMER",
+  "seasonYear": 2026,
+  "tiers": [
+    {
+      "label": "SSS",
+      "color": "#e11d48",
+      "entries": [
+        { "id": "101", "title": "天幕のジャードゥーガル" },
+        { "title": "無職転生Ⅲ ～異世界行ったら本気だす～" }
+      ]
+    },
+    {
+      "label": "SS",
+      "color": "#f97316",
+      "entries": [
+        { "title": "正反対な君と僕 第2期" },
+        { "id": "snapshot:uncertain-ss-2", "titleUncertain": true },
+        { "id": "snapshot:uncertain-ss-3", "titleUncertain": true }
+      ]
+    },
+    {
+      "label": "S",
+      "color": "#f87171",
+      "entries": [
+        { "title": "グロウアップショウ ～ひまわりのサーカス団～" },
+        { "id": "snapshot:uncertain-s-2", "titleUncertain": true },
+        { "id": "snapshot:uncertain-s-3", "titleUncertain": true },
+        { "id": "snapshot:uncertain-s-4", "titleUncertain": true },
+        { "id": "snapshot:uncertain-s-5", "titleUncertain": true }
+      ]
+    },
+    {
+      "label": "A",
+      "color": "#fbbf24",
+      "entries": [
+        { "title": "さよならララ" },
+        { "id": "snapshot:uncertain-a-2", "titleUncertain": true },
+        { "id": "snapshot:uncertain-a-3", "titleUncertain": true },
+        { "id": "snapshot:uncertain-a-4", "titleUncertain": true },
+        { "id": "snapshot:uncertain-a-5", "titleUncertain": true },
+        { "id": "snapshot:uncertain-a-6", "titleUncertain": true },
+        { "id": "snapshot:uncertain-a-7", "titleUncertain": true },
+        { "id": "snapshot:uncertain-a-8", "titleUncertain": true }
+      ]
+    },
+    {
+      "label": "B",
+      "color": "#34d399",
+      "entries": [
+        { "title": "黄泉のツガイ" },
+        { "title": "黒猫と魔女の教室" },
+        { "title": "才女のお世話" },
+        { "id": "snapshot:uncertain-b-4", "titleUncertain": true },
+        { "id": "snapshot:uncertain-b-5", "titleUncertain": true },
+        { "id": "snapshot:uncertain-b-6", "titleUncertain": true },
+        { "id": "snapshot:uncertain-b-7", "titleUncertain": true },
+        { "id": "snapshot:uncertain-b-8", "titleUncertain": true },
+        { "id": "snapshot:uncertain-b-9", "titleUncertain": true }
+      ]
+    },
+    {
+      "label": "C",
+      "color": "#60a5fa",
+      "entries": [
+        { "title": "炎の闘球女 ドッジ弾子" },
+        { "title": "LIAR GAME" },
+        { "id": "snapshot:uncertain-c-3", "titleUncertain": true }
+      ]
+    },
+    {
+      "label": "D",
+      "color": "#a78bfa",
+      "entries": [
+        { "title": "片田舎のおっさん、剣聖になるII" }
+      ]
+    }
+  ]
+}
