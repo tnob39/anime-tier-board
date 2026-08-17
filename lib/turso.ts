@@ -25,3 +25,15 @@ export function getTursoClient() {
 
   return client;
 }
+
+/** テストで DB URL を差し替える前に呼ぶ。本番コードからは使わない。 */
+export function resetTursoClientForTests(): void {
+  if (client) {
+    try {
+      client.close();
+    } catch {
+      // ignore
+    }
+  }
+  client = null;
+}

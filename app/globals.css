@@ -7080,3 +7080,179 @@ a.cl-history-title:hover {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ── Feedback (利用者の声) ── */
+
+.feedback-main {
+  width: min(640px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 96px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.feedback-header {
+  margin-bottom: 20px;
+}
+
+.feedback-back {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-decoration: none;
+  min-height: 44px;
+  line-height: 44px;
+}
+
+.feedback-back:hover {
+  color: var(--accent);
+}
+
+.feedback-header h1 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.feedback-header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.feedback-panel {
+  margin-top: 12px;
+  padding: 18px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.feedback-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--line));
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.feedback-notice p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feedback-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feedback-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.feedback-select,
+.feedback-textarea,
+.feedback-file {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+}
+
+.feedback-select {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.feedback-textarea {
+  min-height: 160px;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.feedback-file {
+  padding: 10px;
+  min-height: 44px;
+}
+
+.feedback-hint,
+.feedback-file-name {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.feedback-honeypot {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.feedback-agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.feedback-agree input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.feedback-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.feedback-submit {
+  min-height: 44px;
+  justify-content: center;
+}
+
+.feedback-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.feedback-success h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.feedback-success p {
+  margin: 0 0 16px;
+  color: var(--muted);
+  line-height: 1.55;
+}
