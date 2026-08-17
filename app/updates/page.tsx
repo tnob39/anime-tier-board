@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import {
   Accessibility, BarChart3, Bell, BookOpen, CalendarDays, Compass, CreditCard,
-  Filter, ImageOff, Info, Layers, ListChecks, Menu, Mic2, Moon, PlayCircle, Search, Share2,
+  Filter, ImageOff, Info, Layers, ListChecks, Menu, MessageSquareHeart, Mic2, Moon, PlayCircle, Search, Share2,
   ShieldCheck, Smartphone, Sparkles, Star,
   Trash2, Tv2, UserCheck, Zap, Download, Loader2, Bookmark, type LucideIcon
 } from "lucide-react";
@@ -48,10 +48,32 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.56",
+    date: "2026-08-17",
+    label: "匿名の『利用者の声』要望箱を追加",
+    isLatest: true,
+    changes: [
+      {
+        icon: MessageSquareHeart,
+        iconTone: "coral",
+        title: "ログイン不要の匿名フィードバック",
+        description: "要望レベルと本文、任意の画像1枚を送れる「利用者の声」ページを追加しました。氏名・メールは不要で、個人情報を保存しません。",
+        href: "/feedback",
+      },
+      {
+        icon: ShieldCheck,
+        iconTone: "emerald",
+        title: "画像メタデータの除去と公開前の注意表示",
+        description: "添付画像はサーバー側で再エンコードし位置情報などを除去します。送信前に GitHub Issues 公開の可能性と個人情報の禁止を明示します。",
+        href: "/feedback",
+      },
+    ]
+  },
+  {
     version: "1.55",
     date: "2026-07-22",
     label: "アクセシビリティ改善の継続と設定ページの見出し統一",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Accessibility,

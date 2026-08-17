@@ -5,6 +5,7 @@ import {
   CreditCard,
   Lock,
   Megaphone,
+  MessageSquareHeart,
   Mic2,
   Settings,
   X
@@ -22,6 +23,7 @@ type Props = {
 // ボトムタブにないページのみ
 const navItems = [
   { href: "/guide", label: "使い方", icon: BookOpen },
+  { href: "/feedback", label: "利用者の声", icon: MessageSquareHeart },
   { href: "/dashboard?section=subscriptions", label: "サブスク", icon: CreditCard },
   { href: "/voice-actors", label: "声優", icon: Mic2 },
   { href: "/settings", label: "設定", icon: Settings },
