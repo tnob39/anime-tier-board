@@ -30,9 +30,9 @@ import { resetTursoClientForTests } from "../lib/turso.ts";
 
 const tempDirs: string[] = [];
 
-// vercel.json は毎時15分に実行するため、部分成功の照合窓は複数回のcronを跨ぐ必要がある。
-test("reconcile window spans multiple hourly cron runs", () => {
-  assert.ok(FEEDBACK_RECONCILE_WINDOW_MS >= 6 * 60 * 60 * 1000);
+// Hobby互換の毎日cronでも、部分成功の照合窓は複数回の実行を跨ぐ必要がある。
+test("reconcile window spans multiple daily cron runs", () => {
+  assert.ok(FEEDBACK_RECONCILE_WINDOW_MS >= 72 * 60 * 60 * 1000);
 });
 
 function createMemoryEnv() {

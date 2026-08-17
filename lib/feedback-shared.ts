@@ -40,10 +40,10 @@ export const FEEDBACK_LEASE_MS = 5 * 60 * 1000;
 
 /**
  * GitHub create 成功〜DB 更新前の部分成功窓向け。
- * cron は毎時実行のため、複数回の実行で GitHub Search の反映を確認できる24時間は
- * 再 create せず reconcile のみに限定する。
+ * Hobby互換の毎日cronを複数回跨いでGitHub Searchの反映を確認できる72時間は、
+ * 再 create せずreconcileのみに限定する。
  */
-export const FEEDBACK_RECONCILE_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const FEEDBACK_RECONCILE_WINDOW_MS = 72 * 60 * 60 * 1000;
 /** reconcile 中の search 回数（eventual consistency 対策）。 */
 export const FEEDBACK_RECONCILE_SEARCH_COUNT = 3;
 
