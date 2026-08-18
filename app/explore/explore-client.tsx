@@ -8,7 +8,12 @@ import { track } from "@/lib/analytics";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import { getAnimePopularity as getPopularity } from "@/lib/home-seasonal-add";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
-import { STREAMING_SERVICES } from "@/lib/streaming-services";
+import {
+  STREAMING_SERVICES,
+  getMergedStreamingPlatforms,
+  getStreamingPlatformOverflowCount,
+  STREAMING_PLATFORM_VISIBLE_LIMIT
+} from "@/lib/streaming-services";
 import type { UserSubscription } from "@/lib/subscriptions";
 import type { AnimeItem, SeasonalFreshness } from "@/lib/types";
 
@@ -724,73 +729,43 @@ export function ExploreClient({
 }
 
 function StreamingPlatformPills({ item }: { item: AnimeItem }) {
-  const platforms = getStreamingPlatforms(item);
-  const visiblePlatforms = platforms.slice(0, 2);
-  const remainingCount = Math.max(0, platforms.length - visiblePlatforms.length);
+  const platforms = getMergedStreamingPlatforms(item);
+  const visiblePlatforms = platforms.slice(0, STREAMING_PLATFORM_VISIBLE_LIMIT);
+  const remainingCount = getStreamingPlatformOverflowCount(platforms.length);
 
   if (!visiblePlatforms.length) {
     return null;
   }
 
   return (
-    <div className="streaming-links explore-streaming-links">
-      {visiblePlatforms.map((platform) => (
-        <a
-          key={`${platform.name}:${platform.url}`}
-          href={platform.url}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <PlayCircle size={11} aria-hidden="true" />
-          <span>{platform.name}</span>
-          <span className="sr-only">（新しいタブで開きます）</span>
-        </a>
-      ))}
-      {remainingCount ? <span className="streaming-more">+{remainingCount}</span> : null}
+    <div className="streaming-links explore-streaming-links" aria-label="見放題">
+      {visiblePlatforms.map((platform) =>
+        platform.url ? (
+          <a
+            key={`${platform.name}:${platform.url}`}
+            href={platform.url}
+            target="_blank"
+            rel="noreferrer"
+            title={`${platform.name}で見放題`}
+          >
+            <PlayCircle size={11} aria-hidden="true" />
+            <span>{platform.name}</span>
+            <span className="sr-only">見放題（新しいタブで開きます）</span>
+          </a>
+        ) : (
+          <span key={`${platform.name}:nolink`} title={`${platform.name}で見放題`}>
+            <PlayCircle size={11} aria-hidden="true" />
+            <span>{platform.name}</span>
+          </span>
+        )
+      )}
+      {remainingCount ? (
+        <span className="streaming-more" title={`他${remainingCount}件の見放題`}>
+          +{remainingCount}
+        </span>
+      ) : null}
     </div>
   );
-}
-
-function getStreamingPlatforms(item: AnimeItem) {
-  if (item.streamingPlatforms?.length) {
-    return item.streamingPlatforms.filter((platform) => platform.url && platform.name);
-  }
-
-  if (item.streamingProvidersJp?.flatrate?.length) {
-    const link = item.streamingProvidersJp.providerLink ?? "#";
-    return item.streamingProvidersJp.flatrate
-      .slice(0, 5)
-      .map((provider) => ({ name: provider.name, url: link }));
-  }
-
-  const platforms = new Map<string, { name: string; url: string }>();
-  for (const episode of item.streamingEpisodes ?? []) {
-    if (!episode.url) {
-      continue;
-    }
-
-    const name = episode.site?.trim() || getHostLabel(episode.url);
-    if (!name) {
-      continue;
-    }
-
-    const key = name.toLowerCase();
-    if (!platforms.has(key)) {
-      platforms.set(key, { name, url: episode.url });
-    }
-  }
-
-  return Array.from(platforms.values()).slice(0, 5);
-}
-
-function getHostLabel(url: string): string | null {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, "");
-    const [label] = host.split(".");
-    return label ? label.charAt(0).toUpperCase() + label.slice(1) : null;
-  } catch {
-    return null;
-  }
 }
 
 function buildPreferences(records: AnimeStatusRecord[]) {
