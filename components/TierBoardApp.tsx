@@ -1367,13 +1367,10 @@ export function TierBoardApp({
                       tier={tier}
                       itemMap={itemMap}
                       editable={!isAuthReturnLocked}
-                      statusDisabled={isAuthReturnLocked}
                       onRename={handleRenameTier}
                       onColor={handleColorTier}
                       onDelete={handleDeleteTier}
                       onOpenMoveMenu={handleOpenMoveMenu}
-                      statusMap={statusMap}
-                      onStatusChange={handleStatusChange}
                     />
                   ))
                 )}
@@ -1424,13 +1421,10 @@ export function TierBoardApp({
                 itemMap={itemMap}
                 pool
                 editable={!isAuthReturnLocked}
-                statusDisabled={isAuthReturnLocked}
                 onRename={handleRenameTier}
                 onColor={handleColorTier}
                 onDelete={handleDeleteTier}
                 onOpenMoveMenu={handleOpenMoveMenu}
-                statusMap={statusMap}
-                onStatusChange={handleStatusChange}
               />
               </section>
             </>
@@ -1521,7 +1515,7 @@ function MoveItemSheet({
         className="move-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="移動先を選択"
+        aria-label="作品の詳細"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="move-sheet-preview">
@@ -1532,10 +1526,29 @@ function MoveItemSheet({
           )}
           <div>
             <strong>{item.title}</strong>
-            <span>移動先を選択</span>
+            <div className="move-sheet-subline">
+              <span>{item.format ?? "ANIME"}</span>
+              <a
+                href={item.siteUrl}
+                target="_blank"
+                rel="noreferrer"
+                title="外部リンク"
+                aria-label={`${item.title}の外部リンク（新しいタブで開きます）`}
+              >
+                <ExternalLink size={14} aria-hidden="true" />
+                <span className="sr-only">（新しいタブで開きます）</span>
+              </a>
+            </div>
           </div>
         </div>
 
+        <div className="move-sheet-details">
+          <ReputationBadges item={item} />
+          <AiringBadges item={item} />
+          <StreamingPlatformLinks item={item} />
+        </div>
+
+        <p className="move-sheet-section-label">視聴ステータス</p>
         <StatusChips
           className="move-status-chips"
           status={status}
@@ -1543,6 +1556,7 @@ function MoveItemSheet({
           onChange={(nextStatus) => onStatusChange(item, nextStatus)}
         />
 
+        <p className="move-sheet-section-label">移動先を選択</p>
         <div className="move-tier-grid">
           {tiers.map((tier) => (
             <button
@@ -1569,7 +1583,7 @@ function MoveItemSheet({
           type="button"
           onClick={onClose}
         >
-          キャンセル
+          閉じる
         </button>
       </section>
     </div>
@@ -1581,25 +1595,19 @@ function TierLane({
   itemMap,
   editable = false,
   pool = false,
-  statusDisabled = false,
   onRename,
   onColor,
   onDelete,
-  onOpenMoveMenu,
-  statusMap,
-  onStatusChange
+  onOpenMoveMenu
 }: {
   tier: TierRow;
   itemMap: Map<string, AnimeItem>;
   editable?: boolean;
   pool?: boolean;
-  statusDisabled?: boolean;
   onRename: (tierId: string, label: string) => void;
   onColor: (tierId: string, color: string) => void;
   onDelete: (tierId: string) => void;
   onOpenMoveMenu: (itemId: string) => void;
-  statusMap: Record<string, ViewingStatus>;
-  onStatusChange: (item: AnimeItem, status: ViewingStatus | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: tier.id,
@@ -1653,11 +1661,7 @@ function TierLane({
               <SortableAnimeCard
                 key={item.id}
                 item={item}
-                compact={!pool}
                 onOpenMoveMenu={onOpenMoveMenu}
-                status={statusMap[item.id] ?? null}
-                statusDisabled={statusDisabled}
-                onStatusChange={onStatusChange}
               />
             ))
           ) : (
@@ -1703,18 +1707,10 @@ function TierLane({
 
 function SortableAnimeCard({
   item,
-  compact = false,
-  onOpenMoveMenu,
-  status,
-  statusDisabled = false,
-  onStatusChange
+  onOpenMoveMenu
 }: {
   item: AnimeItem;
-  compact?: boolean;
   onOpenMoveMenu: (itemId: string) => void;
-  status: ViewingStatus | null;
-  statusDisabled?: boolean;
-  onStatusChange: (item: AnimeItem, status: ViewingStatus | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({
@@ -1723,6 +1719,58 @@ function SortableAnimeCard({
         type: "anime-card"
       }
     });
+  /** Sticky guard: trailing click/tap after drag must not open the detail sheet. */
+  const suppressOpenRef = useRef(false);
+  const suppressTimerRef = useRef<number | null>(null);
+  const pointerOriginRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearSuppressTimer = useCallback(() => {
+    if (suppressTimerRef.current != null) {
+      window.clearTimeout(suppressTimerRef.current);
+      suppressTimerRef.current = null;
+    }
+  }, []);
+
+  const armSuppressOpen = useCallback(() => {
+    suppressOpenRef.current = true;
+    clearSuppressTimer();
+  }, [clearSuppressTimer]);
+
+  useEffect(() => {
+    if (isDragging) {
+      armSuppressOpen();
+      return;
+    }
+    if (!suppressOpenRef.current) {
+      return;
+    }
+    // Keep suppression past isDragging=false so the post-drag click/tap is ignored.
+    clearSuppressTimer();
+    suppressTimerRef.current = window.setTimeout(() => {
+      suppressOpenRef.current = false;
+      suppressTimerRef.current = null;
+    }, 250);
+    return () => {
+      clearSuppressTimer();
+    };
+  }, [isDragging, armSuppressOpen, clearSuppressTimer]);
+
+  useEffect(() => {
+    return () => {
+      clearSuppressTimer();
+    };
+  }, [clearSuppressTimer]);
+
+  const openDetailsFromPointer = useCallback(() => {
+    if (isDragging || suppressOpenRef.current) {
+      suppressOpenRef.current = false;
+      clearSuppressTimer();
+      pointerOriginRef.current = null;
+      return;
+    }
+    onOpenMoveMenu(item.id);
+  }, [clearSuppressTimer, isDragging, item.id, onOpenMoveMenu]);
+
   const style = {
     transform: transform
       ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
@@ -1731,44 +1779,90 @@ function SortableAnimeCard({
     opacity: isDragging ? 0.35 : 1
   } as React.CSSProperties;
 
+  const dragLabel = `${item.title}をドラッグして並べ替え`;
+  const detailLabel = `${item.title}の詳細を開く`;
+  const {
+    onPointerDown: dndPointerDown,
+    onKeyDown: dndKeyDown,
+    ...otherListeners
+  } = listeners ?? {};
+
   return (
     <div
       ref={setNodeRef}
       className={isDragging ? "sortable-card-shell is-dragging" : "sortable-card-shell"}
       style={style}
-      onClick={() => {
-        if (!isDragging) {
-          onOpenMoveMenu(item.id);
-        }
-      }}
-      {...attributes}
-      {...listeners}
     >
-      <AnimeCard
-        item={item}
-        compact={compact}
-        status={status}
-        statusDisabled={statusDisabled}
-        onStatusChange={onStatusChange}
-      />
+      {/*
+        Drag activator is a non-button surface with dnd-kit attributes (role/tabIndex).
+        Enter/Space stay reserved for KeyboardSensor. Detail open is a sibling control
+        so we never nest <button> inside the drag activator.
+      */}
+      <div
+        className="sortable-card-drag"
+        data-sortable-drag="true"
+        title={dragLabel}
+        {...attributes}
+        {...otherListeners}
+        aria-label={dragLabel}
+        onPointerDown={(event) => {
+          pointerOriginRef.current = { x: event.clientX, y: event.clientY };
+          dndPointerDown?.(event);
+        }}
+        onPointerMove={(event) => {
+          const origin = pointerOriginRef.current;
+          if (!origin) {
+            return;
+          }
+          if (
+            Math.abs(event.clientX - origin.x) > 6 ||
+            Math.abs(event.clientY - origin.y) > 6
+          ) {
+            armSuppressOpen();
+          }
+        }}
+        onPointerUp={() => {
+          pointerOriginRef.current = null;
+        }}
+        onPointerCancel={() => {
+          pointerOriginRef.current = null;
+        }}
+        onClick={() => {
+          openDetailsFromPointer();
+        }}
+        onKeyDown={(event) => {
+          // Enter/Space: forward to dnd-kit only. Never open the detail sheet here.
+          dndKeyDown?.(event);
+        }}
+      >
+        <AnimeCard item={item} />
+      </div>
+      <button
+        type="button"
+        className="sortable-card-detail"
+        aria-label={detailLabel}
+        title={detailLabel}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onOpenMoveMenu(item.id);
+        }}
+      >
+        <MoreHorizontal size={14} aria-hidden="true" />
+      </button>
     </div>
   );
 }
 
 function AnimeCard({
   item,
-  overlay = false,
-  compact = false,
-  status = null,
-  statusDisabled = false,
-  onStatusChange
+  overlay = false
 }: {
   item: AnimeItem;
   overlay?: boolean;
-  compact?: boolean;
-  status?: ViewingStatus | null;
-  statusDisabled?: boolean;
-  onStatusChange?: (item: AnimeItem, status: ViewingStatus | null) => void;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -1778,13 +1872,7 @@ function AnimeCard({
 
   return (
     <article
-      className={[
-        "anime-card",
-        overlay ? "is-overlay" : "",
-        compact ? "is-compact" : ""
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={["anime-card", overlay ? "is-overlay" : ""].filter(Boolean).join(" ")}
     >
       {item.proxiedImageUrl && !imageFailed ? (
         <img
@@ -1797,56 +1885,11 @@ function AnimeCard({
       ) : (
         <AnimeCardPlaceholder title={item.title} draggable={false} />
       )}
-      {!compact ? (
-        <div className="anime-meta">
+      <div className="anime-meta">
         <div className="anime-title" title={item.title}>
           {item.title}
         </div>
-        <div className="anime-subline">
-          <span>{item.format ?? "ANIME"}</span>
-          <a
-            href={item.siteUrl}
-            target="_blank"
-            rel="noreferrer"
-            title="外部リンク"
-            aria-label={`${item.title}の外部リンク（新しいタブで開きます）`}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <ExternalLink size={13} />
-          </a>
-        </div>
-        <ReputationBadges item={item} />
-        <AiringBadges item={item} />
-        <StreamingPlatformLinks item={item} />
-        {onStatusChange ? (
-          status ? (
-            <StatusChips
-              status={status}
-              compact
-              disabled={statusDisabled}
-              onChange={(nextStatus) => onStatusChange(item, nextStatus)}
-            />
-          ) : (
-            <button
-              className="status-chip quick-add-planned"
-              type="button"
-              disabled={statusDisabled}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (statusDisabled) {
-                  return;
-                }
-                onStatusChange(item, "planned");
-              }}
-            >
-              ＋見たい
-            </button>
-          )
-        ) : null}
-        </div>
-      ) : null}
+      </div>
     </article>
   );
 }
