@@ -2,7 +2,7 @@
 
 **対象**: Claude Code / Codex / Grok / Cursor / Hermes など、Orca ADE 内で動作するすべてのコーディングエージェント  
 **プロジェクト**: anime-tier-board (`tnob39/anime-tier-board`)  
-**更新**: 2026-06-07
+**更新**: 2026-08-18
 
 > **起動時の必須指示（各エージェントの System Prompt / 初回プロンプトに貼る）**
 >
@@ -91,6 +91,54 @@ orca worktree set --worktree active --comment "filter done; running tests" --jso
 | `calendar-next-airing` | grok-composer | Todo（予定） |
 
 新タスクを始めるときは GitHub Issue を作成し、`orca worktree set --comment "issue #N"` を更新してください。
+
+### 3.1.1 Codex sandbox 標準運用（worktree 隔離と併用）
+
+**原則: Codex は対象 Orca worktree を CWD（作業ルート）にして起動する。sandbox はローカル実行境界であり、GitHub 上の協調・品質ゲートを代替しない。**
+
+| 用途 | sandbox | approval | 起動の要点 |
+|------|---------|----------|------------|
+| 通常の実装・修正 | `workspace-write` | `on-request` | 対象 worktree のみ書き込み。昇格は承認ベース |
+| レビュー・調査（推奨） | `read-only` | （書き込み不要） | 対象 worktree を CWD にしたまま読む |
+| 例外（原則禁止） | `danger-full-access` | 別途明示 | 外部で既に隔離された環境向け。通常運用では使わない |
+
+**CWD の固定（実 CLI）**
+
+```bash
+# 既存 worktree 上で Codex を起動（Orca がその checkout を CWD にする）
+orca terminal create --worktree active --command "codex" --json
+
+# 対話: 作業ルートを明示（codex-cli 0.147.0 で確認）
+codex -C <target-worktree-abs-path> -s workspace-write -a on-request
+
+# 非対話 exec: -C と --sandbox はフラグ。approval は CLI -a 非対応のため -c で明示する
+codex exec --ephemeral --sandbox workspace-write -c 'ask_for_approval="on-request"' -C <target-worktree-abs-path> "<task>"
+
+# レビュー推奨（read-only）。専用 `codex review` サブコマンドに --sandbox フラグは無い
+codex -C <target-worktree-abs-path> -s read-only
+codex exec --ephemeral --sandbox read-only -C <target-worktree-abs-path> "<review prompt>"
+```
+
+ローカル補助スクリプトの例（リポジトリ外）: `dispatch.ps1 -To codex -CodexSandbox workspace-write -CodexCwd <worktree> ...` は内部で `codex exec --sandbox <mode> -C <cwd>` を呼ぶ。実験メモは `docs/experiments/S1_codex_vs_grok_20260626.md`。
+
+**`on-request` 時の承認基準（人間 / 親エージェント）**
+
+| 対象 | 承認してよい条件 | 拒否する例 |
+|------|------------------|------------|
+| 他 worktree / 追加書き込み根 | Spec が明示し、`--add-dir` 等がそのパスに限定されるときだけ | 兄弟 worktree・無関係 checkout への書き込み拡大 |
+| グローバル設定 | ユーザーが明示した設定変更タスクのときだけ | `~/.codex/config.toml` や他ツールのユーザー全域設定の無断変更 |
+| ネットワーク | タスク達成に必要な取得・API・パッケージに限定 | 目的不明の外部送信、秘密情報を含む送信、無関係ドメイン |
+| 破壊的操作 | ユーザー明示 + 対象パス/ブランチが単一に特定できるときだけ | `git clean -fdx`、強制 push、worktree/branch 削除、`gh pr merge` の独断実行 |
+
+既知の運用上の注意（実験結果）: `workspace-write` では **git metadata 書き込み（commit 等）に失敗することがある**。実装は Codex、commit / push / PR 操作は親エージェントまたは人間が行う想定（詳細は上記 S1 実験メモ）。
+
+**sandbox が代替しないもの（必須）**
+
+- GitHub Issue/PR の `merge-pending` クレームとコメント（`AGENTS.md` のステータス運用）
+- PR review（レビュー依頼・承認）
+- CI（`tsc` / `build` / Actions 等の検証）
+
+これらは sandbox の成否に関係なく、従来どおり GitHub 上で実施する。
 
 ### 3.2 Terminal（分割・読み取り・待機）
 
@@ -216,6 +264,7 @@ orca orchestration check --wait --types worker_done,escalation --timeout-ms 3000
 
 - [ ] `ORCA_GUIDE.md` と `docs/GITHUB_ISSUES.md`（または対象 Issue）を読んだ
 - [ ] 担当タスク用の worktree にいる（または作成した）
+- [ ] Codex を使うなら対象 worktree を CWD にし、用途に応じた sandbox（実装=`workspace-write` / レビュー=`read-only`）で起動した（§3.1.1）
 - [ ] 関連 handoff / plan ドキュメントを確認した
 - [ ] `orca worktree set --comment "..."` で状態を明示した
 
@@ -342,6 +391,7 @@ split-pane for file-editing tasks. Keep dependency chains shallow (max 3-4).
 
 | 日付 | 内容 |
 |------|------|
+| 2026-08-18 | §3.1.1 Codex sandbox 標準運用（worktree CWD・workspace-write + on-request・承認基準・GitHub ゲート非代替）を追記（Issue #298） |
 | 2026-06-07 | 初版作成（anime-tier-board 向け） |## 個人開発向け推奨
 
 個人開発では `PERSONAL_ORCA_WORKFLOW.md` を優先的に参照してください。

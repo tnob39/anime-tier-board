@@ -123,10 +123,12 @@ npm.cmd run dev:local
 | エージェント | 補足 |
 |--------------|------|
 | Grok / Composer | 実装担当。対応 GitHub Issue を更新・close |
-| Codex | レビュー・テスト容易性。Diff annotation でフィードバック |
+| Codex | レビュー・テスト容易性。Diff annotation でフィードバック。**起動は対象 Orca worktree を CWD に固定**し、通常は `workspace-write` + `on-request`、レビューは `read-only`（詳細・承認基準は [ORCA_GUIDE.md §3.1.1](./ORCA_GUIDE.md)） |
 | Claude Code | 本書 + `CLAUDE.md` を起動時自動読み込み |
 | Hermes | Orchestrator。worktree 作成・タスク分解・`orchestration` 利用 |
 | Cursor | `AGENTS.md` を Rules / Docs に登録推奨 |
+
+> **Codex sandbox は GitHub ゲートを代替しない**: ローカルの sandbox / approval は実行境界にすぎない。`merge-pending` クレーム、PR review、CI は下記の Issue/PR ステータス運用と従来どおり併用する。
 
 ### Issue / PR ステータス運用（必須・マルチセッション協調）
 
