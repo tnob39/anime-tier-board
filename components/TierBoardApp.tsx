@@ -54,6 +54,11 @@ import {
 import { getCurrentAnimeSeason } from "@/lib/season";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
+import {
+  getMergedStreamingPlatforms,
+  getStreamingPlatformOverflowCount,
+  STREAMING_PLATFORM_VISIBLE_LIMIT
+} from "@/lib/streaming-services";
 import type { AnimeItem, AnimeSeason } from "@/lib/types";
 import { SEASON_LABELS, SEASONS } from "@/lib/types";
 
@@ -1977,32 +1982,48 @@ function StreamingLinks({ item }: { item: AnimeItem }) {
 }
 
 function StreamingPlatformLinks({ item }: { item: AnimeItem }) {
-  const platforms = getStreamingPlatforms(item);
-  const visiblePlatforms = platforms.slice(0, 2);
-  const remainingCount = Math.max(0, platforms.length - visiblePlatforms.length);
+  const platforms = getMergedStreamingPlatforms(item);
+  const visiblePlatforms = platforms.slice(0, STREAMING_PLATFORM_VISIBLE_LIMIT);
+  const remainingCount = getStreamingPlatformOverflowCount(platforms.length);
 
   if (!visiblePlatforms.length) {
     return null;
   }
 
   return (
-    <div className="streaming-links">
-      {visiblePlatforms.map((platform) => (
-        <a
-          key={`${platform.name}:${platform.url}`}
-          href={platform.url}
-          target="_blank"
-          rel="noreferrer"
-          title={`${platform.name}で配信候補を見る`}
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <PlayCircle size={11} />
-          <span>{platform.name}</span>
-          <span className="sr-only">（新しいタブで開きます）</span>
-        </a>
-      ))}
-      {remainingCount ? <span className="streaming-more">+{remainingCount}</span> : null}
+    <div className="streaming-links" aria-label="見放題">
+      {visiblePlatforms.map((platform) =>
+        platform.url ? (
+          <a
+            key={`${platform.name}:${platform.url}`}
+            href={platform.url}
+            target="_blank"
+            rel="noreferrer"
+            title={`${platform.name}で見放題`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <PlayCircle size={11} />
+            <span>{platform.name}</span>
+            <span className="sr-only">見放題（新しいタブで開きます）</span>
+          </a>
+        ) : (
+          <span
+            key={`${platform.name}:nolink`}
+            title={`${platform.name}で見放題`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <PlayCircle size={11} />
+            <span>{platform.name}</span>
+          </span>
+        )
+      )}
+      {remainingCount ? (
+        <span className="streaming-more" title={`他${remainingCount}件の見放題`}>
+          +{remainingCount}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -2192,48 +2213,6 @@ function estimateCourFromEpisodes(episodes?: number | null): string | null {
   }
 
   return "4クール以上";
-}
-
-function getStreamingPlatforms(item: AnimeItem) {
-  if (item.streamingPlatforms?.length) {
-    return item.streamingPlatforms.filter((platform) => platform.url && platform.name);
-  }
-
-  if (item.streamingProvidersJp?.flatrate?.length) {
-    const link = item.streamingProvidersJp.providerLink ?? "#";
-    return item.streamingProvidersJp.flatrate
-      .slice(0, 5)
-      .map((provider) => ({ name: provider.name, url: link }));
-  }
-
-  const platforms = new Map<string, { name: string; url: string }>();
-  for (const episode of item.streamingEpisodes ?? []) {
-    if (!episode.url) {
-      continue;
-    }
-
-    const name = episode.site?.trim() || getHostLabel(episode.url);
-    if (!name) {
-      continue;
-    }
-
-    const key = name.toLowerCase();
-    if (!platforms.has(key)) {
-      platforms.set(key, { name, url: episode.url });
-    }
-  }
-
-  return Array.from(platforms.values()).slice(0, 5);
-}
-
-function getHostLabel(url: string): string | null {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, "");
-    const [label] = host.split(".");
-    return label ? label.charAt(0).toUpperCase() + label.slice(1) : null;
-  } catch {
-    return null;
-  }
 }
 
 function createDefaultBoard(
