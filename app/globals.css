@@ -1166,8 +1166,52 @@ button:disabled {
 }
 
 .sortable-card-shell::after {
-  content: "タップで移動";
+  content: "ドラッグで分類";
   display: none;
+}
+
+.sortable-card-drag {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  outline: 0;
+  touch-action: manipulation;
+}
+
+.sortable-card-drag:focus-visible {
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.24);
+}
+
+.sortable-card-detail {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(20, 26, 32, 0.16);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.sortable-card-shell:hover .sortable-card-detail,
+.sortable-card-shell:focus-within .sortable-card-detail,
+.sortable-card-detail:focus-visible {
+  opacity: 1;
+}
+
+.sortable-card-detail:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.28);
 }
 
 .sortable-card-shell:focus-visible {
@@ -1178,6 +1222,11 @@ button:disabled {
   cursor: grabbing;
   position: relative;
   z-index: 5;
+}
+
+.sortable-card-shell.is-dragging .sortable-card-detail {
+  pointer-events: none;
+  opacity: 0;
 }
 
 .anime-card {
@@ -1192,6 +1241,15 @@ button:disabled {
   box-shadow: 0 1px 2px rgba(20, 26, 32, 0.08);
   user-select: none;
   touch-action: manipulation;
+}
+
+.anime-card .anime-meta {
+  gap: 0;
+  padding: 6px 7px 7px;
+}
+
+.anime-card .anime-title {
+  min-height: 0;
 }
 
 .share-tier-card {
@@ -1267,20 +1325,12 @@ button:disabled {
   transform: rotate(1deg);
 }
 
-.anime-card.is-compact {
-  grid-template-rows: 128px;
-}
-
 .anime-card img {
   width: 100%;
   height: 128px;
   display: block;
   object-fit: cover;
   background: var(--surface-soft);
-}
-
-.anime-card.is-compact img {
-  height: 128px;
 }
 
 .anime-card-placeholder {
@@ -1527,6 +1577,50 @@ button:disabled {
   font-size: 13px;
 }
 
+.move-sheet-subline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.move-sheet-subline a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.move-sheet-subline a:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.move-sheet-details {
+  display: grid;
+  gap: 8px;
+  padding: 0 14px 4px;
+}
+
+.move-sheet-details .reputation-badges,
+.move-sheet-details .airing-badges,
+.move-sheet-details .streaming-links {
+  gap: 6px;
+}
+
+.move-sheet-section-label {
+  margin: 4px 14px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .move-tier-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1665,16 +1759,13 @@ button:disabled {
     grid-template-rows: 112px auto;
   }
 
-  .anime-card img {
+  .anime-card img,
+  .anime-card .anime-card-placeholder {
     height: 112px;
   }
 
-  .anime-card.is-compact {
-    grid-template-rows: 112px;
-  }
-
-  .anime-card.is-compact img {
-    height: 112px;
+  .anime-card .anime-meta {
+    padding: 5px 6px 6px;
   }
 
   .tier-items,
@@ -1899,30 +1990,31 @@ button:disabled {
   }
 
   .anime-card {
-    width: 74px;
-    grid-template-rows: 100px auto;
+    width: 72px;
+    grid-template-rows: 96px auto;
   }
 
-  .anime-card img {
-    height: 100px;
+  .anime-card img,
+  .anime-card .anime-card-placeholder {
+    height: 96px;
   }
 
-  .anime-card.is-compact {
-    grid-template-rows: 100px;
+  .anime-card .anime-meta {
+    gap: 0;
+    padding: 4px 5px 5px;
   }
 
-  .anime-card.is-compact img {
-    height: 100px;
+  .anime-card .anime-title {
+    min-height: 0;
+    font-size: 10px;
+    line-height: 1.3;
   }
 
-  .anime-meta {
-    gap: 4px;
-    padding: 6px;
-  }
-
-  .anime-title {
-    min-height: 30px;
-    font-size: 11px;
+  .tier-items,
+  .pool-items {
+    gap: 6px;
+    min-height: 108px;
+    padding: 8px;
   }
 
   .move-sheet-backdrop {
