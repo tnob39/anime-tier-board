@@ -549,6 +549,15 @@ button:disabled {
   min-width: 0;
 }
 
+.control-bar-season,
+.control-bar-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .toolbar-status {
   align-self: center;
   max-width: 220px;
@@ -1578,15 +1587,44 @@ button:disabled {
     width: 100%;
   }
 
+  /* 2 intentional rows: season selectors, then action icons (avoids lone "…" wrap) */
   .control-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .control-bar-season,
+  .control-bar-actions {
     display: grid;
-    grid-template-columns: repeat(4, minmax(44px, auto));
-    justify-content: stretch;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .control-bar-season {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .control-bar-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .control-bar-actions .command-button,
+  .control-bar-actions .toolbar-more-wrap,
+  .control-bar-actions .toolbar-more-wrap .command-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .control-bar-season .field {
+    min-width: 0;
     width: 100%;
   }
 
   .toolbar-status {
-    grid-column: 1 / -1;
     max-width: 100%;
   }
 
@@ -1751,11 +1789,6 @@ button:disabled {
 
   .status-line {
     font-size: 12px;
-  }
-
-  .control-bar {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
   }
 
   .command-button span {
@@ -4607,6 +4640,7 @@ a.cl-history-title:hover {
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-height: 44px;
   padding: 9px 10px;
   border: none;
   border-radius: 8px;
