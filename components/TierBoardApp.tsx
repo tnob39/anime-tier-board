@@ -1087,167 +1087,171 @@ export function TierBoardApp({
         </div>
 
         <div className="control-bar">
-          <label className="field">
-            <span>年</span>
-            <select
-              value={seasonYear}
-              onChange={(event) => {
-                if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
-                  return;
-                }
-                setSeasonYear(Number(event.target.value));
-              }}
-              disabled={isAuthReturnLocked}
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="control-bar-season" aria-label="年と季節">
+            <label className="field">
+              <span>年</span>
+              <select
+                value={seasonYear}
+                onChange={(event) => {
+                  if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+                    return;
+                  }
+                  setSeasonYear(Number(event.target.value));
+                }}
+                disabled={isAuthReturnLocked}
+              >
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label className="field">
-            <span>期</span>
-            <select
-              value={season}
-              onChange={(event) => {
-                if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
-                  return;
-                }
-                setSeason(event.target.value as AnimeSeason);
-              }}
-              disabled={isAuthReturnLocked}
-            >
-              {SEASONS.map((option) => (
-                <option key={option} value={option}>
-                  {SEASON_LABELS[option]}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label className="field">
+              <span>期</span>
+              <select
+                value={season}
+                onChange={(event) => {
+                  if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+                    return;
+                  }
+                  setSeason(event.target.value as AnimeSeason);
+                }}
+                disabled={isAuthReturnLocked}
+              >
+                {SEASONS.map((option) => (
+                  <option key={option} value={option}>
+                    {SEASON_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
-          <button
-            className="command-button"
-            type="button"
-            onClick={() => void loadAnime()}
-            disabled={loading || isAuthReturnLocked}
-            title="再取得"
-          >
-            {loading ? (
-              <Loader2 className="spin" size={18} aria-hidden="true" />
-            ) : (
-              <RefreshCw size={18} aria-hidden="true" />
-            )}
-            <span>再取得</span>
-          </button>
-
-          <button
-            className={copyConfirm ? "command-button copy-confirm" : "command-button"}
-            type="button"
-            onClick={() => void handleCreateShare()}
-            disabled={
-              !board || sharing || loading || !items.length || isAuthReturnLocked
-            }
-            title="共有URLを作成"
-          >
-            {sharing ? (
-              <Loader2 className="spin" size={18} aria-hidden="true" />
-            ) : copyConfirm ? (
-              <Check size={18} aria-hidden="true" />
-            ) : (
-              <Share2 size={18} aria-hidden="true" />
-            )}
-            <span>{copyConfirm ? "コピーしました" : "共有"}</span>
-          </button>
-
-          <div className="toolbar-more-wrap">
+          <div className="control-bar-actions" aria-label="ツールバー操作">
             <button
-              ref={toolbarMoreButtonRef}
               className="command-button"
               type="button"
-              onClick={() => setToolbarMenuOpen((open) => !open)}
-              aria-haspopup="true"
-              aria-expanded={toolbarMenuOpen}
-              title="その他の操作"
+              onClick={() => void loadAnime()}
+              disabled={loading || isAuthReturnLocked}
+              title="再取得"
             >
-              <MoreHorizontal size={18} aria-hidden="true" />
-              <span>その他</span>
+              {loading ? (
+                <Loader2 className="spin" size={18} aria-hidden="true" />
+              ) : (
+                <RefreshCw size={18} aria-hidden="true" />
+              )}
+              <span>再取得</span>
             </button>
 
-            {toolbarMenuOpen && (
-              <>
-                <div
-                  className="toolbar-more-backdrop"
-                  onClick={() => setToolbarMenuOpen(false)}
-                  aria-hidden="true"
-                />
-                <div className="toolbar-more-menu" aria-label="その他の操作">
-                  <div className="toolbar-more-filters no-export" aria-label="表示フィルター">
+            <button
+              className={copyConfirm ? "command-button copy-confirm" : "command-button"}
+              type="button"
+              onClick={() => void handleCreateShare()}
+              disabled={
+                !board || sharing || loading || !items.length || isAuthReturnLocked
+              }
+              title="共有URLを作成"
+            >
+              {sharing ? (
+                <Loader2 className="spin" size={18} aria-hidden="true" />
+              ) : copyConfirm ? (
+                <Check size={18} aria-hidden="true" />
+              ) : (
+                <Share2 size={18} aria-hidden="true" />
+              )}
+              <span>{copyConfirm ? "コピーしました" : "共有"}</span>
+            </button>
+
+            <div className="toolbar-more-wrap">
+              <button
+                ref={toolbarMoreButtonRef}
+                className="command-button"
+                type="button"
+                onClick={() => setToolbarMenuOpen((open) => !open)}
+                aria-haspopup="true"
+                aria-expanded={toolbarMenuOpen}
+                title="その他の操作"
+              >
+                <MoreHorizontal size={18} aria-hidden="true" />
+                <span>その他</span>
+              </button>
+
+              {toolbarMenuOpen && (
+                <>
+                  <div
+                    className="toolbar-more-backdrop"
+                    onClick={() => setToolbarMenuOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <div className="toolbar-more-menu" aria-label="その他の操作">
+                    <div className="toolbar-more-filters no-export" aria-label="表示フィルター">
+                      <button
+                        className={hideMovies ? "filter-chip is-active" : "filter-chip"}
+                        type="button"
+                        onClick={() => setHideMovies((current) => !current)}
+                        aria-pressed={hideMovies}
+                        title="映画を非表示"
+                      >
+                        映画OFF
+                      </button>
+                      <button
+                        className={hideRerunCandidates ? "filter-chip is-active" : "filter-chip"}
+                        type="button"
+                        onClick={() => setHideRerunCandidates((current) => !current)}
+                        aria-pressed={hideRerunCandidates}
+                        title="旧作・再放送候補を非表示"
+                      >
+                        旧作OFF
+                      </button>
+                    </div>
+
                     <button
-                      className={hideMovies ? "filter-chip is-active" : "filter-chip"}
+                      className="toolbar-more-item"
                       type="button"
-                      onClick={() => setHideMovies((current) => !current)}
-                      aria-pressed={hideMovies}
-                      title="映画を非表示"
+                      onClick={() => {
+                        setToolbarMenuOpen(false);
+                        if (
+                          window.confirm(
+                            "現在の配置を人気順で上書きします。よろしいですか？"
+                          )
+                        ) {
+                          handleAutoPublicTier();
+                        }
+                      }}
+                      disabled={
+                        !board || loading || !items.length || isAuthReturnLocked
+                      }
+                      title="人気順で自動的にTier配置"
                     >
-                      映画OFF
+                      <Sparkles size={16} aria-hidden="true" />
+                      <span>自動配置</span>
                     </button>
+
                     <button
-                      className={hideRerunCandidates ? "filter-chip is-active" : "filter-chip"}
+                      className="toolbar-more-item"
                       type="button"
-                      onClick={() => setHideRerunCandidates((current) => !current)}
-                      aria-pressed={hideRerunCandidates}
-                      title="旧作・再放送候補を非表示"
+                      onClick={() => {
+                        setToolbarMenuOpen(false);
+                        if (
+                          window.confirm(
+                            "Tier表を最初からやり直しますか？この操作は取り消せません。"
+                          )
+                        ) {
+                          handleReset();
+                        }
+                      }}
+                      disabled={!board || isAuthReturnLocked}
+                      title="Tier表をリセット"
                     >
-                      旧作OFF
+                      <RotateCcw size={16} aria-hidden="true" />
+                      <span>リセット</span>
                     </button>
                   </div>
-
-                  <button
-                    className="toolbar-more-item"
-                    type="button"
-                    onClick={() => {
-                      setToolbarMenuOpen(false);
-                      if (
-                        window.confirm(
-                          "現在の配置を人気順で上書きします。よろしいですか？"
-                        )
-                      ) {
-                        handleAutoPublicTier();
-                      }
-                    }}
-                    disabled={
-                      !board || loading || !items.length || isAuthReturnLocked
-                    }
-                    title="人気順で自動的にTier配置"
-                  >
-                    <Sparkles size={16} aria-hidden="true" />
-                    <span>自動配置</span>
-                  </button>
-
-                  <button
-                    className="toolbar-more-item"
-                    type="button"
-                    onClick={() => {
-                      setToolbarMenuOpen(false);
-                      if (
-                        window.confirm(
-                          "Tier表を最初からやり直しますか？この操作は取り消せません。"
-                        )
-                      ) {
-                        handleReset();
-                      }
-                    }}
-                    disabled={!board || isAuthReturnLocked}
-                    title="Tier表をリセット"
-                  >
-                    <RotateCcw size={16} aria-hidden="true" />
-                    <span>リセット</span>
-                  </button>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
