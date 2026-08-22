@@ -1,18 +1,30 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
+import {
+  formatFeedbackImageBytes,
+  prepareFeedbackImageForUpload,
+} from "@/lib/feedback-image-compress";
 import {
   FEEDBACK_BODY_MAX,
   FEEDBACK_BODY_MIN,
   FEEDBACK_HONEYPOT_FIELD,
-  FEEDBACK_IMAGE_MAX_BYTES,
+  FEEDBACK_IMAGE_SELECT_MAX_BYTES,
   FEEDBACK_LEVEL_LABELS,
   FEEDBACK_LEVELS,
   type FeedbackLevel,
 } from "@/lib/feedback-shared";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
+type ImagePrepState = "idle" | "compressing" | "ready";
+
+type PreparedImage = {
+  file: File;
+  originalBytes: number;
+  outputBytes: number;
+  compressed: boolean;
+};
 
 const LEVEL_OPTIONS = FEEDBACK_LEVELS.map((value) => ({
   value,
@@ -22,11 +34,14 @@ const LEVEL_OPTIONS = FEEDBACK_LEVELS.map((value) => ({
 export function FeedbackClient() {
   const [level, setLevel] = useState<FeedbackLevel>("improvement");
   const [body, setBody] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [preparedImage, setPreparedImage] = useState<PreparedImage | null>(null);
+  const [imagePrepState, setImagePrepState] = useState<ImagePrepState>("idle");
   const [honeypot, setHoneypot] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const imageRequestIdRef = useRef(0);
 
   const bodyLength = body.trim().length;
   const bodyHint = useMemo(() => {
@@ -36,33 +51,59 @@ export function FeedbackClient() {
     return `${bodyLength} / ${FEEDBACK_BODY_MAX}文字`;
   }, [bodyLength]);
 
+  const isCompressing = imagePrepState === "compressing";
   const canSubmit =
     agreed &&
     submitState !== "submitting" &&
+    !isCompressing &&
     bodyLength >= FEEDBACK_BODY_MIN &&
     bodyLength <= FEEDBACK_BODY_MAX;
 
-  function onImageChange(event: ChangeEvent<HTMLInputElement>) {
+  function clearImageSelection() {
+    imageRequestIdRef.current += 1;
+    setPreparedImage(null);
+    setImagePrepState("idle");
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  }
+
+  async function onImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
+    // 同一ファイルの再選択でも change が発火するよう毎回クリアする
+    event.target.value = "";
     setErrorMessage(null);
+
     if (!file) {
-      setImageFile(null);
+      clearImageSelection();
       return;
     }
-    if (file.size > FEEDBACK_IMAGE_MAX_BYTES) {
-      setImageFile(null);
-      event.target.value = "";
-      setErrorMessage("画像は3MB以下にしてください。");
+
+    const requestId = imageRequestIdRef.current + 1;
+    imageRequestIdRef.current = requestId;
+    setPreparedImage(null);
+    setImagePrepState("compressing");
+
+    const result = await prepareFeedbackImageForUpload(file);
+
+    if (imageRequestIdRef.current !== requestId) {
       return;
     }
-    const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (file.type && !allowed.includes(file.type)) {
-      setImageFile(null);
-      event.target.value = "";
-      setErrorMessage("画像は JPEG / PNG / WebP のみ対応しています。");
+
+    if (!result.ok) {
+      setPreparedImage(null);
+      setImagePrepState("idle");
+      setErrorMessage(result.error);
       return;
     }
-    setImageFile(file);
+
+    setPreparedImage({
+      file: result.file,
+      originalBytes: result.originalBytes,
+      outputBytes: result.outputBytes,
+      compressed: result.compressed,
+    });
+    setImagePrepState("ready");
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -79,8 +120,8 @@ export function FeedbackClient() {
       formData.set("level", level);
       formData.set("body", body);
       formData.set(FEEDBACK_HONEYPOT_FIELD, honeypot);
-      if (imageFile) {
-        formData.set("image", imageFile);
+      if (preparedImage) {
+        formData.set("image", preparedImage.file);
       }
 
       const response = await fetch("/api/feedback", {
@@ -105,7 +146,7 @@ export function FeedbackClient() {
 
       setSubmitState("success");
       setBody("");
-      setImageFile(null);
+      clearImageSelection();
       setAgreed(false);
       setHoneypot("");
     } catch {
@@ -115,6 +156,21 @@ export function FeedbackClient() {
       );
     }
   }
+
+  const imageStatusText = (() => {
+    if (isCompressing) {
+      return "画像を圧縮しています…";
+    }
+    if (!preparedImage) {
+      return null;
+    }
+    const original = formatFeedbackImageBytes(preparedImage.originalBytes);
+    const output = formatFeedbackImageBytes(preparedImage.outputBytes);
+    if (preparedImage.compressed) {
+      return `圧縮完了: ${original} → 送信サイズ ${output}`;
+    }
+    return `選択中: 画像 1 枚（${output}）`;
+  })();
 
   return (
     <main className="app-main feedback-main">
@@ -165,6 +221,7 @@ export function FeedbackClient() {
               value={level}
               onChange={(e) => setLevel(e.target.value as FeedbackLevel)}
               required
+              disabled={submitState === "submitting" || isCompressing}
             >
               {LEVEL_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -186,6 +243,7 @@ export function FeedbackClient() {
               maxLength={FEEDBACK_BODY_MAX}
               placeholder="改善してほしい点や困っていることを書いてください（個人情報は書かないでください）"
               required
+              disabled={submitState === "submitting" || isCompressing}
             />
             <span className="feedback-hint">{bodyHint}</span>
           </label>
@@ -193,17 +251,27 @@ export function FeedbackClient() {
           <label className="feedback-field">
             <span className="feedback-label">画像（任意・1枚）</span>
             <input
+              ref={imageInputRef}
               className="feedback-file"
               type="file"
               name="image"
               accept="image/jpeg,image/png,image/webp"
               onChange={onImageChange}
+              disabled={submitState === "submitting"}
             />
             <span className="feedback-hint">
-              JPEG / PNG / WebP・最大 3MB。位置情報などのメタデータはサーバーで除去します。
+              JPEG / PNG / WebP・最大{" "}
+              {formatFeedbackImageBytes(FEEDBACK_IMAGE_SELECT_MAX_BYTES)}
+              。3MB超は端末内で自動圧縮してから送信します（元画像は送りません）。位置情報などのメタデータはサーバーで除去します。
             </span>
-            {imageFile ? (
-              <span className="feedback-file-name">選択中: 画像 1 枚</span>
+            {imageStatusText ? (
+              <span
+                className="feedback-file-name"
+                role={isCompressing ? "status" : undefined}
+                aria-live={isCompressing ? "polite" : undefined}
+              >
+                {imageStatusText}
+              </span>
             ) : null}
           </label>
 
@@ -227,6 +295,7 @@ export function FeedbackClient() {
               type="checkbox"
               checked={agreed}
               onChange={(e) => setAgreed(e.target.checked)}
+              disabled={submitState === "submitting" || isCompressing}
             />
             <span>
               GitHub Issues で公開される可能性があること、個人情報を含めていないことを確認しました。
@@ -244,7 +313,11 @@ export function FeedbackClient() {
             className="command-button feedback-submit"
             disabled={!canSubmit}
           >
-            {submitState === "submitting" ? "送信中…" : "匿名で送信する"}
+            {isCompressing
+              ? "圧縮中…"
+              : submitState === "submitting"
+                ? "送信中…"
+                : "匿名で送信する"}
           </button>
         </form>
       )}

@@ -5,6 +5,7 @@ import {
   FEEDBACK_BODY_MIN,
   FEEDBACK_HONEYPOT_FIELD,
   FEEDBACK_IMAGE_MAX_BYTES,
+  FEEDBACK_IMAGE_SELECT_MAX_BYTES,
   FEEDBACK_MULTIPART_MAX_BYTES,
   detectImageMimeFromBytes,
   normalizeFeedbackBody,
@@ -79,6 +80,17 @@ test("validateFeedbackImageBytes rejects oversize and bad types", () => {
   );
   assert.equal(typeof validateFeedbackImageBytes(jpegFixture(), "image/gif"), "string");
   assert.equal(typeof validateFeedbackImageBytes(jpegFixture(), "image/png"), "string");
+});
+
+test("server image and multipart caps stay at 3MB while select cap is 20MB", () => {
+  assert.equal(FEEDBACK_IMAGE_MAX_BYTES, 3 * 1024 * 1024);
+  assert.equal(FEEDBACK_IMAGE_SELECT_MAX_BYTES, 20 * 1024 * 1024);
+  assert.ok(FEEDBACK_IMAGE_SELECT_MAX_BYTES > FEEDBACK_IMAGE_MAX_BYTES);
+  assert.equal(
+    FEEDBACK_MULTIPART_MAX_BYTES,
+    FEEDBACK_IMAGE_MAX_BYTES + 64 * 1024
+  );
+  assert.ok(FEEDBACK_MULTIPART_MAX_BYTES < FEEDBACK_IMAGE_SELECT_MAX_BYTES);
 });
 
 test("Origin allowlist is fail-closed without Origin", () => {
