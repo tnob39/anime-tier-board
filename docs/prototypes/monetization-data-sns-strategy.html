@@ -3,40 +3,816 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>numanie — Growth & Data Strategy</title>
+<link rel="icon" href="data:,">
+<title>numanie — Growth &amp; Data Strategy (snapshot)</title>
 <style>
-:root{--bg:#090b0e;--panel:#11151a;--panel2:#161b21;--line:#29313a;--text:#f2f5f7;--muted:#94a0ac;--accent:#38dbc3;--blue:#70a7ff;--amber:#ffbd45;--red:#ff6b70;--radius:14px;--max:1440px}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"Noto Sans JP","Yu Gothic UI",sans-serif;line-height:1.55}button,a{font:inherit}a{color:inherit}.shell{max-width:var(--max);margin:auto;padding:0 28px}.topbar{position:sticky;top:0;z-index:20;background:rgba(9,11,14,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}.topbar .shell{height:70px;display:flex;align-items:center;justify-content:space-between}.brand{display:flex;gap:12px;align-items:center;font-weight:800}.mark{width:32px;height:32px;border:1px solid var(--accent);display:grid;place-items:center;border-radius:8px;color:var(--accent)}.nav{display:flex;gap:6px}.nav button{background:transparent;border:0;color:var(--muted);padding:9px 13px;border-radius:8px;cursor:pointer}.nav button.active,.nav button:hover{background:#18211f;color:var(--accent)}.hero{padding:72px 0 42px;border-bottom:1px solid var(--line)}.eyebrow{font:700 12px/1.2 ui-monospace,monospace;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}.hero h1{font-size:clamp(40px,6vw,82px);line-height:.98;letter-spacing:-.055em;max-width:1050px;margin:22px 0}.hero h1 span{color:var(--muted)}.lead{font-size:18px;color:#bac3cb;max-width:770px}.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:var(--radius);margin-top:44px;overflow:hidden}.stat{padding:20px;border-right:1px solid var(--line)}.stat:last-child{border:0}.stat b{font-size:26px;display:block}.stat small{color:var(--muted)}section{padding:64px 0;border-bottom:1px solid var(--line)}.section-head{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:28px}.section-head h2{font-size:clamp(28px,4vw,48px);letter-spacing:-.04em;margin:8px 0 0}.section-head p{max-width:560px;color:var(--muted);margin:0}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}.tab{border:1px solid var(--line);background:transparent;color:var(--muted);padding:10px 15px;border-radius:999px;cursor:pointer}.tab.active{border-color:var(--accent);color:#06120f;background:var(--accent)}.epics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.epic{border:1px solid var(--line);background:var(--panel);border-radius:var(--radius);padding:24px;min-height:360px;position:relative;overflow:hidden;cursor:pointer;transition:.2s}.epic:hover,.epic.active{transform:translateY(-3px);border-color:var(--tone)}.epic:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--tone)}.epic .code{color:var(--tone);font:700 12px ui-monospace,monospace}.epic h3{font-size:25px;line-height:1.15;margin:18px 0}.epic p{color:var(--muted)}.chips{display:flex;gap:7px;flex-wrap:wrap;margin:20px 0}.chip{font-size:12px;border:1px solid var(--line);padding:5px 8px;border-radius:6px}.metric{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:11px 0}.metric b{color:var(--tone)}.detail{margin-top:14px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);padding:26px;display:none}.detail.show{display:grid;grid-template-columns:1fr 1fr;gap:30px}.detail h3{margin-top:0}.checklist{list-style:none;padding:0;margin:0}.checklist li{padding:10px 0 10px 30px;border-bottom:1px solid var(--line);position:relative}.checklist li:before{content:"";position:absolute;left:0;top:14px;width:14px;height:14px;border:1px solid var(--accent);border-radius:3px}.pipeline{display:grid;grid-template-columns:repeat(5,1fr);align-items:stretch;gap:28px}.node{position:relative;border:1px solid var(--line);background:var(--panel);padding:22px;border-radius:12px}.node:not(:last-child):after{content:"→";position:absolute;right:-22px;top:50%;color:var(--accent);font-size:22px}.node b{display:block;margin-bottom:8px}.node span{font-size:13px;color:var(--muted)}.guard{margin-top:20px;border-left:3px solid var(--amber);background:#1c1810;padding:18px 20px}.guard strong{color:var(--amber)}.roadmap{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.phase{border:1px solid var(--line);border-radius:var(--radius);padding:24px;background:var(--panel)}.phase .days{font:700 12px ui-monospace,monospace;color:var(--accent)}.phase h3{font-size:26px;margin:12px 0}.phase ul{padding-left:18px;color:var(--muted)}.funnel{display:flex;flex-direction:column;align-items:center;gap:7px}.funnel div{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border:1px solid var(--line);background:var(--panel);clip-path:polygon(4% 0,96% 0,100% 100%,0 100%)}.funnel div:nth-child(1){width:100%}.funnel div:nth-child(2){width:86%}.funnel div:nth-child(3){width:70%}.funnel div:nth-child(4){width:54%;border-color:var(--accent)}.funnel span{color:var(--muted)}.decision{display:grid;grid-template-columns:1fr 1fr;gap:14px}.gate{border:1px solid var(--line);padding:28px;border-radius:var(--radius);background:var(--panel)}.gate.go{border-top:3px solid var(--accent)}.gate.stop{border-top:3px solid var(--red)}.gate h3{font-size:30px;margin:0 0 16px}.gate ul{padding-left:20px;color:var(--muted)}.issues{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.issue{border:1px solid var(--line);padding:18px;border-radius:10px;text-decoration:none;background:var(--panel);display:flex;justify-content:space-between;gap:12px}.issue:hover{border-color:var(--accent)}.issue span{color:var(--muted)}footer{padding:38px 0 70px;color:var(--muted);font-size:13px}.mobile-menu{display:none}
-.clarity{margin-top:38px;display:grid;grid-template-columns:1fr 1fr;gap:14px}.clarity-card{border:1px solid var(--line);background:var(--panel);border-radius:var(--radius);padding:24px}.clarity-card.api{border-top:3px solid var(--blue)}.clarity-card.sns{border-top:3px solid var(--accent)}.clarity-top{display:flex;align-items:start;justify-content:space-between;gap:18px}.clarity-card h2{font-size:30px;letter-spacing:-.04em;margin:6px 0}.answer{font:800 13px ui-monospace,monospace;padding:7px 10px;border-radius:7px;background:#13211f;color:var(--accent);white-space:nowrap}.plain{font-size:17px;color:#d2d9df;margin:16px 0}.split{display:grid;grid-template-columns:1fr 1fr;gap:8px}.split div{border:1px solid var(--line);border-radius:9px;padding:13px}.split b{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}.split strong{font-size:15px}.level-wrap{margin-top:22px}.level-title{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-bottom:9px}.levels{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}.level{min-height:64px;border:1px solid var(--line);border-radius:8px;padding:9px;font-size:11px;color:var(--muted)}.level b{display:block;color:var(--text);font-size:13px}.level.now{border-color:var(--amber);background:#211a0f}.level.target{border-color:var(--accent);background:#10201d}.level small{display:block;color:var(--amber);font-weight:800;margin-top:4px}.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--muted)}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}.dot.now{background:var(--amber)}.dot.target{background:var(--accent)}
-@media(max-width:900px){.nav{display:none}.mobile-menu{display:block;background:transparent;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px}.stats,.epics,.roadmap,.issues,.clarity{grid-template-columns:1fr}.pipeline{grid-template-columns:1fr}.node:not(:last-child):after{content:"↓";right:50%;top:auto;bottom:-27px}.detail.show,.decision{grid-template-columns:1fr}.levels{grid-template-columns:1fr}.level{min-height:auto}.split{grid-template-columns:1fr 1fr}}
-@media(max-width:620px){.shell{padding:0 16px}.hero{padding-top:48px}.stats,.epics,.roadmap,.issues{grid-template-columns:1fr}.stat{border-right:0;border-bottom:1px solid var(--line)}.section-head{display:block}.hero h1{font-size:44px}.epic{min-height:auto}}
+:root{
+  --bg:#f4f2ee;--ink:#111111;--muted:#5c5c5c;--line:#d7d2c8;--panel:#ffffff;--panel2:#faf9f6;
+  --accent:#0f6b5c;--blue:#1f4f8a;--amber:#9a6700;--red:#a11c2e;--chip:#ece8e0;
+  --radius:0;--max:1200px;--focus:#0f6b5c;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Helvetica Neue",Helvetica,Arial,"Noto Sans JP","Yu Gothic UI",sans-serif;line-height:1.5}
+button,a{font:inherit}a{color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.shell{max-width:var(--max);margin:auto;padding:0 24px}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(244,242,238,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.topbar .shell{min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;gap:10px;align-items:center;font-weight:800;letter-spacing:-.02em}
+.mark{width:28px;height:28px;border:2px solid var(--ink);display:grid;place-items:center;font-size:12px}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav button{background:transparent;border:0;color:var(--muted);padding:8px 10px;cursor:pointer}
+.nav button[aria-current="true"],.nav button:hover{color:var(--ink);background:#e8e4db}
+.mobile-menu{display:none;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:8px 10px;min-height:44px;cursor:pointer}
+.snapshot{border-bottom:1px solid var(--line);background:#ebe7de}
+.snapshot .shell{padding:12px 24px;display:grid;gap:6px;font-size:13px}
+.snapshot b{font-weight:800}
+.snapshot code{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.hero{padding:56px 0 36px;border-bottom:1px solid var(--line)}
+.eyebrow{font:700 11px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.hero h1{font-size:clamp(34px,6vw,64px);line-height:.98;letter-spacing:-.055em;max-width:920px;margin:18px 0 12px;font-weight:800}
+.hero h1 span{color:var(--muted)}
+.lead{font-size:17px;color:var(--muted);max-width:760px;margin:0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);margin-top:36px;background:var(--panel)}
+.stat{padding:16px;border-right:1px solid var(--line)}.stat:last-child{border-right:0}
+.stat b{display:block;font-size:22px;letter-spacing:-.03em}.stat small{color:var(--muted);font-size:12px}
+section{padding:56px 0;border-bottom:1px solid var(--line)}
+.section-head{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:24px}
+.section-head h2{font-size:clamp(26px,4vw,42px);letter-spacing:-.04em;margin:8px 0 0;font-weight:800}
+.section-head p{max-width:520px;color:var(--muted);margin:0}
+.clarity{margin-top:28px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.clarity-card{border:1px solid var(--line);background:var(--panel);padding:22px}
+.clarity-card.api{border-top:3px solid var(--blue)}
+.clarity-card.sns{border-top:3px solid var(--accent)}
+.clarity-top{display:flex;align-items:start;justify-content:space-between;gap:14px}
+.clarity-card h2{font-size:26px;letter-spacing:-.04em;margin:6px 0;font-weight:800}
+.answer{font:800 12px ui-monospace,Consolas,monospace;padding:6px 8px;border:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+.plain{font-size:15px;color:#333;margin:14px 0}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.split div{border:1px solid var(--line);padding:12px;background:var(--panel2)}
+.split b{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.split strong{font-size:14px}
+.level-wrap{margin-top:18px}
+.level-title{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-bottom:8px}
+.levels{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.level{min-height:58px;border:1px solid var(--line);padding:8px;font-size:11px;color:var(--muted);background:var(--panel2)}
+.level b{display:block;color:var(--ink);font-size:12px}
+.level.now{border-color:var(--amber);background:#fff8e8}
+.level.target{border-color:var(--accent);background:#e8f5f1}
+.level small{display:block;font-weight:800;margin-top:3px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.dot.now{background:var(--amber)}.dot.target{background:var(--accent)}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tab{border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:10px 14px;min-height:44px;cursor:pointer}
+.tab[aria-selected="true"]{border-color:var(--ink);color:var(--ink);background:#e8e4db;font-weight:700}
+
+.epics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.epic{border:1px solid var(--line);background:var(--panel);padding:20px;min-height:300px;position:relative;display:flex;flex-direction:column;gap:10px}
+.epic[hidden]{display:none!important}
+.epic:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--tone)}
+.epic .code{color:var(--tone);font:700 11px ui-monospace,Consolas,monospace}
+.epic h3{font-size:22px;line-height:1.15;margin:0;letter-spacing:-.03em}
+.epic p{color:var(--muted);margin:0;flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:11px;border:1px solid var(--line);padding:4px 7px;background:var(--chip)}
+.metric{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:9px 0;font-size:13px}
+.metric b{color:var(--tone)}
+.epic-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.epic-actions button{min-height:44px;padding:10px 12px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+.epic-actions button[aria-expanded="true"]{border-color:var(--ink);background:#e8e4db;font-weight:700}
+
+.detail{margin-top:12px;background:var(--panel);border:1px solid var(--line);padding:22px;display:none}
+.detail.show{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.detail h3{margin-top:0}
+.detail-head{display:flex;justify-content:space-between;gap:12px;align-items:start}
+.close-detail{min-height:44px;padding:8px 12px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+.checklist{list-style:none;padding:0;margin:0}
+.checklist li{padding:9px 0 9px 26px;border-bottom:1px solid var(--line);position:relative}
+.checklist li:before{content:"";position:absolute;left:0;top:13px;width:12px;height:12px;border:1px solid var(--accent)}
+
+.chain{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.chain-card{border:1px solid var(--line);background:var(--panel);padding:18px}
+.chain-card h3{margin:8px 0;font-size:20px;letter-spacing:-.02em}
+.chain-meta{display:grid;gap:8px;margin-top:12px}
+.chain-meta div{border:1px solid var(--line);background:var(--panel2);padding:10px}
+.chain-meta b{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.priority-note{margin-top:14px;border:1px solid var(--line);background:var(--panel);padding:14px;font-size:14px;color:var(--muted)}
+.priority-note strong{color:var(--ink)}
+
+.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}
+.node{position:relative;border:1px solid var(--line);background:var(--panel);padding:16px}
+.node:not(:last-child):after{content:"→";position:absolute;right:-14px;top:50%;transform:translateY(-50%);color:var(--accent);font-weight:700}
+.node b{display:block;margin-bottom:6px}.node span{font-size:12px;color:var(--muted)}
+.guard{margin-top:16px;border-left:3px solid var(--amber);background:#fff8e8;padding:14px 16px}
+.guard strong{color:var(--amber)}
+
+.phase-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.roadmap-panel{border:1px solid var(--line);background:var(--panel);padding:18px}
+.roadmap-panel[hidden]{display:none!important}
+.phase-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
+.phase-head h3{margin:0;font-size:24px;letter-spacing:-.03em}
+.phase-head .days{font:700 12px ui-monospace,Consolas,monospace;color:var(--accent)}
+.status-line{font-size:13px;color:var(--muted);margin:0 0 14px}
+.status-line strong{color:var(--ink)}
+.pillars{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.cal-ops{border:1px solid var(--line);background:var(--panel2);padding:12px;margin-bottom:14px;font-size:13px}
+.cal-ops ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
+.weeks{display:grid;gap:8px}
+.week{border:1px solid var(--line);background:var(--panel2)}
+.week-toggle{width:100%;text-align:left;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;min-height:44px;border:0;background:transparent;cursor:pointer}
+.week-toggle strong{font-size:14px}
+.week-toggle span{color:var(--muted);font-size:12px}
+.week-panel{display:none;padding:0 12px 12px;border-top:1px solid var(--line)}
+.week-panel.show{display:block}
+.daygrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:10px}
+.daycell{border:1px solid var(--line);background:var(--panel);padding:8px;min-height:72px;font-size:11px}
+.daycell b{display:block;font-size:11px;margin-bottom:4px}
+.daycell .ch{color:var(--muted)}
+.channels{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.funnel{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:28px}
+.funnel div{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border:1px solid var(--line);background:var(--panel);clip-path:polygon(3% 0,97% 0,100% 100%,0 100%)}
+.funnel div:nth-child(1){width:100%}.funnel div:nth-child(2){width:86%}.funnel div:nth-child(3){width:70%}.funnel div:nth-child(4){width:54%;border-color:var(--accent)}
+.funnel span{color:var(--muted);font-size:12px}
+
+.decision{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gate{border:1px solid var(--line);padding:22px;background:var(--panel)}
+.gate.go{border-top:3px solid var(--accent)}.gate.stop{border-top:3px solid var(--red)}
+.gate h3{font-size:26px;margin:0 0 12px}
+.gate ul{padding-left:18px;color:var(--muted);margin:0}
+.epic-gates{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.epic-gate{border:1px solid var(--line);background:var(--panel);padding:16px}
+.epic-gate h4{margin:0 0 8px;font-size:16px}
+.epic-gate .go-label{color:var(--accent);font-weight:800;font-size:12px}
+.epic-gate .stop-label{color:var(--red);font-weight:800;font-size:12px;margin-top:10px;display:block}
+.epic-gate ul{padding-left:16px;color:var(--muted);margin:6px 0 0;font-size:13px}
+
+.issues{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.issue{border:1px solid var(--line);padding:14px;text-decoration:none;background:var(--panel);display:flex;justify-content:space-between;gap:10px;min-height:44px;align-items:center}
+.issue:hover{border-color:var(--ink)}.issue span{color:var(--muted);font-size:12px}
+footer{padding:28px 0 56px;color:var(--muted);font-size:12px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+#live-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+@media(max-width:900px){
+  .nav{display:none}.mobile-menu{display:inline-flex;align-items:center}
+  .stats,.epics,.clarity,.chain,.issues,.epic-gates{grid-template-columns:1fr}
+  .pipeline{grid-template-columns:1fr}
+  .node:not(:last-child):after{content:"↓";right:50%;top:auto;bottom:-18px;transform:translateX(50%)}
+  .detail.show,.decision{grid-template-columns:1fr}
+  .levels{grid-template-columns:1fr}.level{min-height:auto}
+  .daygrid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .shell{padding:0 14px}.snapshot .shell{padding:12px 14px}
+  .hero{padding-top:36px}.hero h1{font-size:36px}
+  .section-head{display:block}.epic{min-height:auto}
+  .stat{border-right:0;border-bottom:1px solid var(--line)}.stats{grid-template-columns:1fr}
+  .daygrid{grid-template-columns:1fr}
+  .split{grid-template-columns:1fr}
+}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
 <body>
-<header class="topbar"><div class="shell"><div class="brand"><div class="mark">N</div><span>numanie / strategy system</span></div><nav class="nav" aria-label="セクション"><button data-to="overview" class="active">Overview</button><button data-to="data">Data API</button><button data-to="growth">90 days</button><button data-to="gate">Decision</button></nav><button class="mobile-menu" aria-label="先頭へ戻る">↑</button></div></header>
+<header class="topbar">
+  <div class="shell">
+    <div class="brand"><div class="mark" aria-hidden="true">N</div><span>numanie / strategy system</span></div>
+    <nav class="nav" aria-label="セクション">
+      <button type="button" data-to="overview" aria-current="true">Overview</button>
+      <button type="button" data-to="deps">依存</button>
+      <button type="button" data-to="data">Data API</button>
+      <button type="button" data-to="growth">90 days</button>
+      <button type="button" data-to="gate">Decision</button>
+    </nav>
+    <button type="button" class="mobile-menu" aria-label="先頭へ戻る">↑ Top</button>
+  </div>
+</header>
+
+<div class="snapshot" role="note" aria-label="スナップショット境界">
+  <div class="shell">
+    <div><b>status:</b> snapshot（固定表示。ライブ進捗ではない）</div>
+    <div><b>snapshot日時:</b> <time datetime="2026-08-22T19:30:00+09:00">2026-08-22 19:30 JST</time></div>
+    <div><b>参照commit:</b> <code>e4dc56d</code>（feat: compress feedback images before upload）</div>
+    <div><b>実行SSOT:</b> GitHub Issues（本HTMLは理解用地図。着手・状態・完了はIssueを正とする）</div>
+  </div>
+</div>
+
+<div id="live-status" aria-live="polite"></div>
+
 <main>
-<section class="hero" id="overview"><div class="shell"><div class="eyebrow">Monetization readiness / 2026</div><h1>何が独自で、<br><span>今どのレベルか。</span></h1><p class="lead">結論を先に表示します。numanieは「外部データをそのまま見せるアプリ」から、「許可された複数ソースを自社で統合・品質保証し、独自の利用データを加えるサービス」へ進化させます。</p>
-<div class="clarity">
-<article class="clarity-card api"><div class="clarity-top"><div><div class="eyebrow">API / DATA</div><h2>APIは独自開発</h2></div><span class="answer">YES — ただし元データは外部</span></div><p class="plain"><b>numanieが自作するもの：</b> API、DB、統一ID、正規化、品質判定、出典管理。<br><b>外部から許可を得て使うもの：</b> 作品名、放送情報、スタッフ、配信先など。</p><div class="split"><div><b>API・仕組み</b><strong>numanie独自</strong></div><div><b>作品の原情報</b><strong>公式API／許諾ソース</strong></div><div><b>Tier・視聴傾向</b><strong>numanie独自データ</strong></div><div><b>無断スクレイピング</b><strong>採用しない</strong></div></div><div class="level-wrap"><div class="level-title"><span>API成熟度</span><span>現在 → 目標</span></div><div class="levels"><div class="level"><b>L0</b>外部APIを直接表示</div><div class="level now"><b>L1</b>自社APIで中継・統合<small>現在</small></div><div class="level"><b>L2</b>自社DB・統一ID・差分更新</div><div class="level target"><b>L3</b>出典・品質・削除を保証<small>今回の目標</small></div><div class="level"><b>L4</b>独自指標・許諾feed・B2B</div></div></div></article>
-<article class="clarity-card sns"><div class="clarity-top"><div><div class="eyebrow">SNS / GROWTH</div><h2>SNSは運用を独自化</h2></div><span class="answer">OWNED STRATEGY</span></div><p class="plain"><b>媒体は借りる：</b> X、TikTok、Instagram、YouTube。<br><b>numanieが持つもの：</b> Tier共有形式、編集方針、UGC同意、計測、改善知識、コミュニティ。</p><div class="split"><div><b>投稿先</b><strong>外部SNS</strong></div><div><b>企画・表現</b><strong>numanie独自</strong></div><div><b>フォロワー</b><strong>媒体依存</strong></div><div><b>Tier作成者・学習</b><strong>自社資産</strong></div></div><div class="level-wrap"><div class="level-title"><span>SNS成熟度</span><span>現在 → 目標</span></div><div class="levels"><div class="level now"><b>L0</b>単発投稿・基準未整備<small>現在</small></div><div class="level"><b>L1</b>権利規程・UTM・テンプレ</div><div class="level target"><b>L2</b>週次運用・90日検証<small>今回の目標</small></div><div class="level"><b>L3</b>UGC循環・継続率改善</div><div class="level"><b>L4</b>メディアブランド・提携</div></div></div></article>
-</div><div class="legend"><span><i class="dot now"></i>現在地</span><span><i class="dot target"></i>今回の到達目標</span></div><div class="stats"><div class="stat"><b>API L1→L3</b><small>中継から品質保証基盤へ</small></div><div class="stat"><b>SNS L0→L2</b><small>単発から検証可能な運用へ</small></div><div class="stat"><b>1,000</b><small>Catalog API PoC作品</small></div><div class="stat"><b>0</b><small>許容する重大権利違反</small></div></div></div></section>
-<section><div class="shell"><div class="section-head"><div><div class="eyebrow">Operating system</div><h2>3つのエンジン</h2></div><p>カードを選ぶと、初手のタスクと判断基準を展開します。順序は Data → Growth → Revenue。収益だけを単独最適化しません。</p></div><div class="tabs" role="tablist"><button class="tab active" data-filter="all">すべて</button><button class="tab" data-filter="p0">P0のみ</button><button class="tab" data-filter="risk">リスク中心</button></div><div class="epics">
-<article class="epic" data-kind="p0 risk" data-detail="data-detail" style="--tone:var(--blue)" tabindex="0"><div class="code">#722 / PRIORITY P0</div><h3>独自 Anime Catalog API</h3><p>出典・利用条件・鮮度・削除を追跡できる、numanie独自の正規化データ基盤。</p><div class="chips"><span class="chip">Provenance</span><span class="chip">ETL</span><span class="chip">Quality SLO</span></div><div class="metric"><span>最初の実行</span><b>#725</b></div><div class="metric"><span>PoC</span><b>100 → 1,000作品</b></div></article>
-<article class="epic" data-kind="risk" data-detail="sns-detail" style="--tone:var(--accent)" tabindex="0"><div class="code">#723 / PRIORITY P1</div><h3>90日 SNS Growth</h3><p>Tier作成から共有、訪問、視聴管理、再共有へつながる編集・UGCループ。</p><div class="chips"><span class="chip">X</span><span class="chip">Short video</span><span class="chip">UGC</span></div><div class="metric"><span>北極星</span><b>週次Tier作成者</b></div><div class="metric"><span>運用上限</span><b>8–12h / week</b></div></article>
-<article class="epic" data-kind="risk" data-detail="money-detail" style="--tone:var(--amber)" tabindex="0"><div class="code">#721 / PRIORITY P1</div><h3>Monetization Gate</h3><p>配信アフィリエイトを、UX・法務・性能・採算の全条件が揃った時だけ開始。</p><div class="chips"><span class="chip">Affiliate</span><span class="chip">Privacy</span><span class="chip">Unit economics</span></div><div class="metric"><span>暫定CTR Gate</span><b>≥ 3%</b></div><div class="metric"><span>最初の実行</span><b>#724</b></div></article></div>
-<div class="detail" id="data-detail"><div><div class="eyebrow">#725 First action</div><h3>データを取る前に、取ってよいかを確定</h3><p>各ソース・各フィールドを <b>allowed / permission-required / prohibited / unknown</b> に分類。unknownは収集停止。</p></div><ul class="checklist"><li>商用・再配布・画像・TTL・帰属</li><li>規約とrobotsの変更検知</li><li>許可済み最小フィールド</li><li>削除要求とkill switch</li></ul></div>
-<div class="detail" id="sns-detail"><div><div class="eyebrow">#726 First action</div><h3>投稿量より先に、運用規程</h3><p>UGCは明示同意、最新話は48時間配慮。無許諾の画像・映像・音源・切抜きは使わない。</p></div><ul class="checklist"><li>UGC同意と撤回導線</li><li>ネタバレ・サムネ規則</li><li>炎上時の停止SLA</li><li>4媒体の規約確認日</li></ul></div>
-<div class="detail" id="money-detail"><div><div class="eyebrow">#724 First action</div><h3>コードより先に、提携条件</h3><p>ASP審査、成果地点、否認、Cookie期間、PR表記、商標制約まで比較して、最初のPoC候補を選ぶ。</p></div><ul class="checklist"><li>優先候補5社以上</li><li>一次資料URLと確認日</li><li>未承認リンクの無効化</li><li>採択・却下理由</li></ul></div></div></section>
-<section id="data"><div class="shell"><div class="section-head"><div><div class="eyebrow">Data architecture</div><h2>収集から公開まで</h2></div><p>公式APIと書面許諾を優先。規約不明のデータを「とりあえず」本番へ流さないため、品質ゲートの前に権利ゲートを置きます。</p></div><div class="pipeline"><div class="node"><b>01 / Sources</b><span>公式API・許諾済みフィード・許可された限定収集</span></div><div class="node"><b>02 / Raw vault</b><span>非公開・短期TTL・取得時の規約versionを固定</span></div><div class="node"><b>03 / Normalize</b><span>共通schema、identity照合、差分更新</span></div><div class="node"><b>04 / Quality gate</b><span>欠損・重複・鮮度・権利状態。NGはquarantine</span></div><div class="node"><b>05 / Catalog API</b><span>認証・rate limit・予算上限・監査ログ</span></div></div><div class="guard"><strong>収集原則:</strong> 公式API → 書面許諾 → 規約とrobotsが許す限定収集。無断スクレイピング、原文ダンプ再配布、画像の無許諾保存は採用しない。</div></div></section>
-<section id="growth"><div class="shell"><div class="section-head"><div><div class="eyebrow">90-day growth loop</div><h2>学習する運用</h2></div><p>投稿数ではなく、SNS経由でTierを作り、翌週も戻ってくる人を増やせたかで判定します。</p></div><div class="roadmap"><article class="phase"><div class="days">DAY 0—30</div><h3>探索</h3><ul><li>5つのコンテンツ柱</li><li>媒体別の冒頭フック</li><li>UTMとbaseline</li><li>権利チェックを定着</li></ul></article><article class="phase"><div class="days">DAY 31—60</div><h3>集中</h3><ul><li>上位2形式へ70%</li><li>同意済みUGC紹介</li><li>共有カード改善</li><li>低反応形式を停止</li></ul></article><article class="phase"><div class="days">DAY 61—90</div><h3>再現</h3><ul><li>CTA・LPの比較</li><li>投稿時刻の比較</li><li>7日継続を接続</li><li>次四半期Go/Stop</li></ul></article></div><div style="margin-top:36px" class="funnel"><div><b>SNS Reach</b><span>表示・保存・共有</span></div><div><b>Visit</b><span>UTM CTR ≥ 0.5%</span></div><div><b>Tier Start</b><span>CVR ≥ 1%</span></div><div><b>Weekly Creator</b><span>北極星</span></div></div></div></section>
-<section id="gate"><div class="shell"><div class="section-head"><div><div class="eyebrow">Decision gates</div><h2>進む条件、止まる条件</h2></div><p>数字が出るまで続けるのではなく、先に停止条件を決めます。安全性は成長率より優先されます。</p></div><div class="decision"><article class="gate go"><h3>GO</h3><ul><li>収集条件が明確で出典を逆引きできる</li><li>SNS CTR 0.5%以上 / Tier作成CVR 1%以上</li><li>Affiliate CTR 3%以上 / ASP差異10%以内</li><li>予測粗利が追加費用を上回る</li><li>重大な権利・法務違反 0</li></ul></article><article class="gate stop"><h3>STOP / REWORK</h3><ul><li>規約・商用条件がunknown</li><li>削除要求に追従できない</li><li>4週・各形式10投稿後も基準未達</li><li>提携審査不通過、性能・採算未達</li><li>権利侵害・重大炎上は即時停止</li></ul></article></div></div></section>
-<section><div class="shell"><div class="section-head"><div><div class="eyebrow">Live backlog</div><h2>GitHub Issues</h2></div><p>このHTMLは理解のための地図。実行状態の正本はGitHub Issuesです。</p></div><div class="issues"><a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/722"><b>#722 Data API</b><span>P0 →</span></a><a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/723"><b>#723 SNS Growth</b><span>P1 →</span></a><a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/721"><b>#721 Monetization</b><span>P1 →</span></a><a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/725"><b>#725 Source rules</b><span>ACTIVE →</span></a><a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/726"><b>#726 SNS safety</b><span>ACTIVE →</span></a><a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/724"><b>#724 Affiliate ledger</b><span>ACTIVE →</span></a></div></div></section>
-</main><footer><div class="shell">numanie strategy visualization · Design Spike #727 · Data → Trust → Sharing → Sustainable revenue</div></footer>
+<section class="hero" id="overview">
+  <div class="shell">
+    <div class="eyebrow">Monetization readiness / Design Spike #727</div>
+    <h1>何が独自で、<br><span>今どのレベルか。</span></h1>
+    <p class="lead">結論を先に表示します。順序は Data → Growth → Revenue。収益だけを単独最適化しません。媒体順は X → TikTok → Instagram → YouTube。</p>
+    <div class="clarity">
+      <article class="clarity-card api">
+        <div class="clarity-top"><div><div class="eyebrow">API / DATA</div><h2>APIは独自開発</h2></div><span class="answer">YES — 元データは外部</span></div>
+        <p class="plain"><b>numanieが自作するもの：</b> API、DB、統一ID、正規化、品質判定、出典管理。<br><b>外部から許可を得て使うもの：</b> 作品名、放送情報、スタッフ、配信先など。</p>
+        <div class="split">
+          <div><b>API・仕組み</b><strong>numanie独自</strong></div>
+          <div><b>作品の原情報</b><strong>公式API／許諾ソース</strong></div>
+          <div><b>Tier・視聴傾向</b><strong>numanie独自データ</strong></div>
+          <div><b>無断スクレイピング</b><strong>採用しない</strong></div>
+        </div>
+        <div class="level-wrap">
+          <div class="level-title"><span>API成熟度</span><span>現在 → 目標</span></div>
+          <div class="levels">
+            <div class="level"><b>L0</b>外部APIを直接表示</div>
+            <div class="level now"><b>L1</b>自社APIで中継・統合<small>現在</small></div>
+            <div class="level"><b>L2</b>自社DB・統一ID・差分更新</div>
+            <div class="level target"><b>L3</b>出典・品質・削除を保証<small>今回の目標</small></div>
+            <div class="level"><b>L4</b>独自指標・許諾feed・B2B</div>
+          </div>
+        </div>
+      </article>
+      <article class="clarity-card sns">
+        <div class="clarity-top"><div><div class="eyebrow">SNS / GROWTH</div><h2>SNSは運用を独自化</h2></div><span class="answer">OWNED STRATEGY</span></div>
+        <p class="plain"><b>媒体は借りる：</b> X、TikTok、Instagram、YouTube。<br><b>numanieが持つもの：</b> Tier共有形式、編集方針、UGC同意、計測、改善知識、コミュニティ。</p>
+        <div class="split">
+          <div><b>投稿先</b><strong>外部SNS</strong></div>
+          <div><b>企画・表現</b><strong>numanie独自</strong></div>
+          <div><b>フォロワー</b><strong>媒体依存</strong></div>
+          <div><b>Tier作成者・学習</b><strong>自社資産</strong></div>
+        </div>
+        <div class="level-wrap">
+          <div class="level-title"><span>SNS成熟度</span><span>現在 → 目標</span></div>
+          <div class="levels">
+            <div class="level now"><b>L0</b>単発投稿・基準未整備<small>現在</small></div>
+            <div class="level"><b>L1</b>権利規程・UTM・テンプレ</div>
+            <div class="level target"><b>L2</b>週次運用・90日検証<small>今回の目標</small></div>
+            <div class="level"><b>L3</b>UGC循環・継続率改善</div>
+            <div class="level"><b>L4</b>メディアブランド・提携</div>
+          </div>
+        </div>
+      </article>
+    </div>
+    <div class="legend"><span><i class="dot now"></i>現在地</span><span><i class="dot target"></i>今回の到達目標</span></div>
+    <div class="stats">
+      <div class="stat"><b>API L1→L3</b><small>中継から品質保証基盤へ</small></div>
+      <div class="stat"><b>SNS L0→L2</b><small>単発から検証可能な運用へ</small></div>
+      <div class="stat"><b>X 1–2/日</b><small>短尺 3/週 · 8–12h/週</small></div>
+      <div class="stat"><b>0</b><small>許容する重大権利違反</small></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="shell">
+    <div class="section-head">
+      <div><div class="eyebrow">Operating system</div><h2>3つのエンジン</h2></div>
+      <p>Epic優先度と child P0 を区別します。展開は専用ボタン。フィルタ時は詳細を閉じ、フォーカスを管理します。</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Epicフィルタ">
+      <button type="button" class="tab" role="tab" id="tab-all" aria-selected="true" aria-controls="epic-grid" data-filter="all">すべて</button>
+      <button type="button" class="tab" role="tab" id="tab-p0" aria-selected="false" aria-controls="epic-grid" data-filter="p0">P0のみ</button>
+      <button type="button" class="tab" role="tab" id="tab-risk" aria-selected="false" aria-controls="epic-grid" data-filter="risk">リスク中心</button>
+    </div>
+    <div class="epics" id="epic-grid" role="tabpanel" aria-labelledby="tab-all">
+      <article class="epic" data-kind="p0 risk" style="--tone:var(--blue)">
+        <div class="code">#722 Epic優先度 P0</div>
+        <h3>独自 Anime Catalog API</h3>
+        <p>出典・利用条件・鮮度・削除を追跡できる、numanie独自の正規化データ基盤。</p>
+        <div class="chips"><span class="chip">Provenance</span><span class="chip">ETL</span><span class="chip">Quality SLO</span></div>
+        <div class="metric"><span>child P0</span><b>#725 Source rules</b></div>
+        <div class="metric"><span>PoC</span><b>100 → 1,000作品</b></div>
+        <div class="epic-actions">
+          <button type="button" class="expand-btn" aria-expanded="false" aria-controls="data-detail" data-detail="data-detail">詳細を開く</button>
+        </div>
+      </article>
+      <article class="epic" data-kind="risk" style="--tone:var(--accent)">
+        <div class="code">#723 Epic優先度 P1</div>
+        <h3>90日 SNS Growth</h3>
+        <p>Tier作成から共有、訪問、視聴管理、再共有へつながる編集・UGCループ。</p>
+        <div class="chips"><span class="chip">X</span><span class="chip">TikTok</span><span class="chip">IG</span><span class="chip">YouTube</span></div>
+        <div class="metric"><span>child P0</span><b>#726 SNS safety</b></div>
+        <div class="metric"><span>運用上限</span><b>8–12h / week</b></div>
+        <div class="epic-actions">
+          <button type="button" class="expand-btn" aria-expanded="false" aria-controls="sns-detail" data-detail="sns-detail">詳細を開く</button>
+        </div>
+      </article>
+      <article class="epic" data-kind="risk" style="--tone:var(--amber)">
+        <div class="code">#721 Epic優先度 P1</div>
+        <h3>Monetization Gate</h3>
+        <p>配信アフィリエイトを、UX・法務・性能・採算の全条件が揃った時だけ開始。</p>
+        <div class="chips"><span class="chip">Affiliate</span><span class="chip">Privacy</span><span class="chip">Unit economics</span></div>
+        <div class="metric"><span>child P0</span><b>#724 Affiliate ledger</b></div>
+        <div class="metric"><span>暫定CTR Gate</span><b>≥ 3%</b></div>
+        <div class="epic-actions">
+          <button type="button" class="expand-btn" aria-expanded="false" aria-controls="money-detail" data-detail="money-detail">詳細を開く</button>
+        </div>
+      </article>
+    </div>
+
+    <div class="detail" id="data-detail" role="region" aria-labelledby="data-detail-title" hidden>
+      <div>
+        <div class="detail-head">
+          <div>
+            <div class="eyebrow">#725 child P0 · First action</div>
+            <h3 id="data-detail-title">データを取る前に、取ってよいかを確定</h3>
+          </div>
+          <button type="button" class="close-detail" data-close="data-detail">閉じる</button>
+        </div>
+        <p>各ソース・各フィールドを <b>allowed / permission-required / prohibited / unknown</b> に分類。unknownは収集停止。</p>
+      </div>
+      <ul class="checklist">
+        <li>商用・再配布・画像・TTL・帰属</li>
+        <li>規約とrobotsの変更検知</li>
+        <li>許可済み最小フィールド</li>
+        <li>削除要求とkill switch</li>
+      </ul>
+    </div>
+    <div class="detail" id="sns-detail" role="region" aria-labelledby="sns-detail-title" hidden>
+      <div>
+        <div class="detail-head">
+          <div>
+            <div class="eyebrow">#726 child P0 · First action</div>
+            <h3 id="sns-detail-title">投稿量より先に、運用規程</h3>
+          </div>
+          <button type="button" class="close-detail" data-close="sns-detail">閉じる</button>
+        </div>
+        <p>UGCは明示同意、最新話は48時間配慮。無許諾の画像・映像・音源・切抜きは使わない。媒体順は X → TikTok → Instagram → YouTube。</p>
+      </div>
+      <ul class="checklist">
+        <li>UGC同意と撤回導線</li>
+        <li>ネタバレ・サムネ規則</li>
+        <li>炎上時の停止SLA</li>
+        <li>4媒体の規約確認日</li>
+      </ul>
+    </div>
+    <div class="detail" id="money-detail" role="region" aria-labelledby="money-detail-title" hidden>
+      <div>
+        <div class="detail-head">
+          <div>
+            <div class="eyebrow">#724 child P0 · First action</div>
+            <h3 id="money-detail-title">コードより先に、提携条件</h3>
+          </div>
+          <button type="button" class="close-detail" data-close="money-detail">閉じる</button>
+        </div>
+        <p>ASP審査、成果地点、否認、Cookie期間、PR表記、商標制約まで比較して、最初のPoC候補を選ぶ。</p>
+      </div>
+      <ul class="checklist">
+        <li>優先候補5社以上</li>
+        <li>一次資料URLと確認日</li>
+        <li>未承認リンクの無効化</li>
+        <li>採択・却下理由</li>
+      </ul>
+    </div>
+
+    <p class="priority-note"><strong>優先度の区別:</strong> Epic優先度（#722=P0 / #723=P1 / #721=P1）はプログラム順序。child P0（#725 / #726 / #724）は各Epic内の最初の実行単位であり、Epic全体の優先度と同じ意味ではない。</p>
+  </div>
+</section>
+
+<section id="deps">
+  <div class="shell">
+    <div class="section-head">
+      <div><div class="eyebrow">Dependency chain</div><h2>Data → Growth → Revenue</h2></div>
+      <p>開始条件・blocker・handoff成果物を明示。前段が未達なら後段を単独最適化しない。</p>
+    </div>
+    <div class="chain">
+      <article class="chain-card" style="border-top:3px solid var(--blue)">
+        <div class="eyebrow">01 / DATA</div>
+        <h3>#722 Catalog API</h3>
+        <div class="chain-meta">
+          <div><b>開始条件</b>ソース別利用条件の一次資料があること。unknownフィールドを本番収集しない方針が合意されていること。</div>
+          <div><b>blocker</b>#725未完（allowed判定なし）／削除・kill switch未定義／出典逆引き不能。</div>
+          <div><b>handoff成果物</b>利用条件台帳、許可済み最小フィールド、provenance schema草案、100→1,000 PoC判定票。</div>
+        </div>
+      </article>
+      <article class="chain-card" style="border-top:3px solid var(--accent)">
+        <div class="eyebrow">02 / GROWTH</div>
+        <h3>#723 90日 SNS</h3>
+        <div class="chain-meta">
+          <div><b>開始条件</b>#726運用規程がレビュー済み。共有カードにUTMを付与できる。投稿上限8–12h/週を守れる体制。</div>
+          <div><b>blocker</b>権利規程なしの投稿量産／無許諾素材／計測欠落／Data側で共有先メタが壊れている。</div>
+          <div><b>handoff成果物</b>週次カレンダー、投稿テンプレ、UTM付きファネル数値、4週判定（CTR/CVR）、次四半期Go/Stop提案。</div>
+        </div>
+      </article>
+      <article class="chain-card" style="border-top:3px solid var(--amber)">
+        <div class="eyebrow">03 / REVENUE</div>
+        <h3>#721 Monetization</h3>
+        <div class="chain-meta">
+          <div><b>開始条件</b>#724台帳でPoC候補が選定済み。Growthの訪問・Tier作成が安定し、PR/Privacyレビューが可能。</div>
+          <div><b>blocker</b>提携条件unknown／未承認リンク／法務未通過／CTR・採算未達／前段Data/GrowthがSTOP。</div>
+          <div><b>handoff成果物</b>ASP比較台帳、3シナリオ試算、計測イベント契約、30日PoC判定票、開始/停止手順。</div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="data">
+  <div class="shell">
+    <div class="section-head">
+      <div><div class="eyebrow">Data architecture</div><h2>収集から公開まで</h2></div>
+      <p>公式APIと書面許諾を優先。品質ゲートの前に権利ゲートを置きます。</p>
+    </div>
+    <div class="pipeline">
+      <div class="node"><b>01 / Sources</b><span>公式API・許諾済みフィード・許可された限定収集</span></div>
+      <div class="node"><b>02 / Raw vault</b><span>非公開・短期TTL・取得時の規約versionを固定</span></div>
+      <div class="node"><b>03 / Normalize</b><span>共通schema、identity照合、差分更新</span></div>
+      <div class="node"><b>04 / Quality gate</b><span>欠損・重複・鮮度・権利状態。NGはquarantine</span></div>
+      <div class="node"><b>05 / Catalog API</b><span>認証・rate limit・予算上限・監査ログ</span></div>
+    </div>
+    <div class="guard"><strong>収集原則:</strong> 公式API → 書面許諾 → 規約とrobotsが許す限定収集。無断スクレイピング、原文ダンプ再配布、画像の無許諾保存は採用しない。</div>
+  </div>
+</section>
+
+<section id="growth">
+  <div class="shell">
+    <div class="section-head">
+      <div><div class="eyebrow">90-day growth loop · #723</div><h2>学習する運用</h2></div>
+      <p>月〜日の曜日運用、媒体順、コンテンツ柱、週次カレンダーを切り替え・展開して確認します。</p>
+    </div>
+
+    <div class="phase-tabs" role="tablist" aria-label="90日フェーズ">
+      <button type="button" class="tab phase-tab" role="tab" id="phase-tab-0" aria-selected="true" aria-controls="phase-0" data-phase="0">DAY 0–30 探索</button>
+      <button type="button" class="tab phase-tab" role="tab" id="phase-tab-1" aria-selected="false" aria-controls="phase-1" data-phase="1">DAY 31–60 集中</button>
+      <button type="button" class="tab phase-tab" role="tab" id="phase-tab-2" aria-selected="false" aria-controls="phase-2" data-phase="2">DAY 61–90 再現</button>
+    </div>
+
+    <p class="status-line" id="roadmap-status"><strong>表示中:</strong> DAY 0–30 探索 · 週1–4 · 状態 snapshot</p>
+
+    <div class="cal-ops">
+      <b>#723 準拠の固定運用</b>
+      <ul>
+        <li>媒体順: X → TikTok → Instagram → YouTube</li>
+        <li>曜日: 月=候補 / 火=Tips / 水=短尺 / 木=投票 / 金=配信先 / 土=UGC / 日=週間Tier</li>
+        <li>量: X 1〜2/日 · 短尺 3/週 · 作業上限 8〜12h/週</li>
+        <li>コンテンツ柱: 季節Tier / 今週何観る / 視聴・配信時短 / 同意済みUGC / 作品・作り手文脈</li>
+      </ul>
+    </div>
+
+    <div id="phase-0" class="roadmap-panel" role="tabpanel" aria-labelledby="phase-tab-0">
+      <div class="phase-head"><div class="days">DAY 0—30</div><h3>探索</h3></div>
+      <p class="status-line">5柱を均等に試し、UTMと権利チェックを定着。低反応でも打ち切らず学習ログを残す。</p>
+      <div class="pillars">
+        <span class="chip">季節Tier</span><span class="chip">今週何観る</span><span class="chip">視聴/配信時短</span><span class="chip">同意済みUGC</span><span class="chip">作品/作り手文脈</span>
+      </div>
+      <div class="weeks" id="weeks-0"></div>
+    </div>
+
+    <div id="phase-1" class="roadmap-panel" role="tabpanel" aria-labelledby="phase-tab-1" hidden>
+      <div class="phase-head"><div class="days">DAY 31—60</div><h3>集中</h3></div>
+      <p class="status-line">上位2形式へ工数70%。同意済みUGC紹介と共有カード改善。低反応形式は停止。</p>
+      <div class="pillars">
+        <span class="chip">上位2形式 70%</span><span class="chip">UGC紹介</span><span class="chip">共有カード改善</span><span class="chip">低反応停止</span>
+      </div>
+      <div class="weeks" id="weeks-1"></div>
+    </div>
+
+    <div id="phase-2" class="roadmap-panel" role="tabpanel" aria-labelledby="phase-tab-2" hidden>
+      <div class="phase-head"><div class="days">DAY 61—90</div><h3>再現</h3></div>
+      <p class="status-line">CTA・LP・投稿時刻を比較し、7日継続へ接続。次四半期のGo/Stopを出す。</p>
+      <div class="pillars">
+        <span class="chip">CTA/LP比較</span><span class="chip">投稿時刻比較</span><span class="chip">7日継続</span><span class="chip">次四半期判定</span>
+      </div>
+      <div class="weeks" id="weeks-2"></div>
+    </div>
+
+    <div class="channels" aria-label="媒体順">
+      <span class="chip">1. X（1–2/日）</span>
+      <span class="chip">2. TikTok（短尺）</span>
+      <span class="chip">3. Instagram（短尺/静画）</span>
+      <span class="chip">4. YouTube（まとめ/短尺）</span>
+      <span class="chip">短尺合計 3/週</span>
+    </div>
+
+    <div class="funnel" aria-label="KPIファネル">
+      <div><b>SNS Reach</b><span>表示・保存・共有</span></div>
+      <div><b>Visit</b><span>UTM CTR ≥ 0.5%</span></div>
+      <div><b>Tier Start</b><span>CVR ≥ 1%</span></div>
+      <div><b>Weekly Creator</b><span>北極星</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="gate">
+  <div class="shell">
+    <div class="section-head">
+      <div><div class="eyebrow">Decision gates</div><h2>進む条件、止まる条件</h2></div>
+      <p>全体ゲートに加え、Epic別のGo/Stopを分離表示します。安全性は成長率より優先。</p>
+    </div>
+    <div class="decision">
+      <article class="gate go">
+        <h3>GO（全体）</h3>
+        <ul>
+          <li>収集条件が明確で出典を逆引きできる</li>
+          <li>SNS CTR 0.5%以上 / Tier作成CVR 1%以上</li>
+          <li>Affiliate CTR 3%以上 / ASP差異10%以内</li>
+          <li>予測粗利が追加費用を上回る</li>
+          <li>重大な権利・法務違反 0</li>
+        </ul>
+      </article>
+      <article class="gate stop">
+        <h3>STOP / REWORK（全体）</h3>
+        <ul>
+          <li>規約・商用条件がunknown</li>
+          <li>削除要求に追従できない</li>
+          <li>4週・各形式10投稿後も基準未達</li>
+          <li>提携審査不通過、性能・採算未達</li>
+          <li>権利侵害・重大炎上は即時停止</li>
+        </ul>
+      </article>
+    </div>
+    <div class="epic-gates" aria-label="Epic別 Go/Stop">
+      <article class="epic-gate">
+        <h4>#722 Data</h4>
+        <span class="go-label">GO</span>
+        <ul>
+          <li>#725台帳でallowedが確定</li>
+          <li>出典逆引きと削除訓練が通る</li>
+          <li>1,000作品の品質/鮮度/費用が提示可能</li>
+        </ul>
+        <span class="stop-label">STOP</span>
+        <ul>
+          <li>unknownを収集してしまう</li>
+          <li>kill switch未整備</li>
+          <li>月額費用が上限超過</li>
+        </ul>
+      </article>
+      <article class="epic-gate">
+        <h4>#723 Growth</h4>
+        <span class="go-label">GO</span>
+        <ul>
+          <li>#726規程レビュー済み</li>
+          <li>CTR≥0.5% かつ Tier CVR≥1%</li>
+          <li>週次運用が8–12h内で再現可能</li>
+        </ul>
+        <span class="stop-label">STOP</span>
+        <ul>
+          <li>権利侵害・重大炎上</li>
+          <li>4週×各形式10投稿でも未達</li>
+          <li>UGC同意/撤回不能</li>
+        </ul>
+      </article>
+      <article class="epic-gate">
+        <h4>#721 Revenue</h4>
+        <span class="go-label">GO</span>
+        <ul>
+          <li>#724でPoC候補確定</li>
+          <li>Affiliate CTR≥3%・ASP差≤10%</li>
+          <li>予測粗利&gt;追加費、重大法務違反0</li>
+        </ul>
+        <span class="stop-label">STOP</span>
+        <ul>
+          <li>審査不通過・未承認リンク</li>
+          <li>Privacy/PR未通過</li>
+          <li>前段Data/GrowthがSTOP</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="shell">
+    <div class="section-head">
+      <div><div class="eyebrow">Live backlog</div><h2>GitHub Issues</h2></div>
+      <p>このHTMLのstatusはsnapshot。実行状態の正本（SSOT）はGitHub Issuesです。</p>
+    </div>
+    <div class="issues">
+      <a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/722"><b>#722 Data API</b><span>Epic P0 →</span></a>
+      <a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/723"><b>#723 SNS Growth</b><span>Epic P1 →</span></a>
+      <a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/721"><b>#721 Monetization</b><span>Epic P1 →</span></a>
+      <a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/725"><b>#725 Source rules</b><span>child P0 →</span></a>
+      <a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/726"><b>#726 SNS safety</b><span>child P0 →</span></a>
+      <a class="issue" href="https://github.com/tnob39/anime-tier-board/issues/724"><b>#724 Affiliate ledger</b><span>child P0 →</span></a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="shell">
+    numanie strategy visualization · Design Spike #727 · Flat/Swiss self-contained · snapshot @ 2026-08-22 19:30 JST · ref <code>e4dc56d</code> · SSOT = GitHub Issues · Data → Growth → Revenue
+  </div>
+</footer>
+
 <script>
-const qs=s=>document.querySelector(s),qsa=s=>[...document.querySelectorAll(s)];
-qsa('[data-to]').forEach(b=>b.addEventListener('click',()=>{qs('#'+b.dataset.to).scrollIntoView({behavior:'smooth'});qsa('[data-to]').forEach(x=>x.classList.toggle('active',x===b))}));
-qs('.mobile-menu').addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
-qsa('.epic').forEach(card=>{const open=()=>{const id=card.dataset.detail,was=qs('#'+id).classList.contains('show');qsa('.detail').forEach(d=>d.classList.remove('show'));qsa('.epic').forEach(c=>c.classList.remove('active'));if(!was){qs('#'+id).classList.add('show');card.classList.add('active');qs('#'+id).scrollIntoView({behavior:'smooth',block:'nearest'})}};card.addEventListener('click',open);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}})});
-qsa('.tab').forEach(t=>t.addEventListener('click',()=>{qsa('.tab').forEach(x=>x.classList.toggle('active',x===t));const f=t.dataset.filter;qsa('.epic').forEach(c=>c.hidden=f!=='all'&&!c.dataset.kind.includes(f));qsa('.detail').forEach(d=>d.classList.remove('show'))}));
+(function(){
+  const qs=(s,r=document)=>r.querySelector(s);
+  const qsa=(s,r=document)=>[...r.querySelectorAll(s)];
+  const live=qs('#live-status');
+  const announce=msg=>{live.textContent=msg};
+
+  const DAY_PLAN=[
+    {d:'月',t:'候補出し',pillar:'季節Tier / 今週何観る',ch:'X 下書き'},
+    {d:'火',t:'Tips投稿',pillar:'視聴・配信Tips',ch:'X 1–2'},
+    {d:'水',t:'短尺',pillar:'視聴/配信時短',ch:'TikTok/IG/YT短尺枠'},
+    {d:'木',t:'投票',pillar:'季節Tier投票',ch:'X 投票'},
+    {d:'金',t:'配信先',pillar:'今週何観る',ch:'X + IG'},
+    {d:'土',t:'UGC',pillar:'同意済みUGC',ch:'X再共有'},
+    {d:'日',t:'週間Tier',pillar:'作品/作り手文脈',ch:'Xまとめ'}
+  ];
+
+  const PHASES=[
+    {id:0,label:'DAY 0–30 探索',weeks:[1,2,3,4],focus:'5柱を均等に試し、権利チェックとUTMを定着'},
+    {id:1,label:'DAY 31–60 集中',weeks:[5,6,7,8],focus:'上位2形式70%。UGC紹介と共有カード改善'},
+    {id:2,label:'DAY 61–90 再現',weeks:[9,10,11,12,13],focus:'CTA/LP/時刻比較。7日継続と次四半期Go/Stop'}
+  ];
+
+  function weekNote(phaseId, week){
+    if(phaseId===0){
+      if(week===1) return '規程#726確認・プロフィール整備・baseline計測開始';
+      if(week===2) return '柱A/B重点。短尺3本を媒体順で試作';
+      if(week===3) return '柱C/D重点。UGC同意フロー試験';
+      return '柱Eと週間レビュー。学習ログ固定';
+    }
+    if(phaseId===1){
+      if(week===5) return '上位2形式を選定し工数配分70%へ';
+      if(week===6) return '同意済みUGC紹介を週2へ';
+      if(week===7) return '共有カード改善A/B';
+      return '低反応形式を停止し集中を維持';
+    }
+    if(week===9) return 'CTA文言比較開始';
+    if(week===10) return 'LP着地と比較';
+    if(week===11) return '投稿時刻の比較';
+    if(week===12) return '7日継続の接続確認';
+    return '次四半期Go/Stop提案をIssueへhandoff';
+  }
+
+  function renderWeeks(){
+    PHASES.forEach(ph=>{
+      const root=qs('#weeks-'+ph.id);
+      root.innerHTML='';
+      ph.weeks.forEach(w=>{
+        const panelId=`week-panel-${ph.id}-${w}`;
+        const btnId=`week-btn-${ph.id}-${w}`;
+        const wrap=document.createElement('div');
+        wrap.className='week';
+        wrap.innerHTML=`
+          <button type="button" class="week-toggle" id="${btnId}" aria-expanded="false" aria-controls="${panelId}">
+            <strong>Week ${w}</strong>
+            <span>${weekNote(ph.id,w)}</span>
+          </button>
+          <div class="week-panel" id="${panelId}" role="region" aria-labelledby="${btnId}" hidden></div>`;
+        const panel=qs('.week-panel',wrap);
+        const grid=document.createElement('div');
+        grid.className='daygrid';
+        grid.setAttribute('aria-label',`Week ${w} 月〜日`);
+        DAY_PLAN.forEach(day=>{
+          const cell=document.createElement('div');
+          cell.className='daycell';
+          cell.innerHTML=`<b>${day.d} · ${day.t}</b>${day.pillar}<div class="ch">${day.ch}</div>`;
+          grid.appendChild(cell);
+        });
+        const extra=document.createElement('p');
+        extra.style.cssText='margin:10px 0 0;font-size:12px;color:var(--muted)';
+        extra.textContent=`短尺枠: 週3本（水を中心に TikTok→Instagram→YouTube）。Xは毎日1〜2。作業上限8–12h。focus: ${ph.focus}`;
+        panel.appendChild(grid);
+        panel.appendChild(extra);
+        root.appendChild(wrap);
+      });
+    });
+  }
+
+  function setPhase(phaseId, {focusTab=true}={}){
+    PHASES.forEach(ph=>{
+      const panel=qs('#phase-'+ph.id);
+      const tab=qs('#phase-tab-'+ph.id);
+      const on=ph.id===phaseId;
+      panel.hidden=!on;
+      tab.setAttribute('aria-selected', on?'true':'false');
+      tab.tabIndex=on?0:-1;
+    });
+    const ph=PHASES[phaseId];
+    qs('#roadmap-status').innerHTML=`<strong>表示中:</strong> ${ph.label} · 週${ph.weeks[0]}–${ph.weeks[ph.weeks.length-1]} · 状態 snapshot`;
+    announce(`${ph.label} を表示`);
+    if(focusTab) qs('#phase-tab-'+phaseId).focus();
+  }
+
+  function closeAllDetails({restoreFocusTo=null}={}){
+    qsa('.detail').forEach(d=>{
+      d.classList.remove('show');
+      d.hidden=true;
+    });
+    qsa('.expand-btn').forEach(b=>{
+      b.setAttribute('aria-expanded','false');
+      b.textContent='詳細を開く';
+    });
+    if(restoreFocusTo) restoreFocusTo.focus();
+  }
+
+  function openDetail(id, btn){
+    const wasOpen=qs('#'+id).classList.contains('show');
+    closeAllDetails();
+    if(wasOpen){
+      announce('詳細を閉じました');
+      btn.focus();
+      return;
+    }
+    const panel=qs('#'+id);
+    panel.hidden=false;
+    panel.classList.add('show');
+    btn.setAttribute('aria-expanded','true');
+    btn.textContent='詳細を閉じる';
+    const closeBtn=qs('.close-detail',panel);
+    announce('詳細を開きました');
+    (closeBtn||panel).focus();
+  }
+
+  // section nav
+  qsa('[data-to]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const target=qs('#'+b.dataset.to);
+      if(target) target.scrollIntoView({behavior:'smooth'});
+      qsa('[data-to]').forEach(x=>x.setAttribute('aria-current', x===b?'true':'false'));
+    });
+  });
+  qs('.mobile-menu').addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+
+  // epic filter tabs
+  const filterTabs=qsa('.tabs[aria-label="Epicフィルタ"] [role="tab"]');
+  filterTabs.forEach((t,i)=>{
+    t.tabIndex=i===0?0:-1;
+    t.addEventListener('click',()=>activateFilter(t));
+    t.addEventListener('keydown',e=>onTabKey(e,filterTabs,activateFilter));
+  });
+  function activateFilter(tab){
+    filterTabs.forEach(x=>{
+      const on=x===tab;
+      x.setAttribute('aria-selected',on?'true':'false');
+      x.tabIndex=on?0:-1;
+    });
+    qs('#epic-grid').setAttribute('aria-labelledby', tab.id);
+    const f=tab.dataset.filter;
+    const opener=document.activeElement && document.activeElement.classList.contains('expand-btn') ? document.activeElement : tab;
+    closeAllDetails();
+    qsa('.epic').forEach(c=>{
+      c.hidden=f!=='all' && !c.dataset.kind.includes(f);
+    });
+    announce(`${tab.textContent} でフィルタ`);
+    tab.focus();
+    // after filter, if previous opener hidden, stay on tab (already focused)
+    void opener;
+  }
+
+  // epic expand / close
+  qsa('.expand-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>openDetail(btn.dataset.detail, btn));
+  });
+  qsa('.close-detail').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id=btn.dataset.close;
+      const opener=qs(`.expand-btn[data-detail="${id}"]`);
+      closeAllDetails({restoreFocusTo:opener});
+      announce('詳細を閉じました');
+    });
+  });
+
+  // phase tabs
+  const phaseTabs=qsa('.phase-tab');
+  phaseTabs.forEach((t,i)=>{
+    t.tabIndex=i===0?0:-1;
+    t.addEventListener('click',()=>setPhase(Number(t.dataset.phase)));
+    t.addEventListener('keydown',e=>onTabKey(e,phaseTabs,tab=>setPhase(Number(tab.dataset.phase))));
+  });
+
+  function onTabKey(e, tabs, activate){
+    const i=tabs.indexOf(e.currentTarget);
+    let next=-1;
+    if(e.key==='ArrowRight'||e.key==='ArrowDown') next=(i+1)%tabs.length;
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp') next=(i-1+tabs.length)%tabs.length;
+    if(e.key==='Home') next=0;
+    if(e.key==='End') next=tabs.length-1;
+    if(next<0) return;
+    e.preventDefault();
+    activate(tabs[next]);
+  }
+
+  // week expand (event delegation)
+  qsa('.weeks').forEach(root=>{
+    root.addEventListener('click',e=>{
+      const btn=e.target.closest('.week-toggle');
+      if(!btn||!root.contains(btn)) return;
+      const panel=qs('#'+btn.getAttribute('aria-controls'));
+      const open=btn.getAttribute('aria-expanded')==='true';
+      // close siblings in same phase
+      qsa('.week-toggle',root).forEach(b=>{
+        b.setAttribute('aria-expanded','false');
+        const p=qs('#'+b.getAttribute('aria-controls'));
+        p.classList.remove('show');
+        p.hidden=true;
+      });
+      if(!open){
+        btn.setAttribute('aria-expanded','true');
+        panel.hidden=false;
+        panel.classList.add('show');
+        announce(btn.querySelector('strong').textContent+' を展開');
+      }else{
+        announce(btn.querySelector('strong').textContent+' を閉じました');
+        btn.focus();
+      }
+    });
+  });
+
+  renderWeeks();
+  setPhase(0,{focusTab:false});
+})();
 </script>
-</body></html>
+</body>
+</html>
