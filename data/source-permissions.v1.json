@@ -1,0 +1,95 @@
+{
+  "contract_version": "1.0",
+  "entries": [
+    {
+      "domain": "bleach-anime.com",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "clevatess.com",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "grandblue-anime.com",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "kimishinu-anime.com",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "magilumiere-pr.com",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "one-piece.com",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "psyren-anime.com",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "sh-anime.shochiku.co.jp",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "vap.co.jp",
+      "decision": "permission-required",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    },
+    {
+      "domain": "wan2.bungo-stray-dogs-wan.com",
+      "decision": "unknown",
+      "reviewed_on": "2026-08-18",
+      "evidence_refs": [
+        "https://github.com/tnob39/anime-tier-board/issues/725#issuecomment-5378981550"
+      ],
+      "rationale_ja": "運用上の状態記録（operational state）であり、法的許諾を示すものではない。"
+    }
+  ]
+}
