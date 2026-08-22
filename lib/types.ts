@@ -9,6 +9,15 @@ export type AnimeTitleSet = {
   english?: string | null;
 };
 
+/** Unverified official-site candidate from AniList externalLinks (provenance intact). */
+export type AnimeOfficialSite = {
+  url: string;
+  source: "anilist_external_link";
+  sourceLabel: string;
+  retrievedAt: string;
+  verificationStatus: "unverified";
+};
+
 export type AnimeItem = {
   id: string;
   source: AnimeSourceName;
@@ -17,6 +26,8 @@ export type AnimeItem = {
   imageUrl: string;
   proxiedImageUrl: string;
   siteUrl: string;
+  /** Optional unverified official-site candidate; never overwrites siteUrl. */
+  officialSite?: AnimeOfficialSite;
   format?: string | null;
   season?: AnimeSeason | string | null;
   seasonYear?: number | null;

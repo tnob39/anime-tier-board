@@ -1,6 +1,7 @@
 import type {
   AnimeAiringInfo,
   AnimeItem,
+  AnimeOfficialSite,
   AnimeSeason,
   AniListFailureOutcome
 } from "../types.ts";
@@ -10,6 +11,12 @@ export const ANILIST_ENDPOINT = "https://graphql.anilist.co";
 export const ANILIST_MAX_PAGES = 5;
 export const ANILIST_ATTEMPT_BUDGET_MS = 6000;
 const PER_PAGE = 50;
+
+type AniListExternalLink = {
+  site?: string | null;
+  url?: string | null;
+  type?: string | null;
+};
 
 type AniListMedia = {
   id: number;
@@ -86,6 +93,7 @@ type AniListMedia = {
     site?: string | null;
     url?: string | null;
   }>;
+  externalLinks?: AniListExternalLink[] | null;
 };
 
 type AniListDate = {
@@ -241,6 +249,11 @@ const query = `
           site
           url
         }
+        externalLinks {
+          site
+          url
+          type
+        }
       }
     }
   }
@@ -303,6 +316,11 @@ const safeQuery = `
           site
           url
         }
+        externalLinks {
+          site
+          url
+          type
+        }
       }
     }
   }
@@ -323,6 +341,8 @@ export async function fetchAniListSeasonalAnime(
   const now = options.now ?? Date.now;
   const maxHttp = options.maxPages ?? ANILIST_MAX_PAGES;
   const budget: HttpRequestBudget = { used: 0, max: maxHttp };
+  /** Live AniList retrieval timestamp; frozen into officialSite, never refreshed from cache. */
+  const liveRetrievedAt = new Date(now()).toISOString();
   /** Accumulated only for incomplete walks; never returned on cap/timeout failure. */
   const items: AnimeItem[] = [];
   let attemptClosed = false;
@@ -446,6 +466,13 @@ export async function fetchAniListSeasonalAnime(
             url: episode.url as string
           }));
 
+        const officialSite = pickOfficialSiteCandidate(
+          entry.externalLinks,
+          liveRetrievedAt
+        );
+        const siteUrl =
+          entry.siteUrl ?? `https://anilist.co/anime/${entry.id}`;
+
         items.push({
           id: `anilist-${entry.id}`,
           source: "anilist",
@@ -453,7 +480,8 @@ export async function fetchAniListSeasonalAnime(
           titles,
           imageUrl,
           proxiedImageUrl: proxiedImageUrl(imageUrl),
-          siteUrl: entry.siteUrl ?? `https://anilist.co/anime/${entry.id}`,
+          siteUrl,
+          ...(officialSite ? { officialSite } : {}),
           format: entry.format,
           season: entry.season,
           seasonYear: entry.seasonYear,
@@ -541,6 +569,47 @@ export async function fetchAniListSeasonalAnime(
     outcome: "success",
     pagesUsed: budget.used
   };
+}
+
+/**
+ * First INFO + "Official Site" (case-insensitive) + absolute http(s) link.
+ * SOCIAL/STREAMING, relative URLs, and non-http(s) schemes are skipped.
+ * Does not fetch the candidate URL.
+ */
+function pickOfficialSiteCandidate(
+  links: AniListExternalLink[] | null | undefined,
+  retrievedAt: string
+): AnimeOfficialSite | undefined {
+  for (const link of links ?? []) {
+    if ((link.type ?? "").toUpperCase() !== "INFO") {
+      continue;
+    }
+    const sourceLabel = link.site?.trim() ?? "";
+    if (sourceLabel.toLowerCase() !== "official site") {
+      continue;
+    }
+    const url = link.url?.trim() ?? "";
+    if (!isAbsoluteHttpOrHttpsUrl(url)) {
+      continue;
+    }
+    return {
+      url,
+      source: "anilist_external_link",
+      sourceLabel,
+      retrievedAt,
+      verificationStatus: "unverified"
+    };
+  }
+  return undefined;
+}
+
+function isAbsoluteHttpOrHttpsUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function normalizeStreamingPlatforms(

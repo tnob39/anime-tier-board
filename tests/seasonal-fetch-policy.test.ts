@@ -910,3 +910,288 @@ test("Jikan absolute deadline races when fetch ignores AbortSignal", async () =>
   await new Promise((r) => setTimeout(r, hangMs + 30));
   assert.equal(fetchStarted, 1);
 });
+
+// ---------------------------------------------------------------------------
+// Issue #731 — unverified officialSite candidate + provenance
+// ---------------------------------------------------------------------------
+
+type ExternalLinkInput = {
+  site?: string | null;
+  url?: string | null;
+  type?: string | null;
+};
+
+function makeMediaWithLinks(id: number, externalLinks: ExternalLinkInput[]) {
+  return { ...makeMedia(id), externalLinks };
+}
+
+function anilistOkWithMedia(media: ReturnType<typeof makeMedia>[]) {
+  const fetchImpl: typeof fetch = async () =>
+    jsonResponse({
+      data: {
+        Page: {
+          pageInfo: { hasNextPage: false },
+          media
+        }
+      }
+    });
+  return fetchImpl;
+}
+
+async function fetchOfficialSiteFixture(
+  media: ReturnType<typeof makeMedia>[],
+  nowMs = PRE_CUTOFF
+) {
+  return fetchAniListSeasonalAnime(2026, "FALL", {
+    fetchImpl: anilistOkWithMedia(media),
+    now: () => nowMs,
+    deadlineMs: nowMs + 60_000
+  });
+}
+
+test("officialSite: valid INFO Official Site candidate carries provenance", async () => {
+  const nowMs = PRE_CUTOFF;
+  const result = await fetchOfficialSiteFixture(
+    [
+      makeMediaWithLinks(1, [
+        {
+          type: "INFO",
+          site: "Official Site",
+          url: "https://official.example.com/anime1"
+        }
+      ])
+    ],
+    nowMs
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.items.length, 1);
+  const item = result.items[0] as AnimeItem;
+  assert.equal(item.siteUrl, "https://anilist.co/anime/1");
+  assert.deepEqual(item.officialSite, {
+    url: "https://official.example.com/anime1",
+    source: "anilist_external_link",
+    sourceLabel: "Official Site",
+    retrievedAt: new Date(nowMs).toISOString(),
+    verificationStatus: "unverified"
+  });
+});
+
+test("officialSite: first valid INFO Official Site wins among multiple links", async () => {
+  const result = await fetchOfficialSiteFixture([
+    makeMediaWithLinks(2, [
+      {
+        type: "SOCIAL",
+        site: "Twitter",
+        url: "https://twitter.com/example"
+      },
+      {
+        type: "STREAMING",
+        site: "Crunchyroll",
+        url: "https://www.crunchyroll.com/series/example"
+      },
+      {
+        type: "INFO",
+        site: "Wikipedia",
+        url: "https://en.wikipedia.org/wiki/Example"
+      },
+      {
+        type: "INFO",
+        site: "Official Site",
+        url: "https://first-valid.example.com/"
+      },
+      {
+        type: "INFO",
+        site: "official site",
+        url: "https://second-valid.example.com/"
+      }
+    ])
+  ]);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.items[0]?.officialSite?.url, "https://first-valid.example.com/");
+  assert.equal(result.items[0]?.officialSite?.sourceLabel, "Official Site");
+});
+
+test("officialSite: rejects relative URL and dangerous schemes", async () => {
+  const result = await fetchOfficialSiteFixture([
+    makeMediaWithLinks(3, [
+      { type: "INFO", site: "Official Site", url: "/relative/path" },
+      { type: "INFO", site: "Official Site", url: "javascript:alert(1)" },
+      { type: "INFO", site: "Official Site", url: "data:text/html,hi" },
+      { type: "INFO", site: "Official Site", url: "file:///etc/passwd" },
+      {
+        type: "INFO",
+        site: "Official Site",
+        url: "https://safe.example.com/ok"
+      }
+    ])
+  ]);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.items[0]?.officialSite?.url, "https://safe.example.com/ok");
+});
+
+test("officialSite: type or label mismatch yields no candidate", async () => {
+  const result = await fetchOfficialSiteFixture([
+    makeMediaWithLinks(4, [
+      {
+        type: "STREAMING",
+        site: "Official Site",
+        url: "https://streaming-labeled.example.com/"
+      },
+      {
+        type: "SOCIAL",
+        site: "Official Site",
+        url: "https://social-labeled.example.com/"
+      },
+      {
+        type: "INFO",
+        site: "Official Website",
+        url: "https://wrong-label.example.com/"
+      },
+      {
+        type: "INFO",
+        site: "Homepage",
+        url: "https://also-wrong.example.com/"
+      }
+    ])
+  ]);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.items[0]?.officialSite, undefined);
+  assert.equal(result.items[0]?.siteUrl, "https://anilist.co/anime/4");
+});
+
+test("officialSite: safe query also requests externalLinks", async () => {
+  const queries: string[] = [];
+  let calls = 0;
+  const fetchImpl: typeof fetch = async (_input, init) => {
+    calls += 1;
+    const body =
+      typeof init?.body === "string"
+        ? (JSON.parse(init.body) as { query?: string })
+        : {};
+    const queryText = body.query ?? "";
+    queries.push(queryText);
+
+    if (calls === 1) {
+      return new Response("bad query", { status: 400 });
+    }
+
+    assert.ok(
+      queryText.includes("externalLinks"),
+      "safe query must request externalLinks"
+    );
+    assert.ok(!queryText.includes("studios"), "expected safe query shape");
+
+    return jsonResponse({
+      data: {
+        Page: {
+          pageInfo: { hasNextPage: false },
+          media: [
+            makeMediaWithLinks(5, [
+              {
+                type: "INFO",
+                site: "official site",
+                url: "http://http-ok.example.com/"
+              }
+            ])
+          ]
+        }
+      }
+    });
+  };
+
+  const started = PRE_CUTOFF;
+  const result = await fetchAniListSeasonalAnime(2026, "FALL", {
+    fetchImpl,
+    now: () => started,
+    deadlineMs: started + 60_000
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(calls, 2);
+  assert.equal(queries.length, 2);
+  assert.ok(queries[0]?.includes("externalLinks"));
+  assert.ok(queries[1]?.includes("externalLinks"));
+  assert.equal(result.items[0]?.officialSite?.url, "http://http-ok.example.com/");
+  assert.equal(result.items[0]?.officialSite?.sourceLabel, "official site");
+});
+
+test("officialSite: fresh cache keeps retrievedAt and does not increase outbound", async () => {
+  const liveNow = PRE_CUTOFF;
+  const expectedRetrievedAt = new Date(liveNow).toISOString();
+  let nowMs = liveNow;
+
+  const recorder = createFetchRecorder({
+    anilist: { type: "anilist_ok", pages: 1, itemsPerPage: 1 }
+  });
+
+  // Inject official site into the default anilist_ok path by wrapping fetch.
+  const baseFetch = recorder.fetchImpl;
+  const fetchImpl: typeof fetch = async (input, init) => {
+    const response = await baseFetch(input, init);
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    if (!(url.includes("graphql.anilist.co") || url === ANILIST_ENDPOINT)) {
+      return response;
+    }
+    if (!response.ok) {
+      return response;
+    }
+    const payload = (await response.json()) as {
+      data?: { Page?: { pageInfo?: { hasNextPage?: boolean }; media?: unknown[] } };
+    };
+    const media = (payload.data?.Page?.media ?? []).map((entry, index) => {
+      const base = entry as ReturnType<typeof makeMedia>;
+      return makeMediaWithLinks(base.id ?? index + 1, [
+        {
+          type: "INFO",
+          site: "Official Site",
+          url: `https://cached.example.com/${base.id ?? index + 1}`
+        }
+      ]);
+    });
+    return jsonResponse({
+      data: {
+        Page: {
+          pageInfo: payload.data?.Page?.pageInfo ?? { hasNextPage: false },
+          media
+        }
+      }
+    });
+  };
+
+  const source = createSeasonalAnimeSource({
+    now: () => nowMs,
+    fetch: fetchImpl,
+    jikanPageDelayMs: 0
+  });
+
+  const live = await source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(live.servePath, "live_anilist");
+  assert.equal(live.cached, false);
+  const liveSite = live.items[0]?.officialSite;
+  assert.ok(liveSite);
+  assert.equal(liveSite?.retrievedAt, expectedRetrievedAt);
+  const outboundAfterLive = recorder.anilistCalls;
+  assert.ok(outboundAfterLive >= 1);
+
+  nowMs = liveNow + 60_000; // still within fresh window
+  const cached = await source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(cached.freshness, "fresh");
+  assert.equal(cached.servePath, "fresh_direct");
+  assert.equal(cached.cached, true);
+  assert.equal(cached.items[0]?.officialSite?.retrievedAt, expectedRetrievedAt);
+  assert.equal(
+    cached.items[0]?.officialSite?.url,
+    live.items[0]?.officialSite?.url
+  );
+  assert.equal(recorder.anilistCalls, outboundAfterLive);
+  assert.equal(recorder.jikanCalls, 0);
+});
