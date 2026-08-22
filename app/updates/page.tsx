@@ -48,10 +48,26 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.57",
+    date: "2026-08-22",
+    label: "利用者の声でスマホ画像を自動圧縮",
+    isLatest: true,
+    changes: [
+      {
+        icon: Smartphone,
+        iconTone: "coral",
+        title: "3MB超のスクリーンショットも添付可能に",
+        description:
+          "JPEG / PNG / WebP を最大20MBまで選択でき、3MBを超える画像は端末内で自動圧縮してから送信します。元画像はサーバーへ送りません。",
+        href: "/feedback",
+      },
+    ],
+  },
+  {
     version: "1.56",
     date: "2026-08-17",
     label: "匿名の『利用者の声』要望箱を追加",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: MessageSquareHeart,

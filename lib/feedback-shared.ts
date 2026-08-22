@@ -20,7 +20,10 @@ export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
 export const FEEDBACK_BODY_MIN = 10;
 export const FEEDBACK_BODY_MAX = 2000;
+/** サーバー受理・送信直前の画像上限（緩和しない）。 */
 export const FEEDBACK_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+/** クライアントで選択可能な元画像の上限（超過分はブラウザ内圧縮対象）。 */
+export const FEEDBACK_IMAGE_SELECT_MAX_BYTES = 20 * 1024 * 1024;
 export const FEEDBACK_ALLOWED_IMAGE_MIME = [
   "image/jpeg",
   "image/png",
