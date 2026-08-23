@@ -1,0 +1,34 @@
+{
+  "template": true,
+  "decision": "NO_GO",
+  "releaseCommit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5",
+  "executedAt": "2026-08-23T10:00:00Z",
+  "canonicalUrl": "https://anime.example.jp/",
+  "operator": "release-owner-example",
+  "monitoring": {
+    "dashboardRef": "monitor://production/dashboard-example",
+    "alertDestinationRef": "alert://release-oncall-example",
+    "errorBudget": "99.9% monthly availability",
+    "owner": "production-team-example",
+    "onCallSlaMinutes": 15
+  },
+  "checks": [
+    { "id": "typecheck", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/typecheck", "details": {} },
+    { "id": "build", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/build", "details": {} },
+    { "id": "focused-e2e", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/e2e", "details": {} },
+    { "id": "desktop-smoke", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/desktop", "details": {} },
+    { "id": "mobile-smoke", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/mobile", "details": {} },
+    { "id": "a11y", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/a11y", "details": {} },
+    { "id": "console-pageerror", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/console", "details": {} },
+    { "id": "overflow", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/overflow", "details": {} },
+    { "id": "guest-journey", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/guest", "details": { "journeyRef": "artifact://example/guest-journey", "canonicalUrlVerified": true } },
+    { "id": "auth-journey", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/auth", "details": { "journeyRef": "artifact://example/auth-journey", "canonicalUrlVerified": true } },
+    { "id": "api-health-error", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/api", "details": { "apiIds": ["auth-session", "shares-list"], "healthVerified": true, "errorMonitoringVerified": true } },
+    { "id": "health-alert", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/alert", "details": {} },
+    { "id": "turso-restore", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/restore", "details": { "backupRef": "artifact://example/backup", "restoreTarget": "disposable", "restoreResult": "pass", "integrityResult": "pass" } },
+    { "id": "vercel-rollback", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/rollback", "details": { "rollbackDeploymentRef": "artifact://example/previous-deployment", "rollbackResult": "pass" } },
+    { "id": "env-checklist", "status": "pass", "commit": "ac00b96207bc8cb3a6a98dac6e306a7bca6ff4a5", "executedAt": "2026-08-23T10:00:00Z", "operator": "release-owner-example", "artifactRef": "artifact://example/env-checklist", "details": {} }
+  ],
+  "stopBlockers": [],
+  "knownIssues": []
+}
