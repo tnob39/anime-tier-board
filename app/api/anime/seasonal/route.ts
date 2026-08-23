@@ -55,13 +55,20 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
       ? `配信情報の一部を取得できませんでした（${enrichStats.failed}件）。`
       : undefined;
 
-  return NextResponse.json({
-    year,
-    season: isYearScope ? "ALL" : season,
-    generatedAt: new Date().toISOString(),
-    ...result,
-    items: enrichedItems,
-    enrichStats,
-    ...(enrichWarning ? { enrichWarning } : {}),
-  });
+  return NextResponse.json(
+    {
+      year,
+      season: isYearScope ? "ALL" : season,
+      generatedAt: new Date().toISOString(),
+      ...result,
+      items: enrichedItems,
+      enrichStats,
+      ...(enrichWarning ? { enrichWarning } : {}),
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=86400",
+      },
+    }
+  );
 });
