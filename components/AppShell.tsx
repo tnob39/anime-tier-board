@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { AppBadgeUpdater } from "./AppBadgeUpdater";
 import { GlobalNav } from "./GlobalNav";
+import { LegalFooter } from "./LegalFooter";
 import { MobileNav } from "./MobileNav";
 
 const PUBLIC_PREFIXES = [
@@ -18,9 +19,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (isPublic) {
     return (
-      <main id="main-content" tabIndex={-1}>
-        {children}
-      </main>
+      <>
+        <main id="main-content" tabIndex={-1}>
+          {children}
+        </main>
+        <LegalFooter />
+      </>
     );
   }
 
@@ -31,6 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main id="main-content" tabIndex={-1}>
         {children}
       </main>
+      <LegalFooter />
       <MobileNav />
     </>
   );
