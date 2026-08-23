@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import {
+  assertSameOriginBrowserWrite,
+  parseCommentWriteBody,
+  readJsonWithByteLimit
+} from "@/lib/api/write-request-guard";
 import { addComment, listComments } from "@/lib/shares";
 
 export async function GET(
@@ -22,14 +27,18 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const originDenied = assertSameOriginBrowserWrite(request);
+  if (originDenied) return originDenied;
+
   const { shareId } = await params;
-  let payload: { body?: string };
-  try {
-    payload = (await request.json()) as { body?: string };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-  const body = payload.body?.trim();
+
+  const parsed = await readJsonWithByteLimit<unknown>(request);
+  if (!parsed.ok) return parsed.response;
+
+  const commentBody = parseCommentWriteBody(parsed.data);
+  if (!commentBody.ok) return commentBody.response;
+
+  const body = commentBody.body.trim();
 
   if (!body || body.length > 1000) {
     return NextResponse.json({ error: "Invalid comment" }, { status: 400 });
