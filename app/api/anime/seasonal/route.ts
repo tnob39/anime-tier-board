@@ -44,10 +44,9 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
     });
   }
 
-  // DB キャッシュを優先し、未キャッシュ分は上限付きで補完する。
+  // DB キャッシュのみ付与。未キャッシュ分は TMDb warm せず即時返却する。
   const { map: providerMap, stats: enrichStats } = await buildProviderMapWithStats(result.items, {
     skipUncached: true,
-    warmUncachedBudget: 5,
   });
   const enrichedItems = enrichWithStreamingProviders(result.items, providerMap);
 
