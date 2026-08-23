@@ -17,15 +17,25 @@ import {
   fetchJikanSeasonalAnime
 } from "../lib/anime-sources/jikan.ts";
 import type {
+  SeasonalSnapshotRecord,
+  SeasonalSnapshotStore
+} from "../lib/seasonal-snapshot-store.ts";
+import type {
   AnimeItem,
   SeasonalTelemetryEvent
 } from "../lib/types.ts";
 
 /** Deep pre-cutoff so cache-age advances (24h/7d) stay pre-cutoff. */
 const PRE_CUTOFF = Date.parse("2026-01-15T00:00:00.000Z");
+/** Inclusive post-cutoff SSOT instant: 2026-09-15T00:00:00.000Z */
+const CUTOFF_INSTANT = Date.parse("2026-09-15T00:00:00.000Z");
 const PRE_CUTOFF_EDGE = JIKAN_CUTOFF_MS - 1;
 const AT_CUTOFF = JIKAN_CUTOFF_MS;
 const POST_CUTOFF = JIKAN_CUTOFF_MS + 60_000;
+const POST_CUTOFF_IMMEDIATE = JIKAN_CUTOFF_MS + 1;
+
+assert.equal(CUTOFF_INSTANT, JIKAN_CUTOFF_MS);
+assert.equal(AT_CUTOFF, CUTOFF_INSTANT);
 
 type MockMode =
   | { type: "anilist_ok"; pages?: number; itemsPerPage?: number }
@@ -1194,4 +1204,503 @@ test("officialSite: fresh cache keeps retrievedAt and does not increase outbound
   );
   assert.equal(recorder.anilistCalls, outboundAfterLive);
   assert.equal(recorder.jikanCalls, 0);
+});
+
+// ---------------------------------------------------------------------------
+// ATB-737 — cutoff rehearsal matrix via production seams (non-mirror)
+// Covers: 2026-09-15T00:00:00Z -1ms / == / +1ms, post Jikan=0,
+// AniList success/failure, memory+durable fresh/stale/expired, pagination/yearly.
+// ---------------------------------------------------------------------------
+
+function createMapSnapshotStore(
+  seed: SeasonalSnapshotRecord[] = []
+): SeasonalSnapshotStore & { records: Map<string, SeasonalSnapshotRecord> } {
+  const records = new Map<string, SeasonalSnapshotRecord>();
+  for (const row of seed) {
+    records.set(row.seasonalKey, row);
+  }
+  return {
+    records,
+    async get(key: string) {
+      return records.get(key) ?? null;
+    },
+    async put(snapshot: SeasonalSnapshotRecord) {
+      records.set(snapshot.seasonalKey, snapshot);
+    }
+  };
+}
+
+function catalogItem(
+  id: string,
+  source: "anilist" | "jikan" = "anilist"
+): AnimeItem {
+  return {
+    id,
+    source,
+    title: `作品${id}`,
+    titles: { native: `作品${id}`, userPreferred: `Anime ${id}` },
+    imageUrl: `https://example.com/${id}.jpg`,
+    proxiedImageUrl: `/api/image-proxy?url=${encodeURIComponent(`https://example.com/${id}.jpg`)}`,
+    siteUrl: `https://anilist.co/anime/${id}`,
+    format: "TV",
+    season: "FALL",
+    seasonYear: 2026,
+    episodes: 12,
+    popularity: 900,
+    genres: ["Action"],
+    studios: [{ name: "Studio" }]
+  };
+}
+
+function durableRecord(
+  partial: Partial<SeasonalSnapshotRecord> & { seasonalKey?: string } = {}
+): SeasonalSnapshotRecord {
+  const seasonalKey = partial.seasonalKey ?? "2026:FALL";
+  const [yearText, seasonText] = seasonalKey.split(":");
+  return {
+    seasonalKey,
+    seasonYear: Number(yearText),
+    season: seasonText as SeasonalSnapshotRecord["season"],
+    source: partial.source ?? "anilist",
+    items: partial.items ?? [catalogItem("durable-1")],
+    fetchedAt: partial.fetchedAt ?? new Date(AT_CUTOFF).toISOString()
+  };
+}
+
+function jikanRequestCount(urls: string[]): number {
+  return urls.filter((u) => u.includes(JIKAN_HOST)).length;
+}
+
+test("ATB-737 cutoff -1ms: AniList success stays pre, Jikan request count=0", async () => {
+  const h = createHarness({
+    nowMs: PRE_CUTOFF_EDGE,
+    anilist: { type: "anilist_ok" },
+    jikan: { type: "jikan_ok" }
+  });
+  const result = await h.source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(result.servePath, "live_anilist");
+  assert.equal(result.freshness, "fresh");
+  assert.equal(h.recorder.jikanCalls, 0);
+  assert.equal(jikanRequestCount(h.recorder.urls), 0);
+  assert.equal(h.telemetry[0]?.cutoff_regime, "pre");
+  assert.equal(h.telemetry[0]?.jikan_outcome, "skipped_pre_policy");
+});
+
+test("ATB-737 cutoff == 2026-09-15T00:00:00Z: AniList success is post, Jikan=0", async () => {
+  const h = createHarness({
+    nowMs: AT_CUTOFF,
+    anilist: { type: "anilist_ok" },
+    jikan: { type: "jikan_ok" }
+  });
+  const result = await h.source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(result.servePath, "live_anilist");
+  assert.equal(result.source, "anilist");
+  assert.equal(h.recorder.jikanCalls, 0);
+  assert.equal(jikanRequestCount(h.recorder.urls), 0);
+  assert.equal(h.telemetry[0]?.cutoff_regime, "post");
+  assert.equal(h.telemetry[0]?.anilist_outcome, "success");
+  assert.equal(h.telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+});
+
+test("ATB-737 cutoff +1ms: AniList failure → unavailable, Jikan request count=0", async () => {
+  const h = createHarness({
+    nowMs: POST_CUTOFF_IMMEDIATE,
+    anilist: { type: "anilist_http", status: 500 },
+    jikan: { type: "jikan_ok" }
+  });
+  await assert.rejects(() => h.source.fetchSeasonalAnime(2026, "FALL"));
+  assert.equal(h.recorder.jikanCalls, 0);
+  assert.equal(jikanRequestCount(h.recorder.urls), 0);
+  assert.equal(h.telemetry[0]?.cutoff_regime, "post");
+  assert.equal(h.telemetry[0]?.freshness, "unavailable");
+  assert.equal(h.telemetry[0]?.serve_path, "unavailable");
+  assert.equal(h.telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+});
+
+test("ATB-737 memory fresh<=24h post-cutoff: fresh_direct skips upstream, Jikan=0", async () => {
+  const h = createHarness({
+    nowMs: AT_CUTOFF,
+    anilist: { type: "anilist_ok" },
+    jikan: { type: "jikan_ok" }
+  });
+  await h.source.fetchSeasonalAnime(2026, "FALL");
+  h.telemetry.length = 0;
+  h.recorder.urls.length = 0;
+
+  h.setNow(AT_CUTOFF + FRESH_MAX_AGE_MS); // inclusive fresh bound
+  const cached = await h.source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(cached.freshness, "fresh");
+  assert.equal(cached.servePath, "fresh_direct");
+  assert.equal(cached.cached, true);
+  assert.equal(h.recorder.anilistUrls().length, 0);
+  assert.equal(jikanRequestCount(h.recorder.urls), 0);
+  assert.equal(h.telemetry[0]?.source, "cache");
+  assert.equal(h.telemetry[0]?.anilist_outcome, "skipped");
+  assert.equal(h.telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+  assert.equal(h.telemetry[0]?.cutoff_regime, "post");
+});
+
+test("ATB-737 memory stale (24h,7d] post AniList fail: stale only, Jikan=0", async () => {
+  let phase: "ok" | "fail" = "ok";
+  let nowMs = AT_CUTOFF;
+  const urls: string[] = [];
+  const telemetry: SeasonalTelemetryEvent[] = [];
+  const fetchImpl: typeof fetch = async (input) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    urls.push(url);
+    if (url.includes(JIKAN_HOST)) {
+      throw new Error("Jikan must not be contacted post-cutoff");
+    }
+    if (phase === "ok") {
+      return jsonResponse({
+        data: {
+          Page: {
+            pageInfo: { hasNextPage: false },
+            media: [makeMedia(41)]
+          }
+        }
+      });
+    }
+    return new Response("err", { status: 500 });
+  };
+  const source = createSeasonalAnimeSource({
+    now: () => nowMs,
+    fetch: fetchImpl,
+    onTelemetry: (e) => telemetry.push(e),
+    jikanPageDelayMs: 0
+  });
+
+  const live = await source.fetchSeasonalAnime(2026, "FALL");
+  phase = "fail";
+  nowMs = AT_CUTOFF + FRESH_MAX_AGE_MS + 1;
+  telemetry.length = 0;
+  urls.length = 0;
+
+  const stale = await source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(stale.freshness, "stale");
+  assert.equal(stale.servePath, "stale_after_anilist_fail");
+  assert.equal(stale.cached, true);
+  assert.equal(stale.fetchedAt, live.fetchedAt);
+  assert.notEqual(stale.freshness, "fresh");
+  assert.equal(jikanRequestCount(urls), 0);
+  assert.equal(telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+  assert.equal(telemetry[0]?.serve_path, "stale_after_anilist_fail");
+  assert.equal(telemetry[0]?.cutoff_regime, "post");
+});
+
+test("ATB-737 memory expired >7d post AniList fail: unavailable/error, not current", async () => {
+  let phase: "ok" | "fail" = "ok";
+  let nowMs = AT_CUTOFF;
+  const telemetry: SeasonalTelemetryEvent[] = [];
+  const urls: string[] = [];
+  const fetchImpl: typeof fetch = async (input) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    urls.push(url);
+    if (url.includes(JIKAN_HOST)) {
+      throw new Error("Jikan must not be contacted post-cutoff");
+    }
+    if (phase === "ok") {
+      return jsonResponse({
+        data: {
+          Page: {
+            pageInfo: { hasNextPage: false },
+            media: [makeMedia(42)]
+          }
+        }
+      });
+    }
+    return new Response("err", { status: 500 });
+  };
+  const source = createSeasonalAnimeSource({
+    now: () => nowMs,
+    fetch: fetchImpl,
+    onTelemetry: (e) => telemetry.push(e),
+    jikanPageDelayMs: 0
+  });
+
+  await source.fetchSeasonalAnime(2026, "FALL");
+  phase = "fail";
+  nowMs = AT_CUTOFF + STALE_MAX_AGE_MS + 1;
+  telemetry.length = 0;
+  urls.length = 0;
+
+  await assert.rejects(() => source.fetchSeasonalAnime(2026, "FALL"));
+  assert.equal(jikanRequestCount(urls), 0);
+  assert.equal(telemetry.length, 1);
+  assert.equal(telemetry[0]?.freshness, "unavailable");
+  assert.equal(telemetry[0]?.serve_path, "unavailable");
+  assert.notEqual(telemetry[0]?.freshness, "fresh");
+  assert.notEqual(telemetry[0]?.freshness, "stale");
+  assert.notEqual(telemetry[0]?.serve_path, "fresh_direct");
+  assert.notEqual(telemetry[0]?.serve_path, "stale_after_anilist_fail");
+  assert.equal(telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+  assert.equal(telemetry[0]?.cutoff_regime, "post");
+});
+
+test("ATB-737 durable fresh<=24h: short-circuit db_snapshot, Jikan=0", async () => {
+  const fetchedAtMs = AT_CUTOFF;
+  const store = createMapSnapshotStore([
+    durableRecord({
+      fetchedAt: new Date(fetchedAtMs).toISOString(),
+      items: [catalogItem("d-fresh")]
+    })
+  ]);
+  const urls: string[] = [];
+  const telemetry: SeasonalTelemetryEvent[] = [];
+  const source = createSeasonalAnimeSource({
+    now: () => fetchedAtMs + FRESH_MAX_AGE_MS,
+    fetch: async (input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      urls.push(url);
+      throw new Error("upstream must not run for durable fresh");
+    },
+    onTelemetry: (e) => telemetry.push(e),
+    jikanPageDelayMs: 0,
+    snapshotStore: store
+  });
+
+  const result = await source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(result.freshness, "fresh");
+  assert.equal(result.servePath, "fresh_direct");
+  assert.equal(result.cached, true);
+  assert.equal(result.items[0]?.id, "d-fresh");
+  assert.equal(urls.length, 0);
+  assert.equal(jikanRequestCount(urls), 0);
+  assert.equal(telemetry[0]?.source, "db_snapshot");
+  assert.equal(telemetry[0]?.anilist_outcome, "skipped");
+  assert.equal(telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+  assert.equal(telemetry[0]?.cutoff_regime, "post");
+});
+
+test("ATB-737 durable stale (24h,7d] post AniList fail: stale<=7d only, Jikan=0", async () => {
+  const fetchedAtMs = AT_CUTOFF;
+  const store = createMapSnapshotStore([
+    durableRecord({
+      fetchedAt: new Date(fetchedAtMs).toISOString(),
+      items: [catalogItem("d-stale")]
+    })
+  ]);
+  const urls: string[] = [];
+  const telemetry: SeasonalTelemetryEvent[] = [];
+  const nowMs = fetchedAtMs + FRESH_MAX_AGE_MS + 1;
+  const source = createSeasonalAnimeSource({
+    now: () => nowMs,
+    fetch: async (input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      urls.push(url);
+      if (url.includes(JIKAN_HOST)) {
+        throw new Error("Jikan must not be contacted post-cutoff");
+      }
+      return new Response("err", { status: 500 });
+    },
+    onTelemetry: (e) => telemetry.push(e),
+    jikanPageDelayMs: 0,
+    snapshotStore: store
+  });
+
+  const result = await source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(result.freshness, "stale");
+  assert.equal(result.servePath, "stale_after_anilist_fail");
+  assert.equal(result.cached, true);
+  assert.equal(result.items[0]?.id, "d-stale");
+  assert.equal(result.fetchedAt, new Date(fetchedAtMs).toISOString());
+  assert.equal(jikanRequestCount(urls), 0);
+  assert.ok(urls.some((u) => u.includes("graphql.anilist.co") || u === ANILIST_ENDPOINT));
+  assert.equal(telemetry[0]?.source, "db_snapshot");
+  assert.equal(telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+  assert.equal(telemetry[0]?.freshness, "stale");
+});
+
+test("ATB-737 durable exact 7d bound is stale; >7d expired is unavailable (not current)", async () => {
+  const fetchedAtMs = AT_CUTOFF;
+  const record = durableRecord({
+    fetchedAt: new Date(fetchedAtMs).toISOString(),
+    items: [catalogItem("d-bound")]
+  });
+
+  {
+    const store = createMapSnapshotStore([record]);
+    const telemetry: SeasonalTelemetryEvent[] = [];
+    const urls: string[] = [];
+    const source = createSeasonalAnimeSource({
+      now: () => fetchedAtMs + STALE_MAX_AGE_MS,
+      fetch: async (input) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+        urls.push(url);
+        if (url.includes(JIKAN_HOST)) {
+          throw new Error("Jikan must not be contacted post-cutoff");
+        }
+        return new Response("err", { status: 500 });
+      },
+      onTelemetry: (e) => telemetry.push(e),
+      jikanPageDelayMs: 0,
+      snapshotStore: store
+    });
+    const stale = await source.fetchSeasonalAnime(2026, "FALL");
+    assert.equal(stale.freshness, "stale");
+    assert.equal(stale.servePath, "stale_after_anilist_fail");
+    assert.equal(jikanRequestCount(urls), 0);
+    assert.equal(telemetry[0]?.source, "db_snapshot");
+  }
+
+  {
+    const store = createMapSnapshotStore([record]);
+    const telemetry: SeasonalTelemetryEvent[] = [];
+    const urls: string[] = [];
+    const source = createSeasonalAnimeSource({
+      now: () => fetchedAtMs + STALE_MAX_AGE_MS + 1,
+      fetch: async (input) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : input.url;
+        urls.push(url);
+        if (url.includes(JIKAN_HOST)) {
+          throw new Error("Jikan must not be contacted post-cutoff");
+        }
+        return new Response("err", { status: 500 });
+      },
+      onTelemetry: (e) => telemetry.push(e),
+      jikanPageDelayMs: 0,
+      snapshotStore: store
+    });
+    await assert.rejects(() => source.fetchSeasonalAnime(2026, "FALL"));
+    assert.equal(jikanRequestCount(urls), 0);
+    assert.equal(telemetry[0]?.freshness, "unavailable");
+    assert.equal(telemetry[0]?.serve_path, "unavailable");
+    assert.notEqual(telemetry[0]?.freshness, "fresh");
+    assert.notEqual(telemetry[0]?.freshness, "stale");
+    assert.equal(telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+  }
+});
+
+test("ATB-737 post-cutoff AniList pagination success: multi-page, Jikan=0", async () => {
+  const h = createHarness({
+    nowMs: POST_CUTOFF,
+    anilist: { type: "anilist_ok", pages: 3, itemsPerPage: 2 },
+    jikan: { type: "jikan_ok" }
+  });
+  const result = await h.source.fetchSeasonalAnime(2026, "FALL");
+  assert.equal(result.servePath, "live_anilist");
+  assert.equal(result.freshness, "fresh");
+  assert.equal(result.items.length, 6);
+  assert.equal(h.recorder.anilistCalls, 3);
+  assert.equal(h.recorder.jikanCalls, 0);
+  assert.equal(jikanRequestCount(h.recorder.urls), 0);
+  assert.equal(h.telemetry[0]?.cutoff_regime, "post");
+  assert.equal(h.telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+});
+
+test("ATB-737 post-cutoff AniList page-cap failure: unavailable, Jikan=0", async () => {
+  const h = createHarness({
+    nowMs: POST_CUTOFF,
+    anilist: { type: "anilist_page_cap" },
+    jikan: { type: "jikan_ok" }
+  });
+  await assert.rejects(() => h.source.fetchSeasonalAnime(2026, "FALL"));
+  assert.equal(h.recorder.anilistCalls, ANILIST_MAX_PAGES);
+  assert.equal(h.recorder.jikanCalls, 0);
+  assert.equal(jikanRequestCount(h.recorder.urls), 0);
+  assert.equal(h.telemetry[0]?.freshness, "unavailable");
+  assert.equal(h.telemetry[0]?.serve_path, "unavailable");
+  assert.equal(h.telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+});
+
+test("ATB-737 yearly post-cutoff AniList success: one telemetry, Jikan=0", async () => {
+  const h = createHarness({
+    nowMs: POST_CUTOFF,
+    anilist: { type: "anilist_ok" },
+    jikan: { type: "jikan_ok" }
+  });
+  const result = await h.source.fetchYearlyAnime(2026);
+  assert.equal(result.servePath, "live_anilist");
+  assert.equal(result.freshness, "fresh");
+  assert.equal(h.recorder.anilistCalls, 4);
+  assert.equal(h.recorder.jikanCalls, 0);
+  assert.equal(jikanRequestCount(h.recorder.urls), 0);
+  assert.equal(h.telemetry.length, 1);
+  assert.equal(h.telemetry[0]?.seasonal_key, "2026:ALL");
+  assert.equal(h.telemetry[0]?.cutoff_regime, "post");
+  assert.equal(h.telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+});
+
+test("ATB-737 yearly post-cutoff AniList failure: unavailable, Jikan=0", async () => {
+  const h = createHarness({
+    nowMs: POST_CUTOFF,
+    anilist: { type: "anilist_http", status: 500 },
+    jikan: { type: "jikan_ok" }
+  });
+  await assert.rejects(() => h.source.fetchYearlyAnime(2026));
+  assert.equal(h.recorder.jikanCalls, 0);
+  assert.equal(jikanRequestCount(h.recorder.urls), 0);
+  assert.equal(h.telemetry.length, 1);
+  assert.equal(h.telemetry[0]?.seasonal_key, "2026:ALL");
+  assert.equal(h.telemetry[0]?.freshness, "unavailable");
+  assert.equal(h.telemetry[0]?.serve_path, "unavailable");
+  assert.equal(h.telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
+});
+
+test("ATB-737 durable yearly fresh short-circuit post-cutoff, Jikan=0", async () => {
+  const store = createMapSnapshotStore([
+    durableRecord({
+      seasonalKey: "2026:ALL",
+      items: [catalogItem("y1"), catalogItem("y2")],
+      fetchedAt: new Date(AT_CUTOFF).toISOString()
+    })
+  ]);
+  const urls: string[] = [];
+  const telemetry: SeasonalTelemetryEvent[] = [];
+  const source = createSeasonalAnimeSource({
+    now: () => AT_CUTOFF + 30_000,
+    fetch: async (input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      urls.push(url);
+      throw new Error("yearly durable fresh must not hit upstream");
+    },
+    onTelemetry: (e) => telemetry.push(e),
+    jikanPageDelayMs: 0,
+    snapshotStore: store
+  });
+
+  const result = await source.fetchYearlyAnime(2026);
+  assert.equal(result.servePath, "fresh_direct");
+  assert.equal(result.freshness, "fresh");
+  assert.equal(result.items.length, 2);
+  assert.equal(urls.length, 0);
+  assert.equal(jikanRequestCount(urls), 0);
+  assert.equal(telemetry[0]?.seasonal_key, "2026:ALL");
+  assert.equal(telemetry[0]?.source, "db_snapshot");
+  assert.equal(telemetry[0]?.jikan_outcome, "skipped_post_cutoff");
 });
