@@ -181,7 +181,7 @@ test("prepareFeedbackImageForUpload reports decode/encode and fit failures", asy
   }
 });
 
-test("client copy mentions auto-compress and 20MB select limit", () => {
+test("client keeps image selection clear and explains submit requirements", () => {
   const ui = readFileSync(
     path.join(projectRoot, "app/feedback/feedback-client.tsx"),
     "utf8"
@@ -190,6 +190,15 @@ test("client copy mentions auto-compress and 20MB select limit", () => {
   assert.match(ui, /自動圧縮/);
   assert.match(ui, /画像を圧縮しています/);
   assert.match(ui, /元画像は送りません/);
-  assert.match(ui, /event\.target\.value = ""/);
+  assert.match(ui, /selectedImageName/);
+  assert.match(ui, /画像を添付しなくても送信できます/);
+  assert.match(ui, /画像を削除/);
+  assert.match(ui, /aria-live="polite"/);
+  assert.match(ui, /内容をあと/);
+  assert.match(ui, /公開についての確認にチェックしてください/);
+  assert.doesNotMatch(
+    ui,
+    /const file = event\.target\.files\?\.\[0\] \?\? null;\s*event\.target\.value = ""/
+  );
   assert.doesNotMatch(ui, /画像は3MB以下にしてください。/);
 });

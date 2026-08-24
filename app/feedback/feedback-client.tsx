@@ -35,6 +35,7 @@ export function FeedbackClient() {
   const [level, setLevel] = useState<FeedbackLevel>("improvement");
   const [body, setBody] = useState("");
   const [preparedImage, setPreparedImage] = useState<PreparedImage | null>(null);
+  const [selectedImageName, setSelectedImageName] = useState<string | null>(null);
   const [imagePrepState, setImagePrepState] = useState<ImagePrepState>("idle");
   const [honeypot, setHoneypot] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
@@ -59,9 +60,23 @@ export function FeedbackClient() {
     bodyLength >= FEEDBACK_BODY_MIN &&
     bodyLength <= FEEDBACK_BODY_MAX;
 
+  const disabledReason = (() => {
+    if (submitState === "submitting") return "送信中です。";
+    if (isCompressing) return "画像の圧縮完了をお待ちください。";
+    if (bodyLength < FEEDBACK_BODY_MIN) {
+      return `内容をあと${FEEDBACK_BODY_MIN - bodyLength}文字入力してください。`;
+    }
+    if (bodyLength > FEEDBACK_BODY_MAX) {
+      return `内容を${FEEDBACK_BODY_MAX}文字以内にしてください。`;
+    }
+    if (!agreed) return "公開についての確認にチェックしてください。";
+    return null;
+  })();
+
   function clearImageSelection() {
     imageRequestIdRef.current += 1;
     setPreparedImage(null);
+    setSelectedImageName(null);
     setImagePrepState("idle");
     if (imageInputRef.current) {
       imageInputRef.current.value = "";
@@ -70,8 +85,6 @@ export function FeedbackClient() {
 
   async function onImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
-    // 同一ファイルの再選択でも change が発火するよう毎回クリアする
-    event.target.value = "";
     setErrorMessage(null);
 
     if (!file) {
@@ -81,6 +94,7 @@ export function FeedbackClient() {
 
     const requestId = imageRequestIdRef.current + 1;
     imageRequestIdRef.current = requestId;
+    setSelectedImageName(file.name);
     setPreparedImage(null);
     setImagePrepState("compressing");
 
@@ -92,8 +106,10 @@ export function FeedbackClient() {
 
     if (!result.ok) {
       setPreparedImage(null);
+      setSelectedImageName(null);
       setImagePrepState("idle");
       setErrorMessage(result.error);
+      event.target.value = "";
       return;
     }
 
@@ -159,7 +175,9 @@ export function FeedbackClient() {
 
   const imageStatusText = (() => {
     if (isCompressing) {
-      return "画像を圧縮しています…";
+      return selectedImageName
+        ? `${selectedImageName} を圧縮しています…`
+        : "画像を圧縮しています…";
     }
     if (!preparedImage) {
       return null;
@@ -167,9 +185,9 @@ export function FeedbackClient() {
     const original = formatFeedbackImageBytes(preparedImage.originalBytes);
     const output = formatFeedbackImageBytes(preparedImage.outputBytes);
     if (preparedImage.compressed) {
-      return `圧縮完了: ${original} → 送信サイズ ${output}`;
+      return `選択中: ${selectedImageName}（圧縮 ${original} → ${output}）`;
     }
-    return `選択中: 画像 1 枚（${output}）`;
+    return `選択中: ${selectedImageName}（${output}）`;
   })();
 
   return (
@@ -248,9 +266,12 @@ export function FeedbackClient() {
             <span className="feedback-hint">{bodyHint}</span>
           </label>
 
-          <label className="feedback-field">
-            <span className="feedback-label">画像（任意・1枚）</span>
+          <div className="feedback-field">
+            <label className="feedback-label" htmlFor="feedback-image">
+              画像（任意・1枚）
+            </label>
             <input
+              id="feedback-image"
               ref={imageInputRef}
               className="feedback-file"
               type="file"
@@ -260,20 +281,27 @@ export function FeedbackClient() {
               disabled={submitState === "submitting"}
             />
             <span className="feedback-hint">
-              JPEG / PNG / WebP・最大{" "}
+              画像を添付しなくても送信できます。JPEG / PNG / WebP・最大{" "}
               {formatFeedbackImageBytes(FEEDBACK_IMAGE_SELECT_MAX_BYTES)}
               。3MB超は端末内で自動圧縮してから送信します（元画像は送りません）。位置情報などのメタデータはサーバーで除去します。
             </span>
             {imageStatusText ? (
-              <span
-                className="feedback-file-name"
-                role={isCompressing ? "status" : undefined}
-                aria-live={isCompressing ? "polite" : undefined}
-              >
-                {imageStatusText}
-              </span>
+              <div className="feedback-file-selection">
+                <span className="feedback-file-name" role="status" aria-live="polite">
+                  {imageStatusText}
+                </span>
+                <button
+                  type="button"
+                  className="feedback-remove-image"
+                  onClick={clearImageSelection}
+                  disabled={submitState === "submitting"}
+                  aria-label={`${selectedImageName ?? "選択した画像"}を削除`}
+                >
+                  画像を削除
+                </button>
+              </div>
             ) : null}
-          </label>
+          </div>
 
           {/* honeypot: 視覚的に隠す。ラベルも曖昧に。 */}
           <div className="feedback-honeypot" aria-hidden="true">
@@ -312,6 +340,7 @@ export function FeedbackClient() {
             type="submit"
             className="command-button feedback-submit"
             disabled={!canSubmit}
+            aria-describedby={disabledReason ? "feedback-disabled-reason" : undefined}
           >
             {isCompressing
               ? "圧縮中…"
@@ -319,6 +348,13 @@ export function FeedbackClient() {
                 ? "送信中…"
                 : "匿名で送信する"}
           </button>
+          <p
+            id="feedback-disabled-reason"
+            className="feedback-hint feedback-disabled-reason"
+            aria-live="polite"
+          >
+            {disabledReason ?? "送信できます。"}
+          </p>
         </form>
       )}
     </main>
