@@ -7330,6 +7330,34 @@ a.cl-history-title:hover {
   line-height: 1.4;
 }
 
+.feedback-file-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.feedback-remove-image {
+  min-height: 44px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+
+.feedback-remove-image:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.feedback-disabled-reason {
+  margin: -0.35rem 0 0;
+  text-align: center;
+}
+
 .feedback-honeypot {
   position: absolute;
   left: -10000px;
