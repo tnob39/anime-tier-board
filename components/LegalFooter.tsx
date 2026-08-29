@@ -35,7 +35,7 @@ const META_STYLE: CSSProperties = {
 export function LegalFooter() {
   return (
     <footer role="contentinfo" aria-label="法務情報" style={FOOTER_STYLE}>
-      <nav aria-label="プライバシー・利用規約・お問い合わせ" style={NAV_STYLE}>
+      <nav aria-label="プライバシー・利用規約・お問い合わせ・設定" style={NAV_STYLE}>
         <Link href="/privacy" style={LINK_STYLE}>
           プライバシーポリシー
         </Link>
@@ -44,6 +44,9 @@ export function LegalFooter() {
         </Link>
         <Link href="/contact" style={LINK_STYLE}>
           お問い合わせ
+        </Link>
+        <Link href="/settings" style={LINK_STYLE}>
+          設定
         </Link>
       </nav>
       <p style={META_STYLE}>運営: numanie（個人開発プロジェクト）</p>

@@ -501,17 +501,21 @@ test("source contract: settings UI two-step deletion and signOut only after succ
 
   assert.match(ui, /アカウントデータの削除/);
   assert.match(ui, /Googleアカウント/);
-  assert.match(ui, /取り消せません|完全に削除/);
+  assert.match(ui, /取り消せません|削除されます/);
   assert.match(ui, /アカウントデータを削除する/);
   assert.match(ui, /method:\s*["']DELETE["']/);
   assert.match(ui, /\/api\/account/);
   assert.match(ui, /confirmation:\s*deleteInput/);
   assert.match(ui, /signOut\(\s*\{\s*callbackUrl:\s*["']\/["']\s*\}\s*\)/);
-  assert.match(ui, /role=["']alert["']/);
-  assert.match(ui, /aria-live=["']assertive["']/);
+  assert.match(ui, /role=\{[\s\S]*["']alert["']/);
+  assert.match(ui, /aria-live=\{[\s\S]*["']assertive["']/);
   assert.match(ui, /キャンセル/);
   assert.match(ui, /deletePending/);
   assert.match(ui, /ACCOUNT_DELETION_CONFIRMATION/);
+  assert.match(ui, /バックアップ|ログ|キャッシュ/);
+  assert.match(ui, /削除が完了しました/);
+  assert.match(ui, /signOutFailure|ログアウトに失敗/);
+  assert.match(ui, /削除を再試行する|再試行/);
 
   // First button must not call API; only open confirm
   assert.match(ui, /openDeleteConfirm|setShowDeleteConfirm\(true\)/);

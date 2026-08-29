@@ -5346,6 +5346,19 @@ a.cl-history-title:hover {
   accent-color: var(--accent);
 }
 
+.settings-export-actions,
+.settings-deletion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.settings-export-actions .command-button,
+.settings-deletion-actions .command-button {
+  min-height: 44px;
+}
+
 /* ========================================
    WelcomeModal
 ======================================== */

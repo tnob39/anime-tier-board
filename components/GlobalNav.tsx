@@ -39,6 +39,7 @@ export function GlobalNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+
   useEffect(() => {
     if (!isUserMenuOpen) return;
 
@@ -156,10 +157,23 @@ export function GlobalNav() {
                         href="/mypage"
                         className="user-dropdown-item"
                         role="menuitem"
-                        onClick={() => setIsUserMenuOpen(false)}
+                        onClick={() => {
+                          // Defer unmount so App Router navigation is not cancelled.
+                          window.setTimeout(() => setIsUserMenuOpen(false), 0);
+                        }}
                       >
                         <User size={15} aria-hidden="true" />
                         <span>マイページ</span>
+                      </Link>
+                      <Link
+                        href="/settings"
+                        className="user-dropdown-item"
+                        role="menuitem"
+                        onClick={() => {
+                          window.setTimeout(() => setIsUserMenuOpen(false), 0);
+                        }}
+                      >
+                        <span>設定</span>
                       </Link>
                       <button
                         type="button"
@@ -193,7 +207,10 @@ export function GlobalNav() {
       </nav>
 
       {!navV5 ? (
-        <HamburgerMenu isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+        <HamburgerMenu
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+        />
       ) : null}
     </>
   );
