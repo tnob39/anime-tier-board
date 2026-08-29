@@ -28,6 +28,7 @@ const FOOTER_LINKS = [
   { name: "プライバシーポリシー", href: "/privacy" },
   { name: "利用規約", href: "/terms" },
   { name: "お問い合わせ", href: "/contact" },
+  { name: "設定", href: "/settings" },
 ] as const;
 
 async function expectLegalFooter(page: Page) {
@@ -124,9 +125,45 @@ test.describe("ATB-740 legal pages (guest)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "お問い合わせ" })).toBeVisible();
   });
 
+  test("privacy export section reflects implemented settings export", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/privacy");
+
+    const exportSection = page.locator("#privacy-export").locator("..");
+    await expect(page.getByRole("heading", { level: 2, name: "8. データエクスポート" })).toBeVisible();
+    await expect(exportSection).toContainText("設定");
+    await expect(exportSection).not.toContainText("準備中");
+    await expect(page.getByRole("link", { name: "設定" }).first()).toHaveAttribute(
+      "href",
+      "/settings"
+    );
+  });
+
+  test("guest footer 設定 preserves login-required returnTo", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/privacy");
+
+    const settingsLink = page
+      .getByRole("contentinfo", { name: "法務情報" })
+      .getByRole("link", { name: "設定", exact: true });
+    await settingsLink.scrollIntoViewIfNeeded();
+    await Promise.all([
+      page.waitForURL((url) => {
+        const u = new URL(url);
+        return (
+          u.pathname === "/" &&
+          u.searchParams.get("login") === "required" &&
+          u.searchParams.get("returnTo") === "/settings"
+        );
+      }),
+      settingsLink.click()
+    ]);
+  });
+
   test("public share shell still exposes legal footer", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/share/e2e-legal-footer-probe");
+    // Probe share id may keep network activity open; footer is in the shell HTML.
+    await page.goto("/share/e2e-legal-footer-probe", { waitUntil: "domcontentloaded" });
     await expectLegalFooter(page);
   });
 });

@@ -45,7 +45,9 @@ export default function ContactPage() {
           <p>次のような内容を /feedback から送れます。</p>
           <ul style={LIST_STYLE}>
             <li>プライバシーに関する質問・指摘</li>
-            <li>データエクスポートに関する要望（機能は準備中）</li>
+            <li>
+              データエクスポートに関する要望・不具合報告（設定画面のエクスポート機能）
+            </li>
             <li>データ削除に関する要望・不具合報告</li>
             <li>権利侵害に関する申告</li>
             <li>一般的な要望・改善アイデア・不具合報告</li>
@@ -67,7 +69,7 @@ export default function ContactPage() {
               <Link href="/terms">利用規約</Link>
             </li>
             <li>
-              <Link href="/settings">設定（アカウントデータの削除機能）</Link>
+              <Link href="/settings">設定（データのエクスポート・削除）</Link>
             </li>
           </ul>
         </section>

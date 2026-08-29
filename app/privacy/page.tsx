@@ -97,7 +97,9 @@ export default function PrivacyPage() {
         <section style={SECTION_STYLE} aria-labelledby="privacy-export">
           <h2 id="privacy-export">8. データエクスポート</h2>
           <p>
-            ユーザーデータのエクスポート機能は準備中です。現状の手続きについては
+            ログイン後の
+            <Link href="/settings">設定</Link>
+            画面から、アプリ内に保存した本人データのJSONエクスポートを実行できます。通知の暗号鍵や端末の認証情報などの秘密値はエクスポートに含まれません。手続きや不具合の相談は
             <Link href="/contact">お問い合わせ</Link>
             （公式窓口: <Link href="/feedback">/feedback</Link>
             ）からご連絡ください。
