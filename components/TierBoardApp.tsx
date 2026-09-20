@@ -44,6 +44,11 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import {
+  useDisplayMode,
+  type DisplayMode
+} from "@/components/display-mode/DisplayModeProvider";
+import { AsyncState } from "@/components/ui/AsyncState";
 import { track } from "@/lib/analytics";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import { getAnimePopularity } from "@/lib/anime-popularity";
@@ -51,7 +56,7 @@ import {
   fetchSeasonalAnimeClient,
   seedSeasonalAnimeCache,
 } from "@/lib/seasonal-anime-client-cache";
-import { getCurrentAnimeSeason } from "@/lib/season";
+import { getCurrentAnimeSeason, normalizeSeason } from "@/lib/season";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import {
@@ -150,6 +155,147 @@ const nextTierColors = [
   "#2dd4bf"
 ];
 
+export type RatingQueueSeasonItem = {
+  id: string;
+  season?: AnimeSeason | string | null;
+  seasonYear?: number | null;
+};
+
+export type RatingQueueTierLike = {
+  id: string;
+  itemIds: string[];
+};
+
+export type RatingQueueUndoSnapshot = {
+  itemId: string;
+  fromTierId: string;
+  fromIndex: number;
+};
+
+type StatusLoadState = "idle" | "loading" | "ready" | "error";
+
+/**
+ * Exact current-season match by item metadata only — never titles.
+ * Missing or unrecognized season/year must not match (fail-closed).
+ */
+export function matchesRatingQueueSeason(
+  item: Pick<RatingQueueSeasonItem, "season" | "seasonYear">,
+  season: AnimeSeason,
+  seasonYear: number
+): boolean {
+  if (typeof item.seasonYear !== "number" || !Number.isFinite(item.seasonYear)) {
+    return false;
+  }
+  if (item.seasonYear !== seasonYear) {
+    return false;
+  }
+  if (item.season == null || String(item.season).length === 0) {
+    return false;
+  }
+  const normalized = normalizeSeason(String(item.season));
+  if (!normalized || normalized !== season) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Completed + current board season + present in items + currently unranked.
+ * Identity is anime ID only. Deferred IDs are skipped for this session.
+ */
+export function selectRatingQueueCandidateIds(input: {
+  statusMap: Record<string, ViewingStatus>;
+  unrankedItemIds: readonly string[];
+  itemsById: ReadonlyMap<string, RatingQueueSeasonItem>;
+  season: AnimeSeason;
+  seasonYear: number;
+  deferredIds: ReadonlySet<string>;
+}): string[] {
+  const { statusMap, unrankedItemIds, itemsById, season, seasonYear, deferredIds } =
+    input;
+  const seen = new Set<string>();
+  const candidateIds: string[] = [];
+
+  for (const itemId of unrankedItemIds) {
+    if (!itemId || seen.has(itemId) || deferredIds.has(itemId)) {
+      continue;
+    }
+    seen.add(itemId);
+    if (statusMap[itemId] !== "completed") {
+      continue;
+    }
+    const item = itemsById.get(itemId);
+    if (!item) {
+      continue;
+    }
+    if (!matchesRatingQueueSeason(item, season, seasonYear)) {
+      continue;
+    }
+    candidateIds.push(itemId);
+  }
+
+  return candidateIds;
+}
+
+export function restoreItemToExactPosition<T extends RatingQueueTierLike>(
+  tiers: T[],
+  snapshot: RatingQueueUndoSnapshot
+): T[] {
+  const target = tiers.find((tier) => tier.id === snapshot.fromTierId);
+  if (!target) {
+    return tiers;
+  }
+
+  const stripped = tiers.map((tier) => ({
+    ...tier,
+    itemIds: tier.itemIds.filter((id) => id !== snapshot.itemId)
+  }));
+
+  return stripped.map((tier) => {
+    if (tier.id !== snapshot.fromTierId) {
+      return tier;
+    }
+    const nextIds = [...tier.itemIds];
+    const index = Math.max(0, Math.min(snapshot.fromIndex, nextIds.length));
+    nextIds.splice(index, 0, snapshot.itemId);
+    return {
+      ...tier,
+      itemIds: nextIds
+    };
+  });
+}
+
+export function placeItemOnTierOnce<T extends RatingQueueTierLike>(
+  tiers: T[],
+  itemId: string,
+  targetTierId: string
+): T[] {
+  const sourceTier = tiers.find((tier) => tier.itemIds.includes(itemId));
+  const targetTier = tiers.find((tier) => tier.id === targetTierId);
+  if (!sourceTier || !targetTier || sourceTier.id === targetTierId) {
+    return tiers;
+  }
+
+  return tiers.map((tier) => {
+    if (tier.id === sourceTier.id) {
+      return {
+        ...tier,
+        itemIds: tier.itemIds.filter((id) => id !== itemId)
+      };
+    }
+    if (tier.id === targetTierId) {
+      if (tier.itemIds.includes(itemId)) {
+        return tier;
+      }
+      return {
+        ...tier,
+        itemIds: [...tier.itemIds, itemId]
+      };
+    }
+    return tier;
+  });
+}
+
 type TierBoardAppProps = {
   initialSeasonalAnime?: AnimeItem[];
   initialYear?: number;
@@ -230,6 +376,14 @@ export function TierBoardApp({
   const [moveHintSeen, setMoveHintSeen] = useState(true);
   const [poolDrawerOpen, setPoolDrawerOpen] = useState(false);
   const [moveAnnouncement, setMoveAnnouncement] = useState<string | null>(null);
+  const [statusLoadState, setStatusLoadState] = useState<StatusLoadState>("idle");
+  const [statusReloadToken, setStatusReloadToken] = useState(0);
+  const [deferredRatingIds, setDeferredRatingIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [lastQueuePlacement, setLastQueuePlacement] =
+    useState<RatingQueueUndoSnapshot | null>(null);
+  const { mode: displayMode } = useDisplayMode();
   const moveAnnouncementTimeoutRef = useRef<number | null>(null);
   const dragOriginTierIdRef = useRef<string | null>(null);
   /** pending until session settles; evaluating/protected/expired/none after auth-return guard. */
@@ -326,6 +480,40 @@ export function TierBoardApp({
   );
   const unrankedTier = visibleTiers.find((tier) => tier.id === UNRANKED_TIER_ID);
   const rankedTiers = visibleTiers.filter((tier) => tier.id !== UNRANKED_TIER_ID);
+  const ratingQueueItemMap = useMemo(
+    () => new Map(items.map((item) => [item.id, item])),
+    [items]
+  );
+  const ratingQueueCandidateIds = useMemo(() => {
+    if (!board) {
+      return [];
+    }
+    const unrankedItemIds =
+      board.tiers.find((tier) => tier.id === UNRANKED_TIER_ID)?.itemIds ?? [];
+    return selectRatingQueueCandidateIds({
+      statusMap,
+      unrankedItemIds,
+      itemsById: ratingQueueItemMap,
+      season,
+      seasonYear,
+      deferredIds: deferredRatingIds
+    });
+  }, [
+    board,
+    deferredRatingIds,
+    ratingQueueItemMap,
+    season,
+    seasonYear,
+    statusMap
+  ]);
+  const ratingQueueCurrentId = ratingQueueCandidateIds[0] ?? null;
+  const ratingQueueCurrentItem = ratingQueueCurrentId
+    ? ratingQueueItemMap.get(ratingQueueCurrentId) ?? null
+    : null;
+  const ratingQueueCurrentTierId =
+    board && ratingQueueCurrentId
+      ? findTierIdByItemId(board.tiers, ratingQueueCurrentId)
+      : null;
   const tierIdSet = useMemo(
     () => new Set(board?.tiers.map((tier) => tier.id) ?? []),
     [board?.tiers]
@@ -517,6 +705,7 @@ export function TierBoardApp({
   useEffect(() => {
     if (!isAuthenticated) {
       setStatusMap({});
+      setStatusLoadState("idle");
       return;
     }
 
@@ -526,18 +715,12 @@ export function TierBoardApp({
     }
 
     let cancelled = false;
+    setStatusLoadState("loading");
 
     fetch("/api/statuses", { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) {
-          let message = "視聴ステータスの取得に失敗しました。";
-          try {
-            const body = (await response.json()) as { error?: string };
-            if (body.error) message = body.error;
-          } catch {
-            // ignore
-          }
-          throw new Error(message);
+          throw new Error("視聴ステータスの取得に失敗しました。");
         }
         return response.json() as Promise<StatusApiResponse>;
       })
@@ -551,22 +734,24 @@ export function TierBoardApp({
           nextStatuses[record.animeId] = record.status;
         }
         setStatusMap(nextStatuses);
+        setStatusLoadState("ready");
       })
-      .catch((statusError) => {
+      .catch(() => {
         if (cancelled) {
           return;
         }
-        setWarning(
-          statusError instanceof Error
-            ? statusError.message
-            : "視聴ステータスの取得に失敗しました。"
-        );
+        // Keep board editing available: status failure stays on the queue surface.
+        setStatusLoadState("error");
       });
 
     return () => {
       cancelled = true;
     };
-  }, [authReturnReady, authReturnPhase, isAuthenticated]);
+  }, [authReturnReady, authReturnPhase, isAuthenticated, statusReloadToken]);
+
+  useEffect(() => {
+    setLastQueuePlacement(null);
+  }, [season, seasonYear]);
 
   useEffect(() => {
     if (!board) {
@@ -864,6 +1049,88 @@ export function TierBoardApp({
     }
 
     setMoveMenuItemId(null);
+  }
+
+  function handleQueueDefer() {
+    if (!ratingQueueCurrentId || isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+    setDeferredRatingIds((current) => {
+      const next = new Set(current);
+      next.add(ratingQueueCurrentId);
+      return next;
+    });
+  }
+
+  function handleQueuePlace(targetTierId: string) {
+    if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+    const itemId = ratingQueueCurrentId;
+    if (!itemId || !board) {
+      return;
+    }
+    const sourceTierId = findTierIdByItemId(board.tiers, itemId);
+    if (
+      !sourceTierId ||
+      sourceTierId === targetTierId ||
+      !isTierId(board.tiers, targetTierId)
+    ) {
+      return;
+    }
+    const fromIndex =
+      board.tiers.find((tier) => tier.id === sourceTierId)?.itemIds.indexOf(itemId) ??
+      -1;
+    if (fromIndex < 0) {
+      return;
+    }
+
+    setLastQueuePlacement({
+      itemId,
+      fromTierId: sourceTierId,
+      fromIndex
+    });
+    updateBoard((current) => {
+      const nextTiers = placeItemOnTierOnce(current.tiers, itemId, targetTierId);
+      if (nextTiers === current.tiers) {
+        return current;
+      }
+      return {
+        ...current,
+        tiers: nextTiers
+      };
+    });
+
+    const item = ratingQueueItemMap.get(itemId);
+    const tier = board.tiers.find((candidate) => candidate.id === targetTierId);
+    if (item && tier) {
+      announceMove(item.title, tier.label);
+    }
+  }
+
+  function handleQueueUndo() {
+    if (!lastQueuePlacement || isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+      return;
+    }
+    const snapshot = lastQueuePlacement;
+    setLastQueuePlacement(null);
+
+    updateBoard((current) => {
+      const nextTiers = restoreItemToExactPosition(current.tiers, snapshot);
+      if (nextTiers === current.tiers) {
+        return current;
+      }
+      return {
+        ...current,
+        tiers: nextTiers
+      };
+    });
+
+    const item = ratingQueueItemMap.get(snapshot.itemId);
+    const tier = board?.tiers.find((candidate) => candidate.id === snapshot.fromTierId);
+    if (item && tier) {
+      announceMove(item.title, tier.label);
+    }
   }
 
   async function handleStatusChange(item: AnimeItem, status: ViewingStatus | null) {
@@ -1332,6 +1599,22 @@ export function TierBoardApp({
           </div>
         ) : null}
 
+        {isAuthenticated && !isAuthReturnLocked ? (
+          <RatingQueuePanel
+            statusLoadState={statusLoadState}
+            displayMode={displayMode}
+            remainingCount={ratingQueueCandidateIds.length}
+            currentItem={ratingQueueCurrentItem}
+            currentTierId={ratingQueueCurrentTierId}
+            tiers={board?.tiers ?? []}
+            canUndo={Boolean(lastQueuePlacement)}
+            onDefer={handleQueueDefer}
+            onPlace={handleQueuePlace}
+            onUndo={handleQueueUndo}
+            onRetryStatuses={() => setStatusReloadToken((token) => token + 1)}
+          />
+        ) : null}
+
         <DndContext
           sensors={sensors}
           collisionDetection={collisionDetection}
@@ -1449,6 +1732,168 @@ export function TierBoardApp({
         ) : null}
       </main>
     </div>
+  );
+}
+
+function RatingQueuePanel({
+  statusLoadState,
+  displayMode,
+  remainingCount,
+  currentItem,
+  currentTierId,
+  tiers,
+  canUndo,
+  onDefer,
+  onPlace,
+  onUndo,
+  onRetryStatuses
+}: {
+  statusLoadState: StatusLoadState;
+  displayMode: DisplayMode;
+  remainingCount: number;
+  currentItem: AnimeItem | null;
+  currentTierId: string | null;
+  tiers: TierRow[];
+  canUndo: boolean;
+  onDefer: () => void;
+  onPlace: (tierId: string) => void;
+  onUndo: () => void;
+  onRetryStatuses: () => void;
+}) {
+  const showCandidate = statusLoadState === "ready" && currentItem;
+  const nativeTitle =
+    currentItem?.titles.native || currentItem?.title || "";
+
+  return (
+    <section
+      className={
+        displayMode === "simple" ? "rating-queue rating-queue--simple" : "rating-queue"
+      }
+      aria-label="評価待ち"
+    >
+      <div className="rating-queue-header">
+        <h2 className="rating-queue-title">評価待ち</h2>
+        {statusLoadState === "ready" ? (
+          <p className="rating-queue-count" aria-live="polite">
+            残り {remainingCount} 件
+          </p>
+        ) : null}
+      </div>
+
+      {statusLoadState === "loading" ? (
+        <AsyncState
+          status="loading"
+          title="評価待ちを読み込み中"
+          description="視聴ステータスを取得しています。Tier表の編集は続けられます。"
+        />
+      ) : null}
+
+      {statusLoadState === "error" ? (
+        <AsyncState
+          status="error"
+          title="評価待ちを取得できませんでした。"
+          description="Tier表の編集は続けられます。"
+          action={{ label: "再試行", onClick: onRetryStatuses }}
+        />
+      ) : null}
+
+      {statusLoadState === "ready" && !currentItem ? (
+        <AsyncState
+          status="empty"
+          title="評価待ちはありません"
+          description="完了済みで未分類の作品があると、ここに1件ずつ表示されます。"
+        />
+      ) : null}
+
+      {showCandidate && currentItem ? (
+        <>
+          <div className="rating-queue-card" data-anime-id={currentItem.id}>
+            <div className="rating-queue-poster">
+              {displayMode === "simple" ? null : currentItem.proxiedImageUrl ? (
+                <img
+                  src={currentItem.proxiedImageUrl}
+                  alt={nativeTitle}
+                  draggable={false}
+                />
+              ) : (
+                <AnimeCardPlaceholder title={nativeTitle} draggable={false} />
+              )}
+            </div>
+            <div className="rating-queue-card-body">
+              <p className="rating-queue-item-title">{nativeTitle}</p>
+              {currentItem.titles.romaji &&
+              currentItem.titles.romaji !== nativeTitle ? (
+                <p className="rating-queue-item-sub">{currentItem.titles.romaji}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="rating-queue-toolbar">
+            <button
+              className="command-button rating-queue-later"
+              type="button"
+              onClick={onDefer}
+            >
+              あとで
+            </button>
+          </div>
+
+          <p className="rating-queue-section-label">移動先を選択</p>
+          <div className="rating-queue-destinations move-tier-grid">
+            {tiers.map((tier) => {
+              const isCurrent = tier.id === currentTierId;
+              return (
+                <button
+                  key={tier.id}
+                  className={
+                    isCurrent ? "move-tier-button is-current" : "move-tier-button"
+                  }
+                  type="button"
+                  disabled={isCurrent}
+                  aria-current={isCurrent ? "true" : undefined}
+                  aria-label={isCurrent ? `${tier.label}（現在）` : tier.label}
+                  style={
+                    {
+                      "--tier-color": tier.color,
+                      "--tier-text": getReadableTextColor(tier.color)
+                    } as React.CSSProperties
+                  }
+                  onKeyDown={(event) => {
+                    if (isCurrent) {
+                      return;
+                    }
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onPlace(tier.id);
+                    }
+                  }}
+                  onClick={() => {
+                    if (isCurrent) {
+                      return;
+                    }
+                    onPlace(tier.id);
+                  }}
+                >
+                  <span>{tier.label}</span>
+                  {isCurrent ? <small>現在</small> : null}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
+
+      {canUndo ? (
+        <button
+          className="command-button rating-queue-undo"
+          type="button"
+          onClick={onUndo}
+        >
+          元に戻す
+        </button>
+      ) : null}
+    </section>
   );
 }
 
