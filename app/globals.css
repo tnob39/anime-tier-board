@@ -7423,3 +7423,155 @@ a.cl-history-title:hover {
   color: var(--muted);
   line-height: 1.55;
 }
+
+.rating-queue {
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.rating-queue-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.rating-queue-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.rating-queue-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rating-queue-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 8px 0 12px;
+}
+
+.rating-queue-poster {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 90px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.rating-queue-poster img,
+.rating-queue-poster .anime-card-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rating-queue-card-body {
+  min-width: 0;
+}
+
+.rating-queue-item-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.rating-queue-item-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.rating-queue-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rating-queue-later,
+.rating-queue-undo {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.rating-queue-section-label {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rating-queue-destinations {
+  margin-bottom: 12px;
+}
+
+.rating-queue .move-tier-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.rating-queue .move-tier-button:disabled,
+.rating-queue .move-tier-button.is-current {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.rating-queue .move-tier-button:focus-visible,
+.rating-queue-later:focus-visible,
+.rating-queue-undo:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rating-queue .async-state {
+  margin: 0 0 12px;
+  padding: 16px 12px;
+}
+
+html[data-display-mode="simple"] .rating-queue-poster,
+.rating-queue--simple .rating-queue-poster {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rating-queue,
+  .rating-queue * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .rating-queue {
+    margin-bottom: 12px;
+    padding: 12px 10px;
+  }
+
+  .rating-queue-later,
+  .rating-queue-undo {
+    width: 100%;
+  }
+
+  .rating-queue-destinations {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  }
+}
