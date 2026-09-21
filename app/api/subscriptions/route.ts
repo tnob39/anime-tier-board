@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireUserId } from "@/lib/api/auth-helpers";
+import { requireUserId, requireWriteIdentity } from "@/lib/api/auth-helpers";
+import {
+  WRITE_BODY_MAX_BYTES,
+  admitCookieCapableWrite,
+} from "@/lib/api/write-admission";
+import { readJsonWithByteLimit } from "@/lib/api/write-request-guard";
 import { withApiRoute } from "@/lib/api/with-api-route";
-import { AppError } from "@/lib/errors/app-error";
 import { isValidServiceId } from "@/lib/streaming-services";
 import { getSubscriptionState, replaceSubscriptions } from "@/lib/subscriptions";
 
@@ -22,19 +26,17 @@ export const GET = withApiRoute("subscriptions.GET", async () => {
 });
 
 export const POST = withApiRoute("subscriptions.POST", async (request: Request) => {
-  const userId = await requireUserId();
-  let payload: SubscriptionPayload;
+  const identity = await requireWriteIdentity();
+  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  if (denied) return denied;
+  const userId = identity.userId;
 
-  try {
-    payload = (await request.json()) as SubscriptionPayload;
-  } catch {
-    throw new AppError({
-      message: "リクエストの形式が正しくありません。",
-      status: 400,
-      code: "VALIDATION",
-      expose: true
-    });
-  }
+  const parsed = await readJsonWithByteLimit<SubscriptionPayload>(
+    request,
+    WRITE_BODY_MAX_BYTES.subscription
+  );
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   const serviceIds = Array.isArray(payload.serviceIds)
     ? payload.serviceIds.filter((serviceId): serviceId is string => typeof serviceId === "string")

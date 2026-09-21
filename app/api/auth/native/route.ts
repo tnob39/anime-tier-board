@@ -7,6 +7,11 @@ import {
   revokeSessionFromAuthorizationHeader,
   verifyGoogleIdToken,
 } from "@/lib/api/native-auth";
+import {
+  WRITE_BODY_MAX_BYTES,
+  consumeWriteRateLimit,
+} from "@/lib/api/write-admission";
+import { readJsonWithByteLimit } from "@/lib/api/write-request-guard";
 import { AppError } from "@/lib/errors/app-error";
 
 type ExchangePayload = {
@@ -34,7 +39,18 @@ function isValidExchangePayload(value: unknown): value is ExchangePayload {
 }
 
 export const POST = withApiRoute("auth.native.POST", async (request: Request) => {
-  const rawPayload = await request.json();
+  const limited = consumeWriteRateLimit(request, {
+    policy: "nativeAuth",
+    requireIp: true,
+  });
+  if (limited) return limited;
+
+  const parsed = await readJsonWithByteLimit<unknown>(
+    request,
+    WRITE_BODY_MAX_BYTES.nativeAuth
+  );
+  if (!parsed.ok) return parsed.response;
+  const rawPayload = parsed.data;
   if (!isValidExchangePayload(rawPayload)) {
     throw new AppError({
       message: "リクエストの形式が不正です。",
@@ -119,6 +135,11 @@ export const GET = withApiRoute("auth.native.GET", async (request: Request) => {
 });
 
 export const DELETE = withApiRoute("auth.native.DELETE", async (request: Request) => {
+  const limited = consumeWriteRateLimit(request, {
+    policy: "nativeAuth",
+    requireIp: true,
+  });
+  if (limited) return limited;
   await revokeSessionFromAuthorizationHeader(request.headers.get("authorization"));
   return NextResponse.json({ ok: true });
 });

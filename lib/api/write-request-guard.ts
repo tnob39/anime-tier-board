@@ -10,8 +10,16 @@ export type ReadJsonSuccess<T> = { ok: true; data: T };
 export type ReadJsonFailure = { ok: false; response: Response };
 export type ReadJsonResult<T> = ReadJsonSuccess<T> | ReadJsonFailure;
 
+export function jsonWriteError(
+  message: string,
+  status: number,
+  headers?: HeadersInit
+): Response {
+  return Response.json({ error: message }, { status, headers });
+}
+
 function jsonError(message: string, status: number): Response {
-  return Response.json({ error: message }, { status });
+  return jsonWriteError(message, status);
 }
 
 function isChunkedTransfer(headers: Headers): boolean {
@@ -96,7 +104,7 @@ export function assertSameOriginBrowserWrite(
   return null;
 }
 
-async function readBodyBytesWithLimit(
+export async function readBodyBytesWithLimit(
   request: Request,
   maxBytes: number
 ): Promise<ReadJsonResult<Uint8Array>> {
@@ -166,6 +174,44 @@ async function readBodyBytesWithLimit(
   return { ok: true, data: merged };
 }
 
+export type ReadFormDataSuccess = { ok: true; formData: FormData };
+export type ReadFormDataResult = ReadFormDataSuccess | ReadJsonFailure;
+
+/**
+ * formData decode 前に累積バイト上限を適用する。
+ * Content-Length 欠落・過少申告・chunked でも reader で打ち切る。
+ * 上限内なら content-type を保った Request を再構築してから formData する。
+ */
+export async function readFormDataWithByteLimit(
+  request: Request,
+  maxBytes: number
+): Promise<ReadFormDataResult> {
+  const bodyResult = await readBodyBytesWithLimit(request, maxBytes);
+  if (!bodyResult.ok) return bodyResult;
+
+  const contentType = request.headers.get("content-type");
+  if (contentType == null || contentType.trim() === "") {
+    return { ok: false, response: jsonError(WRITE_REQUEST_MALFORMED, 400) };
+  }
+
+  const headers = new Headers();
+  headers.set("content-type", contentType);
+  const copy = new ArrayBuffer(bodyResult.data.byteLength);
+  new Uint8Array(copy).set(bodyResult.data);
+
+  try {
+    const rebuilt = new Request(request.url, {
+      method: request.method || "POST",
+      headers,
+      body: copy,
+    });
+    const formData = await rebuilt.formData();
+    return { ok: true, formData };
+  } catch {
+    return { ok: false, response: jsonError(WRITE_REQUEST_MALFORMED, 400) };
+  }
+}
+
 /**
  * request.json/text/arrayBuffer を使わず、byte 上限付きで JSON を decode する。
  * - Content-Length 不正/負/非整数 → 400
@@ -221,4 +267,27 @@ export function parseCommentWriteBody(data: unknown): CommentWriteBodyResult {
   }
 
   return { ok: true, body };
+}
+
+export type ReactionWriteBodySuccess = { ok: true; kind: string };
+export type ReactionWriteBodyFailure = { ok: false; response: Response };
+export type ReactionWriteBodyResult =
+  | ReactionWriteBodySuccess
+  | ReactionWriteBodyFailure;
+
+/**
+ * reactions POST 用: decode 後の形状検証。
+ * 非 null object かつ kind が string のみ許可。
+ */
+export function parseReactionWriteBody(data: unknown): ReactionWriteBodyResult {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return { ok: false, response: jsonError(WRITE_REQUEST_MALFORMED, 400) };
+  }
+
+  const kind = (data as { kind?: unknown }).kind;
+  if (typeof kind !== "string") {
+    return { ok: false, response: jsonError(WRITE_REQUEST_MALFORMED, 400) };
+  }
+
+  return { ok: true, kind };
 }

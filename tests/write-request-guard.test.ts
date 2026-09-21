@@ -7,6 +7,8 @@ import {
   WRITE_REQUEST_TOO_LARGE,
   assertSameOriginBrowserWrite,
   parseCommentWriteBody,
+  parseReactionWriteBody,
+  readFormDataWithByteLimit,
   readJsonWithByteLimit,
 } from "../lib/api/write-request-guard.ts";
 
@@ -502,6 +504,23 @@ test("parseCommentWriteBody rejects null/array/non-string body with Japanese 400
   if (ok.ok) assert.equal(ok.body, "  hello  ");
 });
 
+test("parseReactionWriteBody rejects non-string kind with Japanese 400", async () => {
+  const cases: unknown[] = [null, [], { kind: 1 }, { kind: null }, {}];
+  for (const data of cases) {
+    const result = parseReactionWriteBody(data);
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.response.status, 400);
+      assert.deepEqual(await errorBody(result.response), {
+        error: WRITE_REQUEST_MALFORMED,
+      });
+    }
+  }
+  const ok = parseReactionWriteBody({ kind: "like" });
+  assert.equal(ok.ok, true);
+  if (ok.ok) assert.equal(ok.kind, "like");
+});
+
 test("source contract: comments POST wires auth→origin→shareId→guard decode→body shape", async () => {
   const { readFileSync } = await import("node:fs");
   const { fileURLToPath } = await import("node:url");
@@ -535,4 +554,113 @@ test("source contract: comments POST wires auth→origin→shareId→guard decod
   assert.ok(decodeIdx > postShareIdIdx);
   assert.ok(shapeIdx > decodeIdx);
   assert.ok(trimIdx > shapeIdx);
+
+  assert.match(source, /consumeWriteRateLimit/);
+  const rateIdx = source.indexOf('policy: "comment"');
+  assert.ok(rateIdx > originIdx);
+  assert.ok(decodeIdx > rateIdx);
+  assert.match(source, /export async function DELETE/);
+  assert.match(source, /delete from share_comments/);
+});
+
+function multipartPayload(
+  value: string,
+  boundary = "----atbTestBoundary"
+): { bytes: Uint8Array; contentType: string } {
+  const raw =
+    `--${boundary}\r\n` +
+    `Content-Disposition: form-data; name="level"\r\n\r\n` +
+    `${value}\r\n` +
+    `--${boundary}--\r\n`;
+  return {
+    bytes: encodeUtf8(raw),
+    contentType: `multipart/form-data; boundary=${boundary}`,
+  };
+}
+
+test("readFormDataWithByteLimit reconstructs multipart and preserves fields", async () => {
+  const { bytes, contentType } = multipartPayload("idea");
+  const headers = new Headers();
+  headers.set("content-type", contentType);
+  headers.set("content-length", String(bytes.byteLength));
+  const request = new Request(SAME_ORIGIN_URL, {
+    method: "POST",
+    headers,
+    body: bytes,
+  });
+  const result = await readFormDataWithByteLimit(request, 4096);
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.formData.get("level"), "idea");
+  }
+});
+
+test("readFormDataWithByteLimit missing Content-Length still caps and 413s", async () => {
+  const maxBytes = 64;
+  let cancelled = false;
+  let pulls = 0;
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      pulls += 1;
+      if (pulls === 1) {
+        controller.enqueue(new Uint8Array(maxBytes));
+        return;
+      }
+      controller.enqueue(new Uint8Array(8));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const headers = new Headers();
+  headers.set("content-type", "multipart/form-data; boundary=----x");
+  headers.set("transfer-encoding", "chunked");
+  const request = new Request(SAME_ORIGIN_URL, {
+    method: "POST",
+    headers,
+    body: stream,
+    // @ts-expect-error duplex required for streaming body in some runtimes
+    duplex: "half",
+  });
+  const result = await readFormDataWithByteLimit(request, maxBytes);
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.response.status, 413);
+    assert.deepEqual(await errorBody(result.response), {
+      error: WRITE_REQUEST_TOO_LARGE,
+    });
+  }
+  assert.equal(cancelled, true);
+});
+
+test("readFormDataWithByteLimit forged small Content-Length still caps streaming body", async () => {
+  const maxBytes = 32;
+  let pulls = 0;
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      pulls += 1;
+      if (pulls === 1) {
+        controller.enqueue(new Uint8Array(16));
+        return;
+      }
+      controller.enqueue(new Uint8Array(maxBytes));
+      controller.close();
+    },
+  });
+  const headers = new Headers();
+  headers.set("content-type", "multipart/form-data; boundary=----x");
+  headers.set("content-length", "16");
+  const request = new Request(SAME_ORIGIN_URL, {
+    method: "POST",
+    headers,
+    body: stream,
+    // @ts-expect-error duplex required for streaming body in some runtimes
+    duplex: "half",
+  });
+  const result = await readFormDataWithByteLimit(request, maxBytes);
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.response.status, 413);
+  }
+  assert.ok(pulls >= 2);
 });

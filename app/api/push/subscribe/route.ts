@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireUserId } from "@/lib/api/auth-helpers";
+import { requireUserId, requireWriteIdentity } from "@/lib/api/auth-helpers";
+import {
+  WRITE_BODY_MAX_BYTES,
+  admitCookieCapableWrite,
+} from "@/lib/api/write-admission";
+import { readJsonWithByteLimit } from "@/lib/api/write-request-guard";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { AppError } from "@/lib/errors/app-error";
 import { saveSubscription, removeSubscription, getSubscriptionsByUser } from "@/lib/push";
@@ -16,8 +21,17 @@ export const GET = withApiRoute("push.subscribe.GET", async () => {
 });
 
 export const POST = withApiRoute("push.subscribe.POST", async (request: Request) => {
-  const userId = await requireUserId();
-  const body = (await request.json()) as SubscribeBody;
+  const identity = await requireWriteIdentity();
+  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  if (denied) return denied;
+  const userId = identity.userId;
+
+  const parsed = await readJsonWithByteLimit<SubscribeBody>(
+    request,
+    WRITE_BODY_MAX_BYTES.push
+  );
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   if (!body.endpoint || !body.keys?.p256dh || !body.keys?.auth) {
     throw new AppError({
@@ -37,8 +51,17 @@ export const POST = withApiRoute("push.subscribe.POST", async (request: Request)
 });
 
 export const DELETE = withApiRoute("push.subscribe.DELETE", async (request: Request) => {
-  const userId = await requireUserId();
-  const { endpoint } = (await request.json()) as { endpoint?: string };
+  const identity = await requireWriteIdentity();
+  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  if (denied) return denied;
+  const userId = identity.userId;
+
+  const parsed = await readJsonWithByteLimit<{ endpoint?: string }>(
+    request,
+    WRITE_BODY_MAX_BYTES.push
+  );
+  if (!parsed.ok) return parsed.response;
+  const { endpoint } = parsed.data;
 
   if (!endpoint) {
     throw new AppError({

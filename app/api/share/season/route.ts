@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import {
+  WRITE_BODY_MAX_BYTES,
+  consumeWriteRateLimit,
+} from "@/lib/api/write-admission";
+import {
+  assertSameOriginBrowserWrite,
+  readJsonWithByteLimit,
+} from "@/lib/api/write-request-guard";
 import { normalizeComment } from "@/lib/evangelist-cards";
 import { getCurrentAnimeSeason, normalizeSeason } from "@/lib/season";
 import { createSeasonShare } from "@/lib/season-share";
@@ -22,12 +30,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let payload: CreatePayload;
-  try {
-    payload = (await request.json()) as CreatePayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const originDenied = assertSameOriginBrowserWrite(request);
+  if (originDenied) return originDenied;
+
+  const limited = consumeWriteRateLimit(request, {
+    userId,
+    policy: "shareCreate",
+  });
+  if (limited) return limited;
+
+  const parsed = await readJsonWithByteLimit<CreatePayload>(
+    request,
+    WRITE_BODY_MAX_BYTES.seasonShare
+  );
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   const current = getCurrentAnimeSeason();
   const season =
@@ -57,7 +74,7 @@ export async function POST(request: Request) {
     season,
     seasonYear,
     statuses: uniqueStatuses,
-    comment
+    comment,
   });
 
   return NextResponse.json({ shareId });

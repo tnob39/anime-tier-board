@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import {
+  WRITE_BODY_MAX_BYTES,
+  consumeWriteRateLimit,
+} from "@/lib/api/write-admission";
+import {
+  assertSameOriginBrowserWrite,
+  readJsonWithByteLimit,
+} from "@/lib/api/write-request-guard";
 import { createShare, type SharedBoard } from "@/lib/shares";
 import type { AnimeItem } from "@/lib/types";
 import { SEASONS } from "@/lib/types";
-
-const MAX_SHARE_PAYLOAD_BYTES = 800_000;
 
 type SharePayload = {
   board?: SharedBoard;
@@ -19,18 +25,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rawBody = await request.text();
-  if (rawBody.length > MAX_SHARE_PAYLOAD_BYTES) {
-    return NextResponse.json({ error: "Share payload too large" }, { status: 413 });
-  }
+  const originDenied = assertSameOriginBrowserWrite(request);
+  if (originDenied) return originDenied;
 
-  let payload: SharePayload;
+  const limited = consumeWriteRateLimit(request, {
+    userId,
+    policy: "shareCreate",
+  });
+  if (limited) return limited;
 
-  try {
-    payload = JSON.parse(rawBody) as SharePayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await readJsonWithByteLimit<SharePayload>(
+    request,
+    WRITE_BODY_MAX_BYTES.share
+  );
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   if (
     !isSharedBoard(payload.board) ||

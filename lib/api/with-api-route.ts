@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
 import { toErrorResponse } from "@/lib/errors/to-response";
 
-type RouteHandler = (request: Request) => Promise<NextResponse>;
+type RouteHandler = (request: Request) => Promise<Response>;
 
 export function withApiRoute(routeName: string, handler: RouteHandler): RouteHandler {
   return async (request: Request) => {

@@ -1,8 +1,6 @@
 import { decode, encode } from "@auth/core/jwt";
 
-import { createNativeSession, isNativeSessionValid, revokeNativeSession } from "@/lib/native-sessions";
-
-const NATIVE_SESSION_SALT = "native-auth-session";
+export const NATIVE_SESSION_SALT = "native-auth-session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 const GOOGLE_ISSUERS = ["https://accounts.google.com", "accounts.google.com"];
 
@@ -39,6 +37,7 @@ function getAllowedGoogleClientIds(): string[] {
 }
 
 export async function createNativeSessionToken(user: NativeSessionUser): Promise<string> {
+  const { createNativeSession } = await import("@/lib/native-sessions");
   const { sessionId } = await createNativeSession(user.id);
 
   return encode({
@@ -55,16 +54,18 @@ export async function createNativeSessionToken(user: NativeSessionUser): Promise
 }
 
 export async function getUserFromSessionToken(token: string): Promise<NativeSessionUser | null> {
+  const secret = getNativeAuthSecret();
   const decoded = await decode({
     token,
-    secret: getNativeAuthSecret(),
+    secret,
     salt: NATIVE_SESSION_SALT,
   });
 
-  if (!decoded?.sub || typeof decoded.sid !== "string") {
+  if (typeof decoded?.sub !== "string" || typeof decoded?.sid !== "string") {
     return null;
   }
 
+  const { isNativeSessionValid } = await import("@/lib/native-sessions");
   const valid = await isNativeSessionValid(decoded.sid);
   if (!valid) {
     return null;
@@ -99,6 +100,7 @@ export async function revokeSessionFromAuthorizationHeader(
 ): Promise<void> {
   const sessionId = await getSessionIdFromAuthorizationHeader(authorizationHeader);
   if (sessionId) {
+    const { revokeNativeSession } = await import("@/lib/native-sessions");
     await revokeNativeSession(sessionId);
   }
 }
