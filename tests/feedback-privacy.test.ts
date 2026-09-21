@@ -47,10 +47,9 @@ test("API route does not touch session/auth and does not log PII headers", () =>
   assert.doesNotMatch(route, /console\.(log|info|debug|error|warn)\(/);
   assert.match(route, /multipart\/form-data/);
   assert.match(route, /isAllowedFeedbackOrigin/);
-  // formData 前に Content-Length 必須検証（欠落で上限回避させない）
-  assert.match(route, /validateFeedbackContentLength/);
-  assert.match(route, /content-length/i);
-  assert.match(route, /411/);
+  assert.match(route, /readFormDataWithByteLimit/);
+  assert.match(route, /FEEDBACK_MULTIPART_MAX_BYTES/);
+  assert.doesNotMatch(route, /request\.formData\s*\(/);
   // 匿名であることをコメントで明示
   assert.match(route, /session\/auth を参照しない|匿名/);
 });

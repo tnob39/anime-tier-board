@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireUserId } from "@/lib/api/auth-helpers";
+import { requireUserId, requireWriteIdentity } from "@/lib/api/auth-helpers";
+import {
+  WRITE_BODY_MAX_BYTES,
+  admitCookieCapableWrite,
+} from "@/lib/api/write-admission";
+import { readJsonWithByteLimit } from "@/lib/api/write-request-guard";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { AppError } from "@/lib/errors/app-error";
 import { deleteStatus, isViewingStatus, listStatuses, saveStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
-
-const MAX_STATUS_PAYLOAD_BYTES = 80_000;
 
 type StatusPayload = {
   animeId?: string;
@@ -19,30 +22,17 @@ export const GET = withApiRoute("statuses.GET", async () => {
 });
 
 export const PUT = withApiRoute("statuses.PUT", async (request: Request) => {
-  const userId = await requireUserId();
+  const identity = await requireWriteIdentity();
+  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  if (denied) return denied;
+  const userId = identity.userId;
 
-  const rawBody = await request.text();
-  if (rawBody.length > MAX_STATUS_PAYLOAD_BYTES) {
-    throw new AppError({
-      message: "送信データが大きすぎます。",
-      status: 413,
-      code: "VALIDATION",
-      expose: true,
-    });
-  }
-
-  let payload: StatusPayload;
-
-  try {
-    payload = JSON.parse(rawBody) as StatusPayload;
-  } catch {
-    throw new AppError({
-      message: "JSONの形式が正しくありません。",
-      status: 400,
-      code: "VALIDATION",
-      expose: true,
-    });
-  }
+  const parsed = await readJsonWithByteLimit<StatusPayload>(
+    request,
+    WRITE_BODY_MAX_BYTES.status
+  );
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   if (
     !payload.animeId ||
@@ -70,7 +60,10 @@ export const PUT = withApiRoute("statuses.PUT", async (request: Request) => {
 });
 
 export const DELETE = withApiRoute("statuses.DELETE", async (request: Request) => {
-  const userId = await requireUserId();
+  const identity = await requireWriteIdentity();
+  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  if (denied) return denied;
+  const userId = identity.userId;
 
   const url = new URL(request.url);
   const animeId = url.searchParams.get("animeId")?.trim();

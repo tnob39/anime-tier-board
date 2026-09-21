@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireUserId } from "@/lib/api/auth-helpers";
+import { requireUserId, requireWriteIdentity } from "@/lib/api/auth-helpers";
+import {
+  WRITE_BODY_MAX_BYTES,
+  admitCookieCapableWrite,
+} from "@/lib/api/write-admission";
+import { readJsonWithByteLimit } from "@/lib/api/write-request-guard";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import {
   ACCOUNT_DELETION_CONFIRMATION,
@@ -44,19 +49,17 @@ export const GET = withApiRoute("account.GET", async (_request: Request) => {
 });
 
 export const DELETE = withApiRoute("account.DELETE", async (request: Request) => {
-  const userId = await requireUserId();
+  const identity = await requireWriteIdentity();
+  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  if (denied) return denied;
+  const userId = identity.userId;
 
-  let payload: AccountDeleteBody;
-  try {
-    payload = (await request.json()) as AccountDeleteBody;
-  } catch {
-    throw new AppError({
-      message: "リクエストの形式が正しくありません。",
-      status: 400,
-      code: "VALIDATION",
-      expose: true
-    });
-  }
+  const parsed = await readJsonWithByteLimit<AccountDeleteBody>(
+    request,
+    WRITE_BODY_MAX_BYTES.account
+  );
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   if (
     payload == null ||

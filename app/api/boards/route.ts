@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireUserId } from "@/lib/api/auth-helpers";
+import { requireUserId, requireWriteIdentity } from "@/lib/api/auth-helpers";
+import {
+  WRITE_BODY_MAX_BYTES,
+  admitCookieCapableWrite,
+} from "@/lib/api/write-admission";
+import { readJsonWithByteLimit } from "@/lib/api/write-request-guard";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { getBoard, saveBoard } from "@/lib/boards";
 import { AppError } from "@/lib/errors/app-error";
 import { SEASONS, type AnimeSeason } from "@/lib/types";
-
-const MAX_BOARD_PAYLOAD_BYTES = 300_000;
 
 export const GET = withApiRoute("boards.GET", async (request: Request) => {
   const userId = await requireUserId();
@@ -26,33 +29,21 @@ export const GET = withApiRoute("boards.GET", async (request: Request) => {
 });
 
 export const PUT = withApiRoute("boards.PUT", async (request: Request) => {
-  const userId = await requireUserId();
+  const identity = await requireWriteIdentity();
+  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  if (denied) return denied;
+  const userId = identity.userId;
 
-  const rawBody = await request.text();
-  if (rawBody.length > MAX_BOARD_PAYLOAD_BYTES) {
-    throw new AppError({
-      message: "送信データが大きすぎます。",
-      status: 413,
-      code: "VALIDATION",
-      expose: true,
-    });
-  }
-
-  let board: unknown;
-  let expectedUpdatedAt: string | null | undefined;
-  try {
-    const parsed = JSON.parse(rawBody) as { board?: unknown; expectedUpdatedAt?: unknown };
-    board = parsed.board;
-    expectedUpdatedAt =
-      typeof parsed.expectedUpdatedAt === "string" ? parsed.expectedUpdatedAt : null;
-  } catch {
-    throw new AppError({
-      message: "JSONの形式が正しくありません。",
-      status: 400,
-      code: "VALIDATION",
-      expose: true,
-    });
-  }
+  const parsed = await readJsonWithByteLimit<{
+    board?: unknown;
+    expectedUpdatedAt?: unknown;
+  }>(request, WRITE_BODY_MAX_BYTES.board);
+  if (!parsed.ok) return parsed.response;
+  const board = parsed.data.board;
+  const expectedUpdatedAt =
+    typeof parsed.data.expectedUpdatedAt === "string"
+      ? parsed.data.expectedUpdatedAt
+      : null;
 
   const candidate = board as { season?: AnimeSeason } | null;
   if (!candidate?.season || !SEASONS.includes(candidate.season)) {
