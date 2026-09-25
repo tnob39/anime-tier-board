@@ -46,8 +46,7 @@ const TINY_PNG = Buffer.from(
 );
 
 const AUTH_RETURN_STATUS_EVALUATING = "Tier表を引き継いでいます…";
-const AUTH_RETURN_STATUS_PROTECTED =
-  "ログイン前のTier表を保持しています。「共有」を押して共有を続けてください。";
+const HANDOFF_CONFLICT_TITLE = "保存済みのTier表があります";
 const AUTH_RETURN_STATUS_EXPIRED =
   "共有の再開期限が切れました。もう一度「共有」を押してください。";
 const SHARE_CREATE_ERROR_MESSAGE = "シェアの作成に失敗しました。";
@@ -180,6 +179,25 @@ function snapshotRemoteCounters(counters: RequestCounters) {
     statusesPut: counters.statusesPut,
     statusesDelete: counters.statusesDelete
   };
+}
+
+function expectNoHandoffWrites(counters: RequestCounters, label = "") {
+  expect(
+    {
+      boardPut: counters.boardPut,
+      sharePost: counters.sharePost,
+      statusesGet: counters.statusesGet,
+      statusesPut: counters.statusesPut,
+      statusesDelete: counters.statusesDelete
+    },
+    label
+  ).toEqual({
+    boardPut: 0,
+    sharePost: 0,
+    statusesGet: 0,
+    statusesPut: 0,
+    statusesDelete: 0
+  });
 }
 
 function expectZeroAutomaticRemote(counters: RequestCounters, label = "") {
@@ -587,11 +605,13 @@ async function waitForTierReady(page: Page) {
   });
 }
 
-async function waitForProtected(page: Page) {
-  await waitForTierReady(page);
-  await expect(
-    page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-  ).toBeVisible({ timeout: 20_000 });
+async function waitForHandoffConflict(page: Page) {
+  await expect(page.getByRole("heading", { name: "今期アニメTier表" })).toBeVisible({
+    timeout: 20_000
+  });
+  await expect(page.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })).toBeVisible({
+    timeout: 20_000
+  });
 }
 
 /** Assert SSR fixture is the visible seasonal source (not poisoned browser route). */
@@ -662,11 +682,12 @@ async function bootstrapProtectedReturn(
     PENDING_SHARE_INTENT_KEY
   );
 
-  remoteBoardRef.current = remoteBoardFixture(itemId, boardYear, boardSeason);
   const board = localBoardWithItemOnS(itemId, [], boardYear, boardSeason);
 
-  // Drain bootstrap autosave PUT (500ms debounce) before the protected proof window.
+  // Drain bootstrap autosave PUT, then pin the remote fixture so first-load
+  // writes cannot masquerade as the handoff remote.
   await page.waitForTimeout(900);
+  remoteBoardRef.current = remoteBoardFixture(itemId, boardYear, boardSeason);
   await seedIntentAndBoard(page, {
     intent: options?.intent ?? validIntent(new Date().toISOString(), boardYear, boardSeason),
     board,
@@ -706,14 +727,13 @@ async function bootstrapProtectedReturn(
     await expect(page.getByRole("heading", { name: "今期アニメTier表" })).toBeVisible({
       timeout: 20_000
     });
-    await expect(
-      page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })).toBeVisible({
+      timeout: 20_000
+    });
   } else {
-    await waitForProtected(page);
+    await waitForHandoffConflict(page);
     await expectSsrFixtureVisible(page);
   }
-  // Drain protected-path debounce; PUT must remain 0.
   await page.waitForTimeout(900);
 
   return { itemId, boardRaw };
@@ -932,17 +952,13 @@ test.describe("ATB-704 auth-return local board guard", () => {
     expect(counters.seasonalGet === 0 || counters.seasonalGet >= 0).toBe(true);
     await expect(page.getByText("ATB-704 POISONED seasonal route")).toHaveCount(0);
 
-    // Final decision: release gate → protected contract continues.
     await releaseAuthReturnDecisionGate(page);
 
-    await expect(
-      page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-    ).toBeVisible({ timeout: 20_000 });
+    await waitForHandoffConflict(page);
     await expect(
       page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_EVALUATING })
     ).toHaveCount(0);
 
-    await waitForProtected(page);
     await expectSsrFixtureVisible(page);
     await page.waitForTimeout(900);
 
@@ -950,9 +966,10 @@ test.describe("ATB-704 auth-return local board guard", () => {
     expect(stored?.tiers.find((t) => t.id === "tier-s")?.itemIds).toEqual([itemId]);
     expect(JSON.stringify(stored)).not.toContain(REMOTE_ONLY_ITEM_ID);
     expect(await readIntentRaw(page)).toBeTruthy();
-    expectZeroAutomaticRemote(counters, "after evaluating → protected");
+    expectNoHandoffWrites(counters, "after evaluating → conflict");
+    expect(counters.boardGet).toBeGreaterThan(0);
     expect(counters.externalAttempts).toBe(0);
-    await expect(page.getByRole("button", { name: "共有" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "共有" })).toBeDisabled();
 
     errors.assertClean();
   });
@@ -979,7 +996,9 @@ test.describe("ATB-704 auth-return local board guard", () => {
       (JSON.parse(boardRaw) as BoardJson).tiers.find((t) => t.id === "tier-s")?.itemIds
     );
 
-    expectZeroAutomaticRemote(counters, "valid pre-share automatic remote");
+    expectNoHandoffWrites(counters, "valid pre-share automatic remote");
+    expect(counters.boardGet).toBeGreaterThan(0);
+    await expect(page.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })).toBeVisible();
     expect(counters.externalAttempts).toBe(0);
     expect(await readIntentRaw(page)).toBeTruthy();
     await expectSsrFixtureVisible(page);
@@ -995,7 +1014,7 @@ test.describe("ATB-704 auth-return local board guard", () => {
     const errors = await attachErrorWatch(page);
 
     const { itemId } = await bootstrapProtectedReturn(page, counters, remoteBoardRef);
-    expectZeroAutomaticRemote(counters, "pre-share");
+    expectNoHandoffWrites(counters, "pre-share");
 
     const postPromise = page.waitForRequest(
       (req: Request) => {
@@ -1009,7 +1028,7 @@ test.describe("ATB-704 auth-return local board guard", () => {
       { timeout: 15_000 }
     );
 
-    await page.getByRole("button", { name: "共有" }).click();
+    await page.getByRole("button", { name: "アカウントのTier表を使う" }).click();
     const postReq = await postPromise;
 
     expect(await readIntentRaw(page)).toBeNull();
@@ -1018,17 +1037,15 @@ test.describe("ATB-704 auth-return local board guard", () => {
       .poll(() => counters.sharePost, { timeout: 10_000 })
       .toBe(1);
     expect(counters.boardPut).toBe(0);
-    expect(counters.boardGet).toBe(0);
+    expect(counters.boardGet).toBeGreaterThan(0);
 
     const body = postReq.postDataJSON() as {
       board?: { tiers?: Array<{ id: string; itemIds: string[] }> };
       items?: Array<{ id: string }>;
     };
     expect(body.board).toBeTruthy();
-    expect(body.items?.some((item) => item.id === itemId)).toBe(true);
-    const sTier = body.board?.tiers?.find((tier) => tier.id === "tier-s");
-    expect(sTier?.itemIds).toEqual([itemId]);
-    expect(JSON.stringify(body)).not.toContain(REMOTE_ONLY_ITEM_ID);
+    const unranked = body.board?.tiers?.find((tier) => tier.id === "tier-unranked");
+    expect(unranked?.itemIds.includes(itemId)).toBe(true);
 
     // Reload must not duplicate POST (intent already consumed).
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -1151,15 +1168,14 @@ test.describe("ATB-704 auth-return local board guard", () => {
     });
 
     resetCounters(counters);
-    const shareBtn = page.getByRole("button", { name: "共有" });
-    await shareBtn.click();
-    await shareBtn.click({ force: true }).catch(() => {
-      // Button may already be disabled; force click still exercises handler if enabled briefly.
-    });
+    const remoteChoice = page.getByRole("button", { name: "アカウントのTier表を使う" });
+    await remoteChoice.click();
+    await remoteChoice.click({ force: true }).catch(() => undefined);
     await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll("button"));
-      const share = buttons.find((b) => b.textContent?.includes("共有"));
-      share?.click();
+      buttons
+        .filter((b) => (b.textContent ?? "").includes("アカウントのTier表を使う"))
+        .forEach((b) => b.click());
     });
 
     await expect.poll(() => counters.sharePost, { timeout: 15_000 }).toBe(1);
@@ -1181,92 +1197,26 @@ test.describe("ATB-704 auth-return local board guard", () => {
     const { itemId } = await bootstrapProtectedReturn(page, counters, remoteBoardRef);
     const before = await readBoardLocalStorage(page);
     expect(before).toBeTruthy();
+    await expect(page.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })).toBeVisible();
 
-    // --- rename S tier ---
     const sName = page.getByLabel("Sの名前");
     await sName.fill("S-保護");
-    await expect
-      .poll(async () => {
-        const b = await readStoredBoardJson(page);
-        return b?.tiers.find((t) => t.id === "tier-s")?.label;
-      }, { timeout: 10_000 })
-      .toBe("S-保護");
+    await page.waitForTimeout(400);
+    expect((await readStoredBoardJson(page))?.tiers.find((t) => t.id === "tier-s")?.label).toBe(
+      "S"
+    );
+    expect(await readBoardLocalStorage(page)).toBe(before);
+    expect(JSON.stringify(await readStoredBoardJson(page))).not.toContain(REMOTE_ONLY_ITEM_ID);
+    expect(itemId).toBeTruthy();
 
-    // --- color change (React controlled color input) ---
-    const colorInput = page.locator('input[type="color"][aria-label="S-保護の色"]');
-    await expect(colorInput).toBeVisible();
-    await colorInput.fill("#112233");
-    await expect
-      .poll(async () => {
-        const b = await readStoredBoardJson(page);
-        return b?.tiers.find((t) => t.id === "tier-s")?.color;
-      }, { timeout: 10_000 })
-      .toBe("#112233");
-
-    // --- card move S → A via move sheet ---
-    await page.locator(".sortable-card-shell").first().click();
-    const moveDialog = page.getByRole("dialog", { name: "移動先を選択" });
-    await expect(moveDialog).toBeVisible();
-    await moveDialog.getByRole("button", { name: "A", exact: true }).click();
-    await expect
-      .poll(async () => {
-        const b = await readStoredBoardJson(page);
-        return b?.tiers.find((t) => t.id === "tier-a")?.itemIds;
-      }, { timeout: 10_000 })
-      .toEqual([itemId]);
-
-    // --- move card to unranked (delete-from-rank equivalent) ---
-    await page.locator(".sortable-card-shell").first().click();
-    await expect(moveDialog).toBeVisible();
-    await moveDialog.getByRole("button", { name: "未分類", exact: true }).click();
-    await expect
-      .poll(async () => {
-        const b = await readStoredBoardJson(page);
-        return b?.tiers.find((t) => t.id === "tier-unranked")?.itemIds.includes(itemId);
-      }, { timeout: 10_000 })
-      .toBe(true);
-
-    // --- add + delete a custom tier ---
-    await page.getByRole("button", { name: "Tierを追加" }).click();
-    await expect
-      .poll(async () => {
-        const b = await readStoredBoardJson(page);
-        return b?.tiers.some((t) => t.id.startsWith("tier-custom-"));
-      }, { timeout: 10_000 })
-      .toBe(true);
-    // Delete custom tier (locked unranked has no delete control).
-    const deleteButtons = page.locator('button[aria-label="Tierを削除"]');
-    await expect(deleteButtons.last()).toBeVisible();
-    page.once("dialog", (dialog) => {
-      void dialog.accept();
-    });
-    await deleteButtons.last().click();
-    await expect
-      .poll(async () => {
-        const b = await readStoredBoardJson(page);
-        return b?.tiers.some((t) => t.id.startsWith("tier-custom-"));
-      }, { timeout: 10_000 })
-      .toBe(false);
-
-    // --- retry save must remain no-op (PUT 0) even if button is force-clicked ---
     await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll("button"));
       buttons.find((b) => b.textContent?.includes("再試行"))?.click();
     });
-
     await page.waitForTimeout(900);
-    expect(counters.boardPut).toBe(0);
-    expectZeroAutomaticRemote(counters, "protected edits + retry");
+    expectNoHandoffWrites(counters, "conflict edits + retry");
     expect(counters.externalAttempts).toBe(0);
     expect(await readIntentRaw(page)).toBeTruthy();
-    await expect(
-      page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-    ).toBeVisible();
-    expect(await readBoardLocalStorage(page)).not.toBe(before);
-    expect(JSON.stringify(await readStoredBoardJson(page))).not.toContain(
-      REMOTE_ONLY_ITEM_ID
-    );
-
     errors.assertClean();
   });
 
@@ -1283,7 +1233,7 @@ test.describe("ATB-704 auth-return local board guard", () => {
     });
     const boardBefore = await readBoardLocalStorage(page);
 
-    await page.getByRole("button", { name: "共有" }).click();
+    await page.getByRole("button", { name: "アカウントのTier表を使う" }).click();
 
     await expect(
       page.getByRole("alert").filter({ hasText: SHARE_CREATE_ERROR_MESSAGE })
@@ -1296,7 +1246,6 @@ test.describe("ATB-704 auth-return local board guard", () => {
     await page.waitForTimeout(1000);
     expect(counters.sharePost).toBe(1);
     expect(counters.boardPut).toBe(0);
-    expect(counters.boardGet).toBe(0);
     expect(counters.statusesGet).toBe(0);
 
     expect(await readIntentRaw(page)).toBeNull();
@@ -1304,9 +1253,7 @@ test.describe("ATB-704 auth-return local board guard", () => {
 
     const stored = await readStoredBoardJson(page);
     expect(stored?.tiers.find((t) => t.id === "tier-s")?.itemIds).toEqual([itemId]);
-    await expect(
-      page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "再試行" })).toBeVisible();
 
     errors.assertClean();
   });
@@ -1342,9 +1289,7 @@ test.describe("ATB-704 auth-return local board guard", () => {
       page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_EXPIRED })
     ).toBeVisible({ timeout: 20_000 });
 
-    await expect(
-      page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-    ).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })).toHaveCount(0);
 
     expect(await readIntentRaw(page)).toBeNull();
     const stored = await readStoredBoardJson(page);
@@ -1430,9 +1375,7 @@ test.describe("ATB-704 auth-return local board guard", () => {
       await p.reload({ waitUntil: "domcontentloaded" });
       await waitForTierReady(p);
 
-      await expect(
-        p.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-      ).toHaveCount(0);
+      await expect(p.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })).toHaveCount(0);
       await expect(
         p.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_EXPIRED })
       ).toHaveCount(0);
@@ -1476,9 +1419,7 @@ test.describe("ATB-704 auth-return local board guard", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await waitForTierReady(page);
 
-    await expect(
-      page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-    ).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })).toHaveCount(0);
     await page.waitForTimeout(900);
     expectZeroAutomaticRemote(counters, "no local board invalid");
     expect(counters.externalAttempts).toBe(0);
@@ -1554,7 +1495,7 @@ test.describe("ATB-704 auth-return local board guard", () => {
       await waitForTierReady(page);
 
       await expect(
-        page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
+        page.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })
       ).toHaveCount(0);
       await expect(
         page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_EXPIRED })
@@ -1584,9 +1525,8 @@ test.describe("ATB-704 auth-return local board guard", () => {
 
     const { itemId } = await bootstrapProtectedReturn(page, counters, remoteBoardRef);
 
-    await expect(
-      page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-    ).toBeVisible();
+    await expect(page.getByRole("dialog", { name: HANDOFF_CONFLICT_TITLE })).toBeVisible();
+    await page.getByRole("button", { name: "共有をやめる" }).click();
 
     const boardRawBefore = await readBoardLocalStorage(page, STORAGE_KEY);
     expect(boardRawBefore).toBeTruthy();
@@ -1600,24 +1540,19 @@ test.describe("ATB-704 auth-return local board guard", () => {
     });
     resetCounters(counters);
 
-    // Protected allows season controls; changing year triggers loadAnime without SSR seed.
     await page.locator("select").first().selectOption(String(PAST_YEAR));
 
     await expect
       .poll(async () => counters.seasonalGet, { timeout: 15_000 })
       .toBeGreaterThan(0);
 
-    await expect(
-      page.getByRole("status").filter({ hasText: AUTH_RETURN_STATUS_PROTECTED })
-    ).toBeVisible();
     const afterCurrent = await readStoredBoardJson(page, STORAGE_KEY);
     expect(afterCurrent?.tiers.find((t) => t.id === "tier-s")?.itemIds).toEqual([
       itemId
     ]);
     expect(JSON.stringify(afterCurrent)).not.toContain(REMOTE_ONLY_ITEM_ID);
-    expect(await readIntentRaw(page)).toBeTruthy();
 
-    expectZeroAutomaticRemote(counters, "seasonal failure while guarded");
+    expectNoHandoffWrites(counters, "seasonal failure while guarded");
     expect(counters.externalAttempts).toBe(0);
 
     errors.assertClean();
