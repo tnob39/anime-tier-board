@@ -42,7 +42,14 @@ import {
   TrendingUp,
   Trash2
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode
+} from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import {
   useDisplayMode,
@@ -76,13 +83,40 @@ const PENDING_SHARE_INTENT_KEY = "anime-tier-board:pending-share-intent:v1";
 const PENDING_SHARE_INTENT_VERSION = 1;
 /** Pending share intent is valid only within 10 minutes of createdAt. */
 const PENDING_SHARE_INTENT_MAX_AGE_MS = 10 * 60 * 1000;
+/** Durable crash-recovery + ownership record in localStorage (survives tabs/close). */
+const SHARE_HANDOFF_RECOVERY_KEY = "anime-tier-board:share-handoff-recovery:v2";
+const SHARE_HANDOFF_OWNER_TAB_ID_KEY = "anime-tier-board:share-handoff-owner-tab-id:v1";
+const SHARE_HANDOFF_LOCK_NAME = "anime-tier-board:share-handoff-post:v2";
+const SHARE_HANDOFF_RECOVERY_VERSION = 2;
+const SHARE_HANDOFF_RECOVERY_MAX_AGE_MS = PENDING_SHARE_INTENT_MAX_AGE_MS;
+const SHARE_HANDOFF_LEASE_MS = 15_000;
 
 const AUTH_RETURN_STATUS_EVALUATING = "Tier表を引き継いでいます…";
-const AUTH_RETURN_STATUS_PROTECTED =
-  "ログイン前のTier表を保持しています。「共有」を押して共有を続けてください。";
 const AUTH_RETURN_STATUS_EXPIRED =
   "共有の再開期限が切れました。もう一度「共有」を押してください。";
+const HANDOFF_LOAD_ERROR_MESSAGE =
+  "Tier表を引き継げませんでした。通信環境を確認して再度お試しください。";
 const SHARE_CREATE_ERROR_MESSAGE = "シェアの作成に失敗しました。";
+const HANDOFF_CONFLICT_TITLE = "保存済みのTier表があります";
+const HANDOFF_REPLACE_CONFIRM_MESSAGE =
+  "アカウントに保存済みのTier表を置き換えます。よろしいですか？";
+const SHARE_LOGIN_PROMPT_MESSAGE =
+  "Tier表を共有するにはログインしてください。作成したTier表はそのまま引き継がれます。";
+const HANDOFF_SHARING_STATUS_MESSAGE = "共有処理中…";
+const HANDOFF_RECOVERY_UNKNOWN_MESSAGE =
+  "共有の結果を確認できません。自動では再送しません。この端末のTier表は保持されています。";
+const HANDOFF_REMOTE_CONTEXT_ERROR_MESSAGE =
+  "引き継ぎ先のシーズンが一致しません。この端末のTier表は保持されています。";
+const HANDOFF_RECOVERY_EXPIRED_MESSAGE =
+  "共有の再開期限が切れました。この端末のTier表は保持されています。";
+const HANDOFF_RECOVERY_UNREADABLE_MESSAGE =
+  "引き継ぎ状態を確認できません。この端末のTier表は保護されています。";
+const PENDING_SHARE_INTENT_STORAGE_ERROR_MESSAGE =
+  "共有の準備を保存できませんでした。空き容量やブラウザ設定を確認して、もう一度お試しください。";
+const HANDOFF_RESTORE_FAILED_MESSAGE =
+  "この端末のTier表を復元できませんでした。共有記録は保持されています。";
+const HANDOFF_RECOVERY_OTHER_TAB_MESSAGE =
+  "別のタブで共有処理中です。このタブでは自動では再送しません。";
 
 type TierRow = {
   id: string;
@@ -101,10 +135,80 @@ type PendingShareIntent = {
   createdAt: string;
 };
 
-/** Auth-return pending-share evaluation phase (P0-B). */
-type AuthReturnPhase = "pending" | "evaluating" | "protected" | "expired" | "none";
+/** Auth-return pending-share evaluation / #692 auto-resume phase. */
+type AuthReturnPhase =
+  | "pending"
+  | "evaluating"
+  | "conflict"
+  | "confirm-replace"
+  | "handoff-error"
+  | "sharing"
+  | "recovery"
+  | "expired"
+  | "none";
 
-type AuthReturnShareDecision = "none" | "valid" | "expired" | "invalid";
+type HandoffErrorKind =
+  | "load"
+  | "save"
+  | "share"
+  | "context"
+  | "recovery-unknown"
+  | "recovery-expired"
+  | "recovery-unreadable"
+  | "restore-failed"
+  | "recovery-other-tab"
+  | null;
+
+type ShareHandoffPutStatus = "none" | "completed" | "unknown";
+type ShareHandoffPostState =
+  | "not_started"
+  | "post_started_unknown"
+  | "post_failed_definite"
+  | "post_completed_cleanup_pending";
+
+type SharePostOutcome = "success" | "definite_failure" | "unknown";
+type HandoffPutOutcome =
+  | "saved"
+  | "conflict"
+  | "definite_failure"
+  | "unknown"
+  | "aborted";
+
+/** Versioned, context-keyed durable recovery+ownership record (localStorage). */
+type ShareHandoffRecoveryMarker = {
+  version: typeof SHARE_HANDOFF_RECOVERY_VERSION;
+  year: number;
+  season: AnimeSeason;
+  storageKey: string;
+  attemptId: string;
+  guestRaw: string;
+  chosenBoardRaw: string;
+  chosenBoardHash: string;
+  createdAt: string;
+  putStatus: ShareHandoffPutStatus;
+  postState: ShareHandoffPostState;
+  ownerTabId: string;
+  leaseExpiresAt: string;
+};
+
+type DurableRead<T> =
+  | { kind: "absent" }
+  | { kind: "unreadable" }
+  | { kind: "malformed" }
+  | { kind: "ok"; value: T };
+
+type StoredBoardRead =
+  | { kind: "absent" }
+  | { kind: "unreadable" }
+  | { kind: "ok"; raw: string; board: BoardState | null };
+
+type AuthReturnShareDecision =
+  | "none"
+  | "valid"
+  | "expired"
+  | "invalid"
+  | "corrupt"
+  | "unreadable";
 
 type BoardState = {
   version: typeof STORAGE_VERSION;
@@ -386,22 +490,47 @@ export function TierBoardApp({
   const { mode: displayMode } = useDisplayMode();
   const moveAnnouncementTimeoutRef = useRef<number | null>(null);
   const dragOriginTierIdRef = useRef<string | null>(null);
-  /** pending until session settles; evaluating/protected/expired/none after auth-return guard. */
+  /** pending until session settles; evaluating/conflict/error/expired/none after auth-return. */
   const [authReturnPhase, setAuthReturnPhase] = useState<AuthReturnPhase>("pending");
   /**
    * Suppress automatic remote board/status traffic while a recognized pending intent
-   * (valid / expired / invalid) keeps the guest local board until explicit Share.
+   * (valid / expired / invalid / conflict) keeps the guest local board until handoff ends.
    */
   const protectLocalBoardRef = useRef(false);
   const authReturnPhaseRef = useRef<AuthReturnPhase>("pending");
   authReturnPhaseRef.current = authReturnPhase;
   /** Synchronous Share in-flight lock (state `sharing` alone can miss double-activation). */
   const shareInFlightRef = useRef(false);
-  /** Canonical pending|evaluating lock for handlers + UI (single source of truth). */
+  const shareAttemptTokenRef = useRef(0);
+  const handoffActionLockRef = useRef(false);
+  const handoffPostIssuedRef = useRef(false);
+  const handoffCancelledRef = useRef(false);
+  const handoffBusyRef = useRef(false);
+  const handoffLocalRef = useRef<BoardState | null>(null);
+  const handoffRemoteRef = useRef<BoardState | null>(null);
+  const handoffItemsRef = useRef<AnimeItem[]>([]);
+  const handoffYearRef = useRef<number | null>(null);
+  const handoffSeasonRef = useRef<AnimeSeason | null>(null);
+  const [handoffErrorKind, setHandoffErrorKind] = useState<HandoffErrorKind>(null);
+  const [handoffBusy, setHandoffBusy] = useState(false);
+  const handoffGenerationRef = useRef(0);
+  const handoffAbortRef = useRef<AbortController | null>(null);
+  const guestSnapshotRawRef = useRef<string | null>(null);
+  const handoffShareBoardRef = useRef<BoardState | null>(null);
+  const recoveryAttemptIdRef = useRef<string | null>(null);
+  const recoveryPutStatusRef = useRef<ShareHandoffPutStatus>("none");
+  const handoffOwnerTabIdRef = useRef<string | null>(null);
+  /** Canonical pending|evaluating|choice lock for handlers + UI. */
   const isAuthReturnLocked = isAuthReturnPhaseLocked(authReturnPhase);
+  const handoffPostLocked = authReturnPhase === "sharing";
+  const handoffActionsLocked = sharing || handoffBusy || handoffPostLocked;
 
   useEffect(() => {
     setMoveHintSeen(window.localStorage.getItem(MOVE_HINT_STORAGE_KEY) === "1");
+  }, []);
+
+  useEffect(() => {
+    handoffOwnerTabIdRef.current = readOrCreateStableHandoffOwnerTabId();
   }, []);
 
   const announceMove = useCallback((itemTitle: string, tierLabel: string) => {
@@ -628,32 +757,44 @@ export function TierBoardApp({
       return;
     }
 
-    let cancelled = false;
+    const generation = bumpHandoffGeneration();
+    handoffCancelledRef.current = false;
+    handoffOwnerTabIdRef.current ??= readOrCreateStableHandoffOwnerTabId();
 
     async function runAuthReturnGuard() {
-      let hasIntent = false;
-      try {
-        hasIntent = sessionStorage.getItem(PENDING_SHARE_INTENT_KEY) != null;
-      } catch {
-        hasIntent = false;
+      const pendingIntentRead = readPendingShareIntentRaw();
+      if (pendingIntentRead.kind === "unreadable") {
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+      if (pendingIntentRead.kind === "ok" && !ensureHandoffAttemptId()) {
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
       }
 
+      if (await applyUnresolvedShareHandoffRecovery(generation)) {
+        return;
+      }
+
+      const hasIntent = pendingIntentRead.kind === "ok";
+
       if (!hasIntent) {
-        if (!cancelled) {
+        if (isHandoffGenerationCurrent(generation)) {
           protectLocalBoardRef.current = false;
           setAuthReturnPhase("none");
         }
         return;
       }
 
-      // Recognized pending-intent key: local-only guard immediately (before any await).
-      // Valid / expired / invalid all keep this guard until explicit Share success.
       protectLocalBoardRef.current = true;
 
-      const evaluation = evaluateAuthReturnShareIntent();
+      const evaluation = evaluateAuthReturnShareIntent(pendingIntentRead.value);
       const decision = evaluation.decision;
 
-      // Valid/expired require current year+season only; never retarget UI from mismatched intent.
       if (
         (decision === "valid" || decision === "expired") &&
         evaluation.year != null &&
@@ -663,44 +804,196 @@ export function TierBoardApp({
         setSeason(evaluation.season);
       }
 
-      // Enter evaluating before any final decision so the status can commit/paint.
-      if (!cancelled) {
+      if (isHandoffGenerationCurrent(generation)) {
         setAuthReturnPhase("evaluating");
       }
 
-      // Paint-safe boundary (macrotask + double rAF) + optional E2E decision gate.
-      // Must await out of the effect so React can commit evaluating first (no flushSync in lifecycle).
       await waitForAuthReturnEvaluatingBoundary();
-
-      if (cancelled) {
-        return;
-      }
-
-      if (decision === "valid") {
-        protectLocalBoardRef.current = true;
-        setAuthReturnPhase("protected");
+      if (!isHandoffGenerationCurrent(generation)) {
         return;
       }
 
       if (decision === "expired") {
-        clearPendingShareIntent();
+        if (!clearPendingShareIntent()) {
+          protectLocalBoardRef.current = true;
+          setHandoffErrorKind("recovery-unreadable");
+          setAuthReturnPhase("recovery");
+          return;
+        }
         protectLocalBoardRef.current = true;
         setAuthReturnPhase("expired");
         return;
       }
 
-      // invalid (or unexpected): consume intent, keep local-only guard, no protected-status UI.
-      clearPendingShareIntent();
-      protectLocalBoardRef.current = true;
-      setAuthReturnPhase("none");
+      if (decision === "unreadable") {
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+
+      if (decision === "corrupt") {
+        handoffYearRef.current = evaluation.year ?? null;
+        handoffSeasonRef.current = evaluation.season ?? null;
+        guestSnapshotRawRef.current = evaluation.corruptRaw ?? null;
+        setHandoffErrorKind("load");
+        setAuthReturnPhase("handoff-error");
+        return;
+      }
+
+      if (decision !== "valid" || evaluation.year == null || evaluation.season == null) {
+        if (!clearPendingShareIntent()) {
+          protectLocalBoardRef.current = true;
+          setHandoffErrorKind("recovery-unreadable");
+          setAuthReturnPhase("recovery");
+          return;
+        }
+        protectLocalBoardRef.current = true;
+        setAuthReturnPhase("none");
+        return;
+      }
+
+      const year = evaluation.year;
+      const nextSeason = evaluation.season;
+      const localKey = getStorageKey(year, nextSeason);
+      const stored = readStoredBoardRecord(localKey);
+      if (stored.kind === "unreadable") {
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+      if (stored.kind === "absent") {
+        if (!clearPendingShareIntent()) {
+          protectLocalBoardRef.current = true;
+          setHandoffErrorKind("recovery-unreadable");
+          setAuthReturnPhase("recovery");
+          return;
+        }
+        protectLocalBoardRef.current = true;
+        setAuthReturnPhase("none");
+        return;
+      }
+      if (!stored.board) {
+        guestSnapshotRawRef.current = stored.raw;
+        handoffYearRef.current = year;
+        handoffSeasonRef.current = nextSeason;
+        setHandoffErrorKind("load");
+        setAuthReturnPhase("handoff-error");
+        return;
+      }
+      if (isCanonicalGeneratedDefaultBoard(stored.board)) {
+        if (!clearPendingShareIntent()) {
+          protectLocalBoardRef.current = true;
+          setHandoffErrorKind("recovery-unreadable");
+          setAuthReturnPhase("recovery");
+          return;
+        }
+        protectLocalBoardRef.current = true;
+        setAuthReturnPhase("none");
+        return;
+      }
+
+      const frozen = cloneBoardState(stored.board);
+      guestSnapshotRawRef.current = stored.raw;
+      handoffYearRef.current = year;
+      handoffSeasonRef.current = nextSeason;
+      handoffLocalRef.current = frozen;
+      setBoard(frozen);
+
+      try {
+        const payload = await fetchSeasonalAnimeClient(year, nextSeason);
+        if (!isHandoffGenerationCurrent(generation)) {
+          return;
+        }
+        const nextItems = payload.items;
+        if (nextItems.length > 0) {
+          handoffItemsRef.current = nextItems;
+          setItems(nextItems);
+          setWarning(payload.warning ?? payload.enrichWarning ?? null);
+          setBoard(reconcileBoard(frozen, nextItems, year, nextSeason));
+        } else {
+          handoffItemsRef.current = items;
+        }
+      } catch {
+        if (!isHandoffGenerationCurrent(generation)) {
+          return;
+        }
+        handoffItemsRef.current = items;
+      }
+
+      if (!isHandoffGenerationCurrent(generation)) {
+        return;
+      }
+
+      await compareAndContinueShareHandoff(generation);
     }
 
     void runAuthReturnGuard();
 
     return () => {
-      cancelled = true;
+      bumpHandoffGeneration();
     };
   }, [authStatus]);
+
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key !== SHARE_HANDOFF_RECOVERY_KEY) {
+        return;
+      }
+      const held = readShareHandoffRecoveryDurable();
+      if (held.kind === "unreadable" || held.kind === "malformed") {
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+      if (held.kind !== "ok") {
+        return;
+      }
+      const marker = held.value;
+      if (recoveryMarkerAgeExpired(marker)) {
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-expired");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+      if (
+        !isRecoveryMarkerOwnedBy(
+          marker,
+          handoffOwnerTabIdRef.current,
+          recoveryAttemptIdRef.current
+        ) &&
+        !recoveryMarkerAgeExpired(marker) &&
+        !recoveryLeaseExpired(marker)
+      ) {
+        shareInFlightRef.current = true;
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-other-tab");
+        setAuthReturnPhase("recovery");
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  useEffect(() => {
+    if (authReturnPhase !== "sharing") {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      const shareBoard = handoffShareBoardRef.current ?? handoffLocalRef.current;
+      if (!shareBoard || !handoffPostIssuedRef.current) {
+        return;
+      }
+      persistHandoffRecoveryMarker({
+        shareBoard,
+        putStatus: recoveryPutStatusRef.current,
+        postState: "post_started_unknown"
+      });
+    }, Math.max(3_000, Math.floor(SHARE_HANDOFF_LEASE_MS / 3)));
+    return () => window.clearInterval(timer);
+  }, [authReturnPhase]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -758,17 +1051,30 @@ export function TierBoardApp({
       return;
     }
 
+    // Freeze original guest snapshot: do not persist reconcile/display mutations
+    // while a pending share handoff or unresolved recovery marker owns the local copy.
+    if (
+      protectLocalBoardRef.current ||
+      isAuthReturnPhaseLocked(authReturnPhaseRef.current) ||
+      hasUnresolvedShareHandoffRecoveryMarker()
+    ) {
+      setSaveState("local");
+      return;
+    }
+
     localStorage.setItem(storageKey, JSON.stringify(board));
 
-    // Protected auth-return: localStorage only — never PUT / autosave.
-    if (!isAuthenticated || protectLocalBoardRef.current) {
+    if (!isAuthenticated) {
       setSaveState("local");
       return;
     }
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => {
-      if (protectLocalBoardRef.current) {
+      if (
+        protectLocalBoardRef.current ||
+        hasUnresolvedShareHandoffRecoveryMarker()
+      ) {
         setSaveState("local");
         return;
       }
@@ -806,7 +1112,12 @@ export function TierBoardApp({
       return;
     }
     // Protected / local-only guard: keep guest board offline until explicit Share success.
-    if (!board || retryingSave || protectLocalBoardRef.current) {
+    if (
+      !board ||
+      retryingSave ||
+      protectLocalBoardRef.current ||
+      hasUnresolvedShareHandoffRecoveryMarker()
+    ) {
       return;
     }
 
@@ -1224,13 +1535,885 @@ export function TierBoardApp({
     });
   }
 
-  async function handleCreateShare() {
-    if (!board || !items.length || isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+  function bumpHandoffGeneration(): number {
+    // Generation invalidation must not reset shareInFlightRef; only the owning
+    // POST attempt clears it after token equality. Do not abort an issued POST.
+    if (!handoffPostIssuedRef.current) {
+      handoffAbortRef.current?.abort();
+      const controller = new AbortController();
+      handoffAbortRef.current = controller;
+      handoffBusyRef.current = false;
+      handoffActionLockRef.current = false;
+    }
+    handoffGenerationRef.current += 1;
+    return handoffGenerationRef.current;
+  }
+
+  function isHandoffGenerationCurrent(generation: number): boolean {
+    return handoffGenerationRef.current === generation;
+  }
+
+  function handoffSignal(): AbortSignal {
+    const hooks = window as unknown as AuthReturnWindowHooks;
+    if (hooks.__ATB692_IGNORE_HANDOFF_ABORT__) {
+      return new AbortController().signal;
+    }
+    return handoffAbortRef.current?.signal ?? new AbortController().signal;
+  }
+
+  function ensureHandoffAttemptId(): boolean {
+    if (recoveryAttemptIdRef.current != null) {
+      return true;
+    }
+    const created = createHandoffAttemptId();
+    if (created == null) {
+      return false;
+    }
+    recoveryAttemptIdRef.current = created;
+    recoveryPutStatusRef.current = "none";
+    return true;
+  }
+
+  function tryBeginHandoffUserAction(): boolean {
+    if (handoffActionLockRef.current) {
+      return false;
+    }
+    if (shareInFlightRef.current) {
+      return false;
+    }
+    if (handoffPostIssuedRef.current) {
+      return false;
+    }
+    if (handoffBusyRef.current) {
+      return false;
+    }
+    if (handoffCancelledRef.current) {
+      return false;
+    }
+    handoffActionLockRef.current = true;
+    return true;
+  }
+
+  function restoreGuestSnapshotToStorage(): boolean {
+    const year = handoffYearRef.current;
+    const nextSeason = handoffSeasonRef.current;
+    const raw = guestSnapshotRawRef.current;
+    if (year == null || nextSeason == null || raw == null) {
+      return false;
+    }
+    const key = getStorageKey(year, nextSeason);
+    if (!writeLocalStorageRaw(key, raw)) {
+      return false;
+    }
+    const parsed = parseBoardMatchingContext(raw, year, nextSeason);
+    if (!parsed) {
+      return false;
+    }
+    setBoard(parsed);
+    return true;
+  }
+
+  function persistHandoffRecoveryMarker(input: {
+    shareBoard: BoardState;
+    putStatus: ShareHandoffPutStatus;
+    postState: ShareHandoffPostState;
+  }): boolean {
+    const year = handoffYearRef.current;
+    const nextSeason = handoffSeasonRef.current;
+    const guestRaw = guestSnapshotRawRef.current;
+    const ownerTabId = handoffOwnerTabIdRef.current;
+    const attemptId = recoveryAttemptIdRef.current;
+    if (
+      year == null ||
+      nextSeason == null ||
+      guestRaw == null ||
+      ownerTabId == null ||
+      attemptId == null
+    ) {
+      return false;
+    }
+    if (
+      parseBoardMatchingContext(guestRaw, year, nextSeason) == null ||
+      !remoteBoardMatchesHandoffContext(input.shareBoard, year, nextSeason)
+    ) {
+      return false;
+    }
+    const chosenBoardRaw = JSON.stringify(input.shareBoard);
+    recoveryPutStatusRef.current = input.putStatus;
+    const existing = readShareHandoffRecoveryDurable();
+    const createdAt =
+      existing.kind === "ok" && existing.value.attemptId === attemptId
+        ? existing.value.createdAt
+        : new Date().toISOString();
+    const marker: ShareHandoffRecoveryMarker = {
+      version: SHARE_HANDOFF_RECOVERY_VERSION,
+      year,
+      season: nextSeason,
+      storageKey: getStorageKey(year, nextSeason),
+      attemptId,
+      guestRaw,
+      chosenBoardRaw,
+      chosenBoardHash: hashShareHandoffBoardRaw(chosenBoardRaw),
+      createdAt,
+      putStatus: input.putStatus,
+      postState: input.postState,
+      ownerTabId,
+      leaseExpiresAt: new Date(Date.now() + SHARE_HANDOFF_LEASE_MS).toISOString()
+    };
+    if (!casWriteShareHandoffRecoveryMarker(marker)) {
+      return false;
+    }
+    return true;
+  }
+
+  function finishCompletedShareCleanup(marker: ShareHandoffRecoveryMarker): boolean {
+    const chosen = parseBoardMatchingContext(
+      marker.chosenBoardRaw,
+      marker.year,
+      marker.season
+    );
+    if (!chosen) {
+      return false;
+    }
+    if (!writeLocalStorageRaw(marker.storageKey, marker.chosenBoardRaw)) {
+      return false;
+    }
+    setBoard(chosen);
+    return clearDurableRecoveryRecords();
+  }
+
+  async function applyUnresolvedShareHandoffRecovery(generation: number): Promise<boolean> {
+    const markerRead = readShareHandoffRecoveryDurable();
+
+    if (markerRead.kind === "unreadable") {
+      protectLocalBoardRef.current = true;
+      if (isHandoffGenerationCurrent(generation)) {
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+      }
+      return true;
+    }
+    if (markerRead.kind === "malformed") {
+      protectLocalBoardRef.current = true;
+      if (isHandoffGenerationCurrent(generation)) {
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+      }
+      return true;
+    }
+    if (markerRead.kind !== "ok") {
+      return false;
+    }
+
+    const marker = markerRead.value;
+    const pendingIntentRead = readPendingShareIntentRaw();
+    if (pendingIntentRead.kind === "unreadable") {
+      protectLocalBoardRef.current = true;
+      if (isHandoffGenerationCurrent(generation)) {
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+      }
+      return true;
+    }
+    if (recoveryAttemptIdRef.current == null) {
+      if (pendingIntentRead.kind === "ok") {
+        if (!ensureHandoffAttemptId()) {
+          protectLocalBoardRef.current = true;
+          setHandoffErrorKind("recovery-unreadable");
+          setAuthReturnPhase("recovery");
+          return true;
+        }
+      } else {
+        // A reload with a consumed intent resumes the durable attempt. A tab
+        // that still has its own pending intent must use a fresh nonce.
+        recoveryAttemptIdRef.current = marker.attemptId;
+      }
+    }
+    const guestBoard = parseBoardMatchingContext(
+      marker.guestRaw,
+      marker.year,
+      marker.season
+    );
+    const chosenBoard = parseBoardMatchingContext(
+      marker.chosenBoardRaw,
+      marker.year,
+      marker.season
+    );
+    guestSnapshotRawRef.current = marker.guestRaw;
+    handoffYearRef.current = marker.year;
+    handoffSeasonRef.current = marker.season;
+    recoveryPutStatusRef.current = marker.putStatus;
+    if (guestBoard) {
+      handoffLocalRef.current = guestBoard;
+      setBoard(guestBoard);
+    }
+    if (chosenBoard) {
+      handoffShareBoardRef.current = chosenBoard;
+    }
+    protectLocalBoardRef.current = true;
+    setSeasonYear(marker.year);
+    setSeason(marker.season);
+    if (!isHandoffGenerationCurrent(generation)) {
+      return true;
+    }
+
+    // TTL is authoritative. A stale marker must not be retained merely because
+    // an untrusted/future lease would otherwise appear to hold ownership.
+    if (recoveryMarkerAgeExpired(marker)) {
+      setHandoffErrorKind("recovery-expired");
+      setAuthReturnPhase("recovery");
+      return true;
+    }
+
+    if (handoffOwnerTabIdRef.current == null) {
+      setHandoffErrorKind("recovery-unreadable");
+      setAuthReturnPhase("recovery");
+      return true;
+    }
+
+    const ours = isRecoveryMarkerOwnedBy(
+      marker,
+      handoffOwnerTabIdRef.current,
+      recoveryAttemptIdRef.current
+    );
+    const leaseDead = recoveryLeaseExpired(marker);
+
+    if (marker.postState === "post_completed_cleanup_pending") {
+      if (!ours && !leaseDead) {
+        setHandoffErrorKind("recovery-other-tab");
+        setAuthReturnPhase("recovery");
+        return true;
+      }
+      if (finishCompletedShareCleanup(marker)) {
+        protectLocalBoardRef.current = false;
+        recoveryAttemptIdRef.current = null;
+        setAuthReturnPhase("none");
+        setHandoffErrorKind(null);
+        return true;
+      }
+      setHandoffErrorKind("recovery-unknown");
+      setAuthReturnPhase("recovery");
+      return true;
+    }
+    if (!ours && !leaseDead) {
+      setHandoffErrorKind("recovery-other-tab");
+      setAuthReturnPhase("recovery");
+      return true;
+    }
+
+    if (!ours && leaseDead && chosenBoard) {
+      let takeoverPersisted = false;
+      const takeoverAttemptId = createHandoffAttemptId();
+      if (takeoverAttemptId == null) {
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return true;
+      }
+      recoveryAttemptIdRef.current = takeoverAttemptId;
+      const takeoverLockAcquired = await withShareHandoffLock(async () => {
+        takeoverPersisted = persistHandoffRecoveryMarker({
+          shareBoard: chosenBoard,
+          putStatus: marker.putStatus,
+          postState: marker.postState
+        });
+      });
+      if (!takeoverLockAcquired || !takeoverPersisted) {
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return true;
+      }
+    }
+
+    if (marker.postState === "post_failed_definite") {
+      setHandoffErrorKind("share");
+      setAuthReturnPhase("handoff-error");
+      return true;
+    }
+    setHandoffErrorKind("recovery-unknown");
+    setAuthReturnPhase("recovery");
+    return true;
+  }
+
+  async function compareAndContinueShareHandoff(generation: number) {
+    const year = handoffYearRef.current;
+    const nextSeason = handoffSeasonRef.current;
+    const localBoard = handoffLocalRef.current;
+    if (year == null || nextSeason == null || !localBoard) {
       return;
     }
 
-    // Synchronous in-flight lock prevents double activation before React re-render.
+    setHandoffErrorKind(null);
+    setAuthReturnPhase("evaluating");
+
+    const remoteResult = await fetchRemoteBoardForHandoff(
+      year,
+      nextSeason,
+      handoffSignal()
+    );
+    if (!isHandoffGenerationCurrent(generation) || handoffCancelledRef.current) {
+      handoffActionLockRef.current = false;
+      return;
+    }
+    if (!remoteResult.ok) {
+      if (remoteResult.reason === "aborted") {
+        handoffActionLockRef.current = false;
+        return;
+      }
+      setHandoffErrorKind(remoteResult.reason === "context" ? "context" : "load");
+      setAuthReturnPhase("handoff-error");
+      handoffActionLockRef.current = false;
+      return;
+    }
+
+    handoffRemoteRef.current = remoteResult.board;
+
+    if (!remoteResult.board) {
+      await putLocalThenShare(generation, null);
+      return;
+    }
+
+    if (boardsEquivalentForHandoff(localBoard, remoteResult.board)) {
+      await postShareFromHandoff(generation, localBoard);
+      return;
+    }
+
+    setAuthReturnPhase("conflict");
+    handoffActionLockRef.current = false;
+  }
+
+  async function putLocalThenShare(
+    generation: number,
+    expectedUpdatedAt: string | null
+  ) {
+    const localBoard = handoffLocalRef.current;
+    if (!localBoard || !isHandoffGenerationCurrent(generation)) {
+      handoffActionLockRef.current = false;
+      return;
+    }
+    if (shareInFlightRef.current || handoffPostIssuedRef.current || handoffCancelledRef.current) {
+      handoffActionLockRef.current = false;
+      return;
+    }
+    if (handoffBusyRef.current) {
+      return;
+    }
+
+    handoffBusyRef.current = true;
+    handoffActionLockRef.current = true;
+    setHandoffBusy(true);
+    let ownershipPersisted = false;
+    const ownershipLockAcquired = await withShareHandoffLock(async () => {
+      ownershipPersisted = persistHandoffRecoveryMarker({
+        shareBoard: localBoard,
+        putStatus: "unknown",
+        postState: "not_started"
+      });
+    });
+    if (!ownershipLockAcquired || !ownershipPersisted) {
+      handoffBusyRef.current = false;
+      handoffActionLockRef.current = false;
+      setHandoffBusy(false);
+      protectLocalBoardRef.current = true;
+      setHandoffErrorKind("recovery-unreadable");
+      setAuthReturnPhase("recovery");
+      return;
+    }
+    try {
+      const result = await putRemoteBoardForHandoff(
+        localBoard,
+        expectedUpdatedAt,
+        handoffSignal()
+      );
+      if (
+        !isHandoffGenerationCurrent(generation) ||
+        handoffCancelledRef.current
+      ) {
+        return;
+      }
+      if (result === "aborted") {
+        return;
+      }
+      if (result === "unknown") {
+        recoveryPutStatusRef.current = "unknown";
+        let unknownPersisted = false;
+        const unknownLockAcquired = await withShareHandoffLock(async () => {
+          unknownPersisted = persistHandoffRecoveryMarker({
+            shareBoard: localBoard,
+            putStatus: "unknown",
+            postState: "not_started"
+          });
+        });
+        if (!unknownLockAcquired || !unknownPersisted) {
+          protectLocalBoardRef.current = true;
+          setHandoffErrorKind("recovery-unreadable");
+          setAuthReturnPhase("recovery");
+          return;
+        }
+        const restored = restoreGuestSnapshotToStorage();
+        if (!restored) {
+          setHandoffErrorKind("restore-failed");
+        } else {
+          setHandoffErrorKind("recovery-unknown");
+        }
+        setAuthReturnPhase("recovery");
+        return;
+      }
+      if (result === "definite_failure") {
+        clearDurableRecoveryRecords();
+        recoveryPutStatusRef.current = "none";
+        setHandoffErrorKind("save");
+        setAuthReturnPhase("handoff-error");
+        return;
+      }
+      if (result === "conflict") {
+        const year = handoffYearRef.current;
+        const nextSeason = handoffSeasonRef.current;
+        if (year != null && nextSeason != null) {
+          const fresh = await fetchRemoteBoardForHandoff(
+            year,
+            nextSeason,
+            handoffSignal()
+          );
+          if (
+            !isHandoffGenerationCurrent(generation) ||
+            handoffCancelledRef.current
+          ) {
+            return;
+          }
+          if (!fresh.ok) {
+            if (fresh.reason === "aborted") {
+              return;
+            }
+            setHandoffErrorKind(fresh.reason === "context" ? "context" : "load");
+            setAuthReturnPhase("handoff-error");
+            return;
+          }
+          handoffRemoteRef.current = fresh.board;
+        }
+        clearDurableRecoveryRecords();
+        setAuthReturnPhase("conflict");
+        return;
+      }
+      recoveryPutStatusRef.current = "completed";
+      let completedMarkerPersisted = false;
+      const completedMarkerLockAcquired = await withShareHandoffLock(async () => {
+        completedMarkerPersisted = persistHandoffRecoveryMarker({
+          shareBoard: localBoard,
+          putStatus: "completed",
+          postState: "not_started"
+        });
+      });
+      if (!completedMarkerLockAcquired || !completedMarkerPersisted) {
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+      await postShareFromHandoff(generation, localBoard);
+    } catch {
+      if (!isHandoffGenerationCurrent(generation) || handoffCancelledRef.current) {
+        return;
+      }
+      recoveryPutStatusRef.current = "unknown";
+      let unknownPersisted = false;
+      const unknownLockAcquired = await withShareHandoffLock(async () => {
+        unknownPersisted = persistHandoffRecoveryMarker({
+          shareBoard: localBoard,
+          putStatus: "unknown",
+          postState: "not_started"
+        });
+      });
+      if (!unknownLockAcquired || !unknownPersisted) {
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+      const restored = restoreGuestSnapshotToStorage();
+      setHandoffErrorKind(restored ? "recovery-unknown" : "restore-failed");
+      setAuthReturnPhase("recovery");
+    } finally {
+      if (isHandoffGenerationCurrent(generation) && !handoffPostIssuedRef.current) {
+        handoffBusyRef.current = false;
+        handoffActionLockRef.current = false;
+        setHandoffBusy(false);
+      }
+    }
+  }
+
+  async function postShareFromHandoff(generation: number, shareBoard: BoardState) {
+    if (!isHandoffGenerationCurrent(generation)) {
+      return;
+    }
+    if (handoffCancelledRef.current) {
+      return;
+    }
+    if (shareInFlightRef.current || handoffPostIssuedRef.current) {
+      return;
+    }
+
+    shareInFlightRef.current = true;
+    const shareToken = shareAttemptTokenRef.current + 1;
+    shareAttemptTokenRef.current = shareToken;
+    handoffShareBoardRef.current = shareBoard;
+    handoffActionLockRef.current = true;
+
+    const lockAcquired = await withShareHandoffLock(async () => {
+      await performHandoffPost(generation, shareBoard);
+    });
+    if (!lockAcquired && isHandoffGenerationCurrent(generation)) {
+      handoffPostIssuedRef.current = false;
+      protectLocalBoardRef.current = true;
+      setHandoffErrorKind("recovery-other-tab");
+      setAuthReturnPhase("recovery");
+    }
+
+    if (shareAttemptTokenRef.current === shareToken) {
+      shareInFlightRef.current = false;
+    }
+    if (isHandoffGenerationCurrent(generation)) {
+      setSharing(false);
+      setHandoffBusy(false);
+      handoffBusyRef.current = false;
+      handoffActionLockRef.current = false;
+    }
+  }
+
+  async function performHandoffPost(generation: number, shareBoard: BoardState) {
+    const markerWritten = persistHandoffRecoveryMarker({
+      shareBoard,
+      putStatus: recoveryPutStatusRef.current,
+      postState: "post_started_unknown"
+    });
+    if (!markerWritten) {
+      const held = readShareHandoffRecoveryDurable();
+      const otherOwner =
+        held.kind === "ok" &&
+        !isRecoveryMarkerOwnedBy(
+          held.value,
+          handoffOwnerTabIdRef.current,
+          recoveryAttemptIdRef.current
+        ) &&
+        !recoveryMarkerAgeExpired(held.value) &&
+        !recoveryLeaseExpired(held.value);
+      setHandoffErrorKind(otherOwner ? "recovery-other-tab" : "recovery-unreadable");
+      setAuthReturnPhase("recovery");
+      return;
+    }
+
+    if (!clearPendingShareIntent()) {
+      protectLocalBoardRef.current = true;
+      setHandoffErrorKind("recovery-unreadable");
+      setAuthReturnPhase("recovery");
+      return;
+    }
+
+    handoffPostIssuedRef.current = true;
+    setSharing(true);
+    setHandoffBusy(true);
+    setAuthReturnPhase("sharing");
+    setError(null);
+
+    const shareItems =
+      handoffItemsRef.current.length > 0 ? handoffItemsRef.current : items;
+
+    try {
+      const response = await fetch("/api/shares", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ board: shareBoard, items: shareItems })
+      });
+      let payload: ShareApiResponse = {};
+      let jsonParsed = true;
+      try {
+        payload = (await response.json()) as ShareApiResponse;
+      } catch {
+        jsonParsed = false;
+        payload = {};
+      }
+
+      const outcomeClass = classifySharePostResponse(response, payload, jsonParsed);
+      if (outcomeClass !== "success") {
+        const failureStatePersisted = persistHandoffRecoveryMarker({
+          shareBoard,
+          putStatus: recoveryPutStatusRef.current,
+          postState:
+            outcomeClass === "definite_failure"
+              ? "post_failed_definite"
+              : "post_started_unknown"
+        });
+        if (!failureStatePersisted) {
+          protectLocalBoardRef.current = true;
+          handoffPostIssuedRef.current = false;
+          setHandoffErrorKind("recovery-unreadable");
+          setAuthReturnPhase("recovery");
+          return;
+        }
+        const restored = restoreGuestSnapshotToStorage();
+        handoffPostIssuedRef.current = false;
+        if (isHandoffGenerationCurrent(generation)) {
+          if (!restored) {
+            setHandoffErrorKind("restore-failed");
+            setAuthReturnPhase("recovery");
+          } else if (outcomeClass === "definite_failure") {
+            setHandoffErrorKind("share");
+            setAuthReturnPhase("handoff-error");
+          } else {
+            setHandoffErrorKind("recovery-unknown");
+            setAuthReturnPhase("recovery");
+          }
+        }
+        return;
+      }
+
+      const cleanupPendingWritten = persistHandoffRecoveryMarker({
+        shareBoard,
+        putStatus: recoveryPutStatusRef.current,
+        postState: "post_completed_cleanup_pending"
+      });
+      if (!cleanupPendingWritten) {
+        handoffPostIssuedRef.current = false;
+        protectLocalBoardRef.current = true;
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+
+      const year = handoffYearRef.current;
+      const nextSeason = handoffSeasonRef.current;
+      const chosenRaw = JSON.stringify(shareBoard);
+      const boardWritten =
+        year != null &&
+        nextSeason != null &&
+        writeLocalStorageRaw(getStorageKey(year, nextSeason), chosenRaw);
+      if (!boardWritten) {
+        handoffPostIssuedRef.current = false;
+        protectLocalBoardRef.current = true;
+        if (isHandoffGenerationCurrent(generation)) {
+          setHandoffErrorKind("recovery-unknown");
+          setAuthReturnPhase("recovery");
+        }
+        return;
+      }
+      setBoard(shareBoard);
+
+      track({ name: "tier_share_create" });
+      const nextShareUrl = `${window.location.origin}/share/${payload.shareId}`;
+      setShareUrl(nextShareUrl);
+      const outcome = await shareOrCopyUrl({
+        url: nextShareUrl,
+        title: "今期アニメTier表",
+        text: "私の今期アニメTier表をシェアします"
+      });
+      if (isHandoffGenerationCurrent(generation)) {
+        setShareOutcome(outcome);
+        if (outcome === "copied") {
+          if (copyConfirmTimeoutRef.current !== null) {
+            window.clearTimeout(copyConfirmTimeoutRef.current);
+          }
+          setCopyConfirm(true);
+          copyConfirmTimeoutRef.current = window.setTimeout(() => {
+            setCopyConfirm(false);
+            copyConfirmTimeoutRef.current = null;
+          }, 2000);
+        }
+      }
+
+      if (clearDurableRecoveryRecords()) {
+        recoveryAttemptIdRef.current = null;
+        protectLocalBoardRef.current = false;
+        handoffPostIssuedRef.current = false;
+        if (isHandoffGenerationCurrent(generation)) {
+          setAuthReturnPhase("none");
+          setHandoffErrorKind(null);
+        }
+        return;
+      }
+
+      handoffPostIssuedRef.current = false;
+      protectLocalBoardRef.current = true;
+      if (isHandoffGenerationCurrent(generation)) {
+        setHandoffErrorKind("recovery-unknown");
+        setAuthReturnPhase("recovery");
+      }
+    } catch {
+      const unknownStatePersisted = persistHandoffRecoveryMarker({
+        shareBoard,
+        putStatus: recoveryPutStatusRef.current,
+        postState: "post_started_unknown"
+      });
+      if (!unknownStatePersisted) {
+        protectLocalBoardRef.current = true;
+        handoffPostIssuedRef.current = false;
+        setHandoffErrorKind("recovery-unreadable");
+        setAuthReturnPhase("recovery");
+        return;
+      }
+      const restored = restoreGuestSnapshotToStorage();
+      handoffPostIssuedRef.current = false;
+      setHandoffErrorKind(restored ? "recovery-unknown" : "restore-failed");
+      setAuthReturnPhase("recovery");
+    }
+  }
+
+  function cancelShareHandoff() {
+    if (handoffPostIssuedRef.current || authReturnPhaseRef.current === "sharing") {
+      return;
+    }
+    const existing = readShareHandoffRecoveryDurable();
+    if (existing.kind === "ok") {
+      const marker = existing.value;
+      if (
+        !isRecoveryMarkerOwnedBy(
+          marker,
+          handoffOwnerTabIdRef.current,
+          recoveryAttemptIdRef.current
+        ) &&
+        !recoveryMarkerAgeExpired(marker) &&
+        !recoveryLeaseExpired(marker)
+      ) {
+        setHandoffErrorKind("recovery-other-tab");
+        setAuthReturnPhase("recovery");
+        protectLocalBoardRef.current = true;
+        return;
+      }
+    }
+    handoffCancelledRef.current = true;
+    bumpHandoffGeneration();
+    if (!restoreGuestSnapshotToStorage()) {
+      protectLocalBoardRef.current = true;
+      handoffPostIssuedRef.current = false;
+      setSharing(false);
+      setHandoffBusy(false);
+      setHandoffErrorKind("restore-failed");
+      setAuthReturnPhase("recovery");
+      return;
+    }
+    if (!clearPendingShareIntent()) {
+      protectLocalBoardRef.current = true;
+      handoffPostIssuedRef.current = false;
+      setSharing(false);
+      setHandoffBusy(false);
+      setHandoffErrorKind("restore-failed");
+      setAuthReturnPhase("recovery");
+      return;
+    }
+    if (!clearDurableRecoveryRecords()) {
+      protectLocalBoardRef.current = true;
+      handoffPostIssuedRef.current = false;
+      setSharing(false);
+      setHandoffBusy(false);
+      setHandoffErrorKind("restore-failed");
+      setAuthReturnPhase("recovery");
+      return;
+    }
+    protectLocalBoardRef.current = true;
+    handoffPostIssuedRef.current = false;
+    recoveryAttemptIdRef.current = null;
+    recoveryPutStatusRef.current = "none";
+    setSharing(false);
+    setHandoffBusy(false);
+    setAuthReturnPhase("none");
+    setHandoffErrorKind(null);
+  }
+
+  function abortHandoffWritesAndReturnToConflict() {
+    if (handoffPostIssuedRef.current || authReturnPhaseRef.current === "sharing") {
+      return;
+    }
+    handoffCancelledRef.current = true;
+    bumpHandoffGeneration();
+    setSharing(false);
+    setHandoffBusy(false);
+    handoffCancelledRef.current = false;
+    setAuthReturnPhase("conflict");
+  }
+
+  function adoptRemoteThenShare() {
+    if (!tryBeginHandoffUserAction()) {
+      return;
+    }
+    const remote = handoffRemoteRef.current;
+    const year = handoffYearRef.current;
+    const nextSeason = handoffSeasonRef.current;
+    if (!remote || year == null || nextSeason == null) {
+      handoffActionLockRef.current = false;
+      return;
+    }
+    if (!remoteBoardMatchesHandoffContext(remote, year, nextSeason)) {
+      handoffActionLockRef.current = false;
+      setHandoffErrorKind("context");
+      setAuthReturnPhase("handoff-error");
+      return;
+    }
+
+    const generation = handoffGenerationRef.current;
+    const nextItems =
+      handoffItemsRef.current.length > 0 ? handoffItemsRef.current : items;
+    const adopted =
+      nextItems.length > 0
+        ? reconcileBoard(remote, nextItems, year, nextSeason)
+        : remote;
+    setBoard(adopted);
+    recoveryPutStatusRef.current = "none";
+    void postShareFromHandoff(generation, adopted);
+  }
+
+  function confirmReplaceLocalThenShare() {
+    if (!tryBeginHandoffUserAction()) {
+      return;
+    }
+    const remote = handoffRemoteRef.current;
+    void putLocalThenShare(
+      handoffGenerationRef.current,
+      remote?.updatedAt ?? null
+    );
+  }
+
+  function retryShareHandoff() {
+    if (!tryBeginHandoffUserAction()) {
+      return;
+    }
+    if (
+      handoffErrorKind === "recovery-unknown" ||
+      handoffErrorKind === "recovery-expired" ||
+      handoffErrorKind === "recovery-unreadable" ||
+      handoffErrorKind === "recovery-other-tab"
+    ) {
+      handoffActionLockRef.current = false;
+      return;
+    }
+    if (handoffErrorKind === "restore-failed") {
+      handoffActionLockRef.current = false;
+      cancelShareHandoff();
+      return;
+    }
+    const generation = handoffGenerationRef.current;
+    if (handoffErrorKind === "share") {
+      const shareBoard = handoffShareBoardRef.current ?? handoffLocalRef.current;
+      if (!shareBoard) {
+        handoffActionLockRef.current = false;
+        return;
+      }
+      void postShareFromHandoff(generation, shareBoard);
+      return;
+    }
+    if (handoffErrorKind === "save") {
+      void putLocalThenShare(
+        generation,
+        handoffRemoteRef.current?.updatedAt ?? null
+      );
+      return;
+    }
+    void compareAndContinueShareHandoff(generation);
+  }
+
+  async function handleCreateShare() {
     if (shareInFlightRef.current) {
+      return;
+    }
+    if (!board || !items.length || isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
       return;
     }
 
@@ -1240,9 +2423,15 @@ export function TierBoardApp({
     }
 
     shareInFlightRef.current = true;
+    const shareToken = shareAttemptTokenRef.current + 1;
+    shareAttemptTokenRef.current = shareToken;
 
-    // Explicit Share only: atomically consume pending intent before the single POST.
-    clearPendingShareIntent();
+    // Explicit Share only: consume pending intent and verify removal before POST.
+    if (!clearPendingShareIntent()) {
+      shareInFlightRef.current = false;
+      setError(SHARE_CREATE_ERROR_MESSAGE);
+      return;
+    }
 
     setSharing(true);
     setError(null);
@@ -1300,20 +2489,26 @@ export function TierBoardApp({
       // Fixed copy; local board unchanged; no automatic retry; stay guarded if still in guard.
       setError(SHARE_CREATE_ERROR_MESSAGE);
     } finally {
-      shareInFlightRef.current = false;
+      if (shareAttemptTokenRef.current === shareToken) {
+        shareInFlightRef.current = false;
+      }
       setSharing(false);
     }
   }
 
   function handleGoogleLoginFromPrompt() {
     if (loginPrompt === "share") {
-      writePendingShareIntent({
+      const written = writePendingShareIntent({
         version: PENDING_SHARE_INTENT_VERSION,
         action: "share",
         year: seasonYear,
         season,
         createdAt: new Date().toISOString()
       });
+      if (!written) {
+        setError(PENDING_SHARE_INTENT_STORAGE_ERROR_MESSAGE);
+        return;
+      }
     }
     void signIn("google");
   }
@@ -1540,7 +2735,7 @@ export function TierBoardApp({
             <p>
               {loginPrompt === "status"
                 ? "視聴ステータスを保存するにはログインしてください。Tier表の編集はログインなしで続けられます。"
-                : "Tier表を共有するにはログインしてください。作成したTier表はそのまま残ります。"}
+                : SHARE_LOGIN_PROMPT_MESSAGE}
             </p>
           </div>
           <div className="tier-login-prompt-actions">
@@ -1552,15 +2747,158 @@ export function TierBoardApp({
               Googleでログイン
             </button>
             <button
-              className="command-button tier-login-prompt-close"
+              className="command-button"
               type="button"
               onClick={() => setLoginPrompt(null)}
-              aria-label="閉じる"
             >
-              ×
+              閉じる
             </button>
           </div>
         </div>
+      ) : null}
+
+      {authReturnPhase === "conflict" ||
+      authReturnPhase === "confirm-replace" ||
+      authReturnPhase === "handoff-error" ||
+      authReturnPhase === "sharing" ||
+      authReturnPhase === "recovery" ? (
+        <ShareHandoffDialog
+          title={
+            authReturnPhase === "sharing"
+              ? HANDOFF_SHARING_STATUS_MESSAGE
+              : authReturnPhase === "recovery"
+                ? handoffErrorKind === "recovery-expired"
+                  ? HANDOFF_RECOVERY_EXPIRED_MESSAGE
+                  : handoffErrorKind === "recovery-unreadable"
+                    ? HANDOFF_RECOVERY_UNREADABLE_MESSAGE
+                    : handoffErrorKind === "restore-failed"
+                      ? HANDOFF_RESTORE_FAILED_MESSAGE
+                      : handoffErrorKind === "recovery-other-tab"
+                        ? HANDOFF_RECOVERY_OTHER_TAB_MESSAGE
+                        : HANDOFF_RECOVERY_UNKNOWN_MESSAGE
+              : authReturnPhase === "handoff-error"
+                ? handoffErrorKind === "share"
+                  ? SHARE_CREATE_ERROR_MESSAGE
+                  : handoffErrorKind === "context"
+                    ? HANDOFF_REMOTE_CONTEXT_ERROR_MESSAGE
+                    : HANDOFF_LOAD_ERROR_MESSAGE
+                : authReturnPhase === "confirm-replace"
+                  ? HANDOFF_REPLACE_CONFIRM_MESSAGE
+                  : HANDOFF_CONFLICT_TITLE
+          }
+          alert={
+            authReturnPhase === "handoff-error" || authReturnPhase === "recovery"
+          }
+          escapeLocked={authReturnPhase === "sharing"}
+          onEscape={
+            authReturnPhase === "sharing"
+              ? () => undefined
+              : authReturnPhase === "confirm-replace"
+                ? abortHandoffWritesAndReturnToConflict
+                : cancelShareHandoff
+          }
+        >
+          {authReturnPhase === "conflict" ? (
+            <>
+              <button
+                className="command-button emphasis-button"
+                type="button"
+                disabled={handoffActionsLocked}
+                onClick={() => setAuthReturnPhase("confirm-replace")}
+              >
+                この端末のTier表を使う
+              </button>
+              <button
+                className="command-button"
+                type="button"
+                disabled={handoffActionsLocked}
+                onClick={() => adoptRemoteThenShare()}
+              >
+                アカウントのTier表を使う
+              </button>
+              <button
+                className="command-button"
+                type="button"
+                disabled={handoffActionsLocked}
+                onClick={cancelShareHandoff}
+              >
+                共有をやめる
+              </button>
+            </>
+          ) : null}
+          {authReturnPhase === "confirm-replace" ? (
+            <>
+              <button
+                className="command-button emphasis-button"
+                type="button"
+                disabled={handoffActionsLocked}
+                onClick={() => confirmReplaceLocalThenShare()}
+              >
+                置き換えて共有
+              </button>
+              <button
+                className="command-button"
+                type="button"
+                disabled={handoffActionsLocked}
+                onClick={abortHandoffWritesAndReturnToConflict}
+              >
+                戻る
+              </button>
+              <button
+                className="command-button"
+                type="button"
+                disabled={handoffActionsLocked}
+                onClick={cancelShareHandoff}
+              >
+                共有をやめる
+              </button>
+            </>
+          ) : null}
+          {authReturnPhase === "handoff-error" ? (
+            <>
+              <button
+                className="command-button emphasis-button"
+                type="button"
+                disabled={handoffActionsLocked}
+                onClick={() => retryShareHandoff()}
+              >
+                再試行
+              </button>
+              <button
+                className="command-button"
+                type="button"
+                disabled={handoffActionsLocked}
+                onClick={cancelShareHandoff}
+              >
+                共有をやめる
+              </button>
+            </>
+          ) : null}
+          {authReturnPhase === "recovery" ? (
+            <>
+              {handoffErrorKind === "restore-failed" ? (
+                <button
+                  className="command-button emphasis-button"
+                  type="button"
+                  disabled={handoffActionsLocked}
+                  onClick={() => retryShareHandoff()}
+                >
+                  再試行
+                </button>
+              ) : null}
+              {handoffErrorKind === "recovery-other-tab" ? null : (
+                <button
+                  className="command-button"
+                  type="button"
+                  disabled={handoffActionsLocked}
+                  onClick={cancelShareHandoff}
+                >
+                  共有をやめる
+                </button>
+              )}
+            </>
+          ) : null}
+        </ShareHandoffDialog>
       ) : null}
 
       <main className="app-main">
@@ -1569,9 +2907,9 @@ export function TierBoardApp({
             {AUTH_RETURN_STATUS_EVALUATING}
           </div>
         ) : null}
-        {authReturnPhase === "protected" ? (
+        {authReturnPhase === "sharing" ? (
           <div className="notice" role="status" aria-live="polite">
-            {AUTH_RETURN_STATUS_PROTECTED}
+            {HANDOFF_SHARING_STATUS_MESSAGE}
           </div>
         ) : null}
         {authReturnPhase === "expired" ? (
@@ -2920,20 +4258,390 @@ function getStorageKey(year: number, season: AnimeSeason): string {
   return `${STORAGE_PREFIX}:${year}:${season}`;
 }
 
-function writePendingShareIntent(intent: PendingShareIntent): void {
+function writePendingShareIntent(intent: PendingShareIntent): boolean {
+  const serialized = JSON.stringify(intent);
   try {
-    sessionStorage.setItem(PENDING_SHARE_INTENT_KEY, JSON.stringify(intent));
+    sessionStorage.setItem(PENDING_SHARE_INTENT_KEY, serialized);
+    return sessionStorage.getItem(PENDING_SHARE_INTENT_KEY) === serialized;
   } catch {
-    // quota / private mode: later readers simply see no intent
+    return false;
   }
 }
 
-function clearPendingShareIntent(): void {
+function readPendingShareIntentRaw(): DurableRead<string> {
+  try {
+    const raw = sessionStorage.getItem(PENDING_SHARE_INTENT_KEY);
+    return raw == null ? { kind: "absent" } : { kind: "ok", value: raw };
+  } catch {
+    return { kind: "unreadable" };
+  }
+}
+
+function clearPendingShareIntent(): boolean {
   try {
     sessionStorage.removeItem(PENDING_SHARE_INTENT_KEY);
+    return sessionStorage.getItem(PENDING_SHARE_INTENT_KEY) == null;
   } catch {
-    // ignore
+    return false;
   }
+}
+
+function hashShareHandoffBoardRaw(raw: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < raw.length; index += 1) {
+    hash ^= raw.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+function createHandoffOwnerTabId(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // fall through
+  }
+  return `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function createHandoffAttemptId(): string | null {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function readOrCreateStableHandoffOwnerTabId(): string | null {
+  try {
+    const existing = sessionStorage.getItem(SHARE_HANDOFF_OWNER_TAB_ID_KEY);
+    if (existing != null) {
+      return existing.length > 0 ? existing : null;
+    }
+
+    const created = createHandoffOwnerTabId();
+    sessionStorage.setItem(SHARE_HANDOFF_OWNER_TAB_ID_KEY, created);
+    return sessionStorage.getItem(SHARE_HANDOFF_OWNER_TAB_ID_KEY) === created
+      ? created
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function isRecoveryMarkerOwnedBy(
+  marker: ShareHandoffRecoveryMarker,
+  ownerTabId: string | null,
+  attemptId: string | null
+): boolean {
+  return (
+    ownerTabId != null &&
+    attemptId != null &&
+    marker.ownerTabId === ownerTabId &&
+    marker.attemptId === attemptId
+  );
+}
+
+async function withShareHandoffLock(callback: () => Promise<void>): Promise<boolean> {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const lockManager = (navigator as Navigator & { locks?: LockManager }).locks;
+  if (!lockManager || typeof lockManager.request !== "function") {
+    return false;
+  }
+
+  let acquired = false;
+  try {
+    await lockManager.request(
+      SHARE_HANDOFF_LOCK_NAME,
+      { mode: "exclusive", ifAvailable: true },
+      async (lock) => {
+        if (!lock) {
+          return;
+        }
+        acquired = true;
+        await callback();
+      }
+    );
+    return acquired;
+  } catch {
+    return false;
+  }
+}
+
+function isCanonicalAnimeSeason(value: unknown): value is AnimeSeason {
+  return (
+    value === "WINTER" ||
+    value === "SPRING" ||
+    value === "SUMMER" ||
+    value === "FALL"
+  );
+}
+
+function isPositiveIntegerYear(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function parseStrictIsoTimestamp(value: unknown): number | null {
+  if (typeof value !== "string" || value.trim() === "") {
+    return null;
+  }
+  const ms = Date.parse(value);
+  if (!Number.isFinite(ms)) {
+    return null;
+  }
+  return new Date(ms).toISOString() === value ? ms : null;
+}
+
+function parseBoardMatchingContext(
+  raw: string,
+  year: number,
+  season: AnimeSeason
+): BoardState | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  const board = parseBoardState(parsed);
+  if (!board) {
+    return null;
+  }
+  if (board.seasonYear !== year || board.season !== season) {
+    return null;
+  }
+  return board;
+}
+
+function readLocalStorageRaw(
+  key: string
+): { kind: "absent" } | { kind: "unreadable" } | { kind: "ok"; raw: string } {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw == null) {
+      return { kind: "absent" };
+    }
+    return { kind: "ok", raw };
+  } catch {
+    return { kind: "unreadable" };
+  }
+}
+
+function writeLocalStorageRaw(key: string, raw: string): boolean {
+  try {
+    localStorage.setItem(key, raw);
+    return localStorage.getItem(key) === raw;
+  } catch {
+    return false;
+  }
+}
+
+function isShareHandoffRecoveryMarker(
+  value: unknown
+): value is ShareHandoffRecoveryMarker {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  const keys = Object.keys(candidate).sort();
+  const expected = [
+    "attemptId",
+    "chosenBoardHash",
+    "chosenBoardRaw",
+    "createdAt",
+    "guestRaw",
+    "leaseExpiresAt",
+    "ownerTabId",
+    "postState",
+    "putStatus",
+    "season",
+    "storageKey",
+    "version",
+    "year"
+  ];
+  if (keys.length !== expected.length || keys.join(",") !== expected.join(",")) {
+    return false;
+  }
+  if (candidate.version !== SHARE_HANDOFF_RECOVERY_VERSION) {
+    return false;
+  }
+  if (!isPositiveIntegerYear(candidate.year)) {
+    return false;
+  }
+  if (!isCanonicalAnimeSeason(candidate.season)) {
+    return false;
+  }
+  if (typeof candidate.storageKey !== "string") {
+    return false;
+  }
+  if (candidate.storageKey !== getStorageKey(candidate.year, candidate.season)) {
+    return false;
+  }
+  if (typeof candidate.attemptId !== "string" || candidate.attemptId.length === 0) {
+    return false;
+  }
+  if (typeof candidate.ownerTabId !== "string" || candidate.ownerTabId.length === 0) {
+    return false;
+  }
+  if (typeof candidate.guestRaw !== "string" || typeof candidate.chosenBoardRaw !== "string") {
+    return false;
+  }
+  if (typeof candidate.chosenBoardHash !== "string") {
+    return false;
+  }
+  if (candidate.chosenBoardHash !== hashShareHandoffBoardRaw(candidate.chosenBoardRaw)) {
+    return false;
+  }
+  if (parseStrictIsoTimestamp(candidate.createdAt) == null) {
+    return false;
+  }
+  if (parseStrictIsoTimestamp(candidate.leaseExpiresAt) == null) {
+    return false;
+  }
+  if (
+    candidate.putStatus !== "none" &&
+    candidate.putStatus !== "completed" &&
+    candidate.putStatus !== "unknown"
+  ) {
+    return false;
+  }
+  if (
+    candidate.postState !== "not_started" &&
+    candidate.postState !== "post_started_unknown" &&
+    candidate.postState !== "post_failed_definite" &&
+    candidate.postState !== "post_completed_cleanup_pending"
+  ) {
+    return false;
+  }
+  const guestBoard = parseBoardMatchingContext(
+    candidate.guestRaw,
+    candidate.year,
+    candidate.season
+  );
+  const chosenBoard = parseBoardMatchingContext(
+    candidate.chosenBoardRaw,
+    candidate.year,
+    candidate.season
+  );
+  return guestBoard != null && chosenBoard != null;
+}
+
+function recoveryMarkerAgeExpired(marker: ShareHandoffRecoveryMarker, now = Date.now()): boolean {
+  const createdMs = parseStrictIsoTimestamp(marker.createdAt);
+  if (createdMs == null || createdMs > now) {
+    return true;
+  }
+  return now - createdMs > SHARE_HANDOFF_RECOVERY_MAX_AGE_MS;
+}
+
+function recoveryLeaseExpired(marker: ShareHandoffRecoveryMarker, now = Date.now()): boolean {
+  const expiresMs = parseStrictIsoTimestamp(marker.leaseExpiresAt);
+  return expiresMs == null || expiresMs <= now;
+}
+
+function readShareHandoffRecoveryDurable(): DurableRead<ShareHandoffRecoveryMarker> {
+  const raw = readLocalStorageRaw(SHARE_HANDOFF_RECOVERY_KEY);
+  if (raw.kind === "absent" || raw.kind === "unreadable") {
+    return raw;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw.raw);
+  } catch {
+    return { kind: "malformed" };
+  }
+  if (!isShareHandoffRecoveryMarker(parsed)) {
+    return { kind: "malformed" };
+  }
+  return { kind: "ok", value: parsed };
+}
+
+function casWriteShareHandoffRecoveryMarker(
+  next: ShareHandoffRecoveryMarker
+): boolean {
+  if (!next.ownerTabId || !next.attemptId) {
+    return false;
+  }
+  const existing = readShareHandoffRecoveryDurable();
+  if (existing.kind === "unreadable") {
+    return false;
+  }
+  if (existing.kind === "malformed") {
+    return false;
+  }
+  if (existing.kind === "ok") {
+    const held = existing.value;
+    if (
+      !isRecoveryMarkerOwnedBy(held, next.ownerTabId, next.attemptId) &&
+      !recoveryMarkerAgeExpired(held) &&
+      !recoveryLeaseExpired(held)
+    ) {
+      return false;
+    }
+  }
+  const serialized = JSON.stringify(next);
+  if (!writeLocalStorageRaw(SHARE_HANDOFF_RECOVERY_KEY, serialized)) {
+    return false;
+  }
+  const verify = readShareHandoffRecoveryDurable();
+  return (
+    verify.kind === "ok" &&
+    verify.value.ownerTabId === next.ownerTabId &&
+    verify.value.attemptId === next.attemptId &&
+    verify.value.postState === next.postState &&
+    verify.value.chosenBoardHash === next.chosenBoardHash
+  );
+}
+
+function clearDurableRecoveryRecords(): boolean {
+  try {
+    localStorage.removeItem(SHARE_HANDOFF_RECOVERY_KEY);
+    if (localStorage.getItem(SHARE_HANDOFF_RECOVERY_KEY) != null) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasUnresolvedShareHandoffRecoveryMarker(): boolean {
+  const marker = readShareHandoffRecoveryDurable();
+  return marker.kind !== "absent";
+}
+
+function classifySharePostResponse(
+  response: Response,
+  payload: unknown,
+  jsonParsed: boolean
+): SharePostOutcome {
+  if (!response.ok) {
+    return "definite_failure";
+  }
+  if (!jsonParsed) {
+    return "unknown";
+  }
+  if (!payload || typeof payload !== "object") {
+    return "unknown";
+  }
+  const shareId = (payload as ShareApiResponse).shareId;
+  if (typeof shareId !== "string" || shareId.trim() === "") {
+    return "unknown";
+  }
+  return "success";
 }
 
 /** Exact metadata-only schema; reject extra keys and wrong shapes. */
@@ -2958,11 +4666,9 @@ function isExactPendingShareIntent(value: unknown): value is PendingShareIntent 
   return (
     candidate.version === PENDING_SHARE_INTENT_VERSION &&
     candidate.action === "share" &&
-    typeof candidate.year === "number" &&
-    Number.isFinite(candidate.year) &&
-    typeof candidate.season === "string" &&
-    (SEASONS as readonly string[]).includes(candidate.season) &&
-    typeof candidate.createdAt === "string"
+    isPositiveIntegerYear(candidate.year) &&
+    isCanonicalAnimeSeason(candidate.season) &&
+    parseStrictIsoTimestamp(candidate.createdAt) != null
   );
 }
 
@@ -2971,11 +4677,20 @@ type AuthReturnShareEvaluation = {
   /** Present when schema yields year/season (valid/expired are always current). */
   year?: number;
   season?: AnimeSeason;
+  corruptRaw?: string;
 };
 
-/** Contract mutations stay locked for both pre-decision phases. */
+/** Mutations stay locked until handoff chooses a board or is cancelled/expired. */
 function isAuthReturnPhaseLocked(phase: AuthReturnPhase): boolean {
-  return phase === "pending" || phase === "evaluating";
+  return (
+    phase === "pending" ||
+    phase === "evaluating" ||
+    phase === "conflict" ||
+    phase === "confirm-replace" ||
+    phase === "handoff-error" ||
+    phase === "sharing" ||
+    phase === "recovery"
+  );
 }
 
 /**
@@ -2985,6 +4700,7 @@ function isAuthReturnPhaseLocked(phase: AuthReturnPhase): boolean {
 type AuthReturnWindowHooks = {
   __ATB704_AUTH_RETURN_DECISION_GATE__?: Promise<void> | null;
   __ATB704_AUTH_RETURN_EVALUATING_PAINTED__?: () => void;
+  __ATB692_IGNORE_HANDOFF_ABORT__?: boolean;
 };
 
 /**
@@ -3038,13 +4754,17 @@ async function waitForAuthReturnEvaluatingBoundary(): Promise<void> {
  * createdAt within 10 minutes, and an existing valid matching local board.
  * Past/future year or season mismatch is invalid (local-only, not protected).
  */
-function evaluateAuthReturnShareIntent(): AuthReturnShareEvaluation {
-  let raw: string | null = null;
-  try {
-    raw = sessionStorage.getItem(PENDING_SHARE_INTENT_KEY);
-  } catch {
-    return { decision: "none" };
+function evaluateAuthReturnShareIntent(
+  rawOverride?: string
+): AuthReturnShareEvaluation {
+  const pendingRead =
+    rawOverride === undefined
+      ? readPendingShareIntentRaw()
+      : { kind: "ok" as const, value: rawOverride };
+  if (pendingRead.kind === "unreadable") {
+    return { decision: "unreadable" };
   }
+  const raw = pendingRead.kind === "ok" ? pendingRead.value : null;
 
   if (raw == null) {
     return { decision: "none" };
@@ -3071,8 +4791,8 @@ function evaluateAuthReturnShareIntent(): AuthReturnShareEvaluation {
     return { decision: "invalid", ...withSeason };
   }
 
-  const createdMs = Date.parse(parsed.createdAt);
-  if (!Number.isFinite(createdMs)) {
+  const createdMs = parseStrictIsoTimestamp(parsed.createdAt);
+  if (createdMs == null) {
     return { decision: "invalid", ...withSeason };
   }
 
@@ -3085,11 +4805,19 @@ function evaluateAuthReturnShareIntent(): AuthReturnShareEvaluation {
     return { decision: "expired", ...withSeason };
   }
 
-  const localBoard = readStoredBoard(getStorageKey(year, season));
+  const stored = readStoredBoardRecord(getStorageKey(year, season));
+  if (stored.kind === "unreadable") {
+    return { decision: "unreadable", ...withSeason };
+  }
+  if (stored.kind === "ok" && stored.board == null) {
+    return { decision: "corrupt", ...withSeason, corruptRaw: stored.raw };
+  }
   if (
-    !localBoard ||
-    localBoard.seasonYear !== year ||
-    localBoard.season !== season
+    stored.kind !== "ok" ||
+    !stored.board ||
+    stored.board.seasonYear !== year ||
+    stored.board.season !== season ||
+    isCanonicalGeneratedDefaultBoard(stored.board)
   ) {
     return { decision: "invalid", ...withSeason };
   }
@@ -3111,6 +4839,90 @@ async function readRemoteBoard(
 
   const payload = (await response.json()) as BoardApiResponse;
   return payload.board && isBoardState(payload.board) ? payload.board : null;
+}
+
+type HandoffRemoteResult =
+  | { ok: true; board: BoardState | null }
+  | { ok: false; reason: "http" | "malformed" | "aborted" | "context" };
+
+function remoteBoardMatchesHandoffContext(
+  board: BoardState,
+  year: number,
+  season: AnimeSeason
+): boolean {
+  const normalized = normalizeSeason(String(board.season));
+  return board.seasonYear === year && normalized === season;
+}
+
+/** Handoff GET: HTTP failure is distinct from remote-none (`board: null`). */
+async function fetchRemoteBoardForHandoff(
+  year: number,
+  season: AnimeSeason,
+  signal: AbortSignal
+): Promise<HandoffRemoteResult> {
+  try {
+    const response = await fetch(`/api/boards?year=${year}&season=${season}`, {
+      cache: "no-store",
+      signal
+    });
+
+    if (!response.ok) {
+      return { ok: false, reason: "http" };
+    }
+
+    const payload = (await response.json()) as BoardApiResponse;
+    if (payload.board == null) {
+      return { ok: true, board: null };
+    }
+    const parsed = parseBoardState(payload.board);
+    if (!parsed) {
+      return { ok: false, reason: "malformed" };
+    }
+    if (!remoteBoardMatchesHandoffContext(parsed, year, season)) {
+      return { ok: false, reason: "context" };
+    }
+    return { ok: true, board: parsed };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return { ok: false, reason: "aborted" };
+    }
+    return { ok: false, reason: "http" };
+  }
+}
+
+async function putRemoteBoardForHandoff(
+  board: BoardState,
+  expectedUpdatedAt: string | null,
+  signal: AbortSignal
+): Promise<HandoffPutOutcome> {
+  try {
+    const response = await fetch("/api/boards", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        board,
+        expectedUpdatedAt
+      }),
+      signal
+    });
+
+    if (response.status === 409) {
+      return "conflict";
+    }
+
+    if (!response.ok) {
+      return "definite_failure";
+    }
+
+    return "saved";
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return "aborted";
+    }
+    return "unknown";
+  }
 }
 
 async function saveRemoteBoard(board: BoardState, signal: AbortSignal): Promise<void> {
@@ -3136,36 +4948,264 @@ function getSaveStateLabel(state: "local" | "saving" | "saved" | "error"): strin
 }
 
 function readStoredBoard(storageKey: string): BoardState | null {
+  const stored = readStoredBoardRecord(storageKey);
+  return stored.kind === "ok" ? stored.board : null;
+}
+
+function readStoredBoardRecord(storageKey: string): StoredBoardRead {
+  const rawRead = readLocalStorageRaw(storageKey);
+  if (rawRead.kind === "absent" || rawRead.kind === "unreadable") {
+    return rawRead;
+  }
+  let parsed: unknown;
   try {
-    const raw = localStorage.getItem(storageKey);
-
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(raw) as unknown;
-
-    if (!isBoardState(parsed)) {
-      return null;
-    }
-
-    return parsed;
+    parsed = JSON.parse(rawRead.raw);
   } catch {
+    return { kind: "ok", raw: rawRead.raw, board: null };
+  }
+  return { kind: "ok", raw: rawRead.raw, board: parseBoardState(parsed) };
+}
+
+function parseBoardState(value: unknown): BoardState | null {
+  if (!value || typeof value !== "object") {
     return null;
   }
+
+  const candidate = value as Record<string, unknown>;
+  const boardKeys = Object.keys(candidate).sort();
+  if (
+    boardKeys.length !== 5 ||
+    boardKeys.join(",") !== "season,seasonYear,tiers,updatedAt,version"
+  ) {
+    return null;
+  }
+  if (candidate.version !== STORAGE_VERSION) {
+    return null;
+  }
+  if (!isPositiveIntegerYear(candidate.seasonYear)) {
+    return null;
+  }
+  if (!isCanonicalAnimeSeason(candidate.season)) {
+    return null;
+  }
+  if (
+    typeof candidate.updatedAt !== "string" ||
+    parseStrictIsoTimestamp(candidate.updatedAt) == null
+  ) {
+    return null;
+  }
+  if (!Array.isArray(candidate.tiers) || candidate.tiers.length === 0) {
+    return null;
+  }
+
+  const seenTierIds = new Set<string>();
+  const seenItemIds = new Set<string>();
+  const tiers: TierRow[] = [];
+
+  for (const entry of candidate.tiers) {
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+    const tier = entry as Record<string, unknown>;
+    const tierKeys = Object.keys(tier).sort();
+    if (
+      (tierKeys.length !== 4 && tierKeys.length !== 5) ||
+      tierKeys.slice(0, 4).join(",") !== "color,id,itemIds,label" ||
+      (tierKeys.length === 5 && tierKeys[4] !== "locked")
+    ) {
+      return null;
+    }
+    if (typeof tier.id !== "string" || tier.id.trim() === "") {
+      return null;
+    }
+    if (typeof tier.label !== "string" || tier.label.trim() === "") {
+      return null;
+    }
+    if (typeof tier.color !== "string") {
+      return null;
+    }
+    if (!Array.isArray(tier.itemIds)) {
+      return null;
+    }
+    if (seenTierIds.has(tier.id)) {
+      return null;
+    }
+    seenTierIds.add(tier.id);
+    const itemIds: string[] = [];
+    for (const itemId of tier.itemIds) {
+      if (typeof itemId !== "string" || itemId.trim() === "") {
+        return null;
+      }
+      if (seenItemIds.has(itemId)) {
+        return null;
+      }
+      seenItemIds.add(itemId);
+      itemIds.push(itemId);
+    }
+    if (tier.locked !== undefined && typeof tier.locked !== "boolean") {
+      return null;
+    }
+    tiers.push({
+      id: tier.id,
+      label: tier.label,
+      color: tier.color,
+      itemIds,
+      ...(typeof tier.locked === "boolean" ? { locked: tier.locked } : {})
+    });
+  }
+
+  const unranked = tiers.filter((tier) => tier.id === UNRANKED_TIER_ID);
+  if (unranked.length !== 1 || unranked[0].locked !== true) {
+    return null;
+  }
+
+  return {
+    version: STORAGE_VERSION,
+    season: candidate.season as AnimeSeason,
+    seasonYear: candidate.seasonYear,
+    tiers,
+    updatedAt: candidate.updatedAt
+  };
 }
 
 function isBoardState(value: unknown): value is BoardState {
-  if (!value || typeof value !== "object") {
+  return parseBoardState(value) !== null;
+}
+
+function cloneBoardState(board: BoardState): BoardState {
+  return JSON.parse(JSON.stringify(board)) as BoardState;
+}
+
+function isCanonicalGeneratedDefaultBoard(board: BoardState): boolean {
+  if (board.tiers.length !== defaultTierTemplates.length) {
     return false;
   }
+  return defaultTierTemplates.every((template, index) => {
+    const tier = board.tiers[index];
+    return (
+      tier.id === template.id &&
+      tier.label === template.label &&
+      tier.color === template.color &&
+      Boolean(tier.locked) === Boolean(template.locked) &&
+      (template.id === UNRANKED_TIER_ID || tier.itemIds.length === 0)
+    );
+  });
+}
 
-  const candidate = value as Partial<BoardState>;
+function boardsEquivalentForHandoff(left: BoardState, right: BoardState): boolean {
   return (
-    candidate.version === STORAGE_VERSION &&
-    typeof candidate.seasonYear === "number" &&
-    typeof candidate.season === "string" &&
-    Array.isArray(candidate.tiers)
+    left.version === right.version &&
+    left.season === right.season &&
+    left.seasonYear === right.seasonYear &&
+    JSON.stringify(
+      left.tiers.map((tier) => ({
+        id: tier.id,
+        label: tier.label,
+        color: tier.color,
+        itemIds: tier.itemIds,
+        locked: Boolean(tier.locked)
+      }))
+    ) ===
+      JSON.stringify(
+        right.tiers.map((tier) => ({
+          id: tier.id,
+          label: tier.label,
+          color: tier.color,
+          itemIds: tier.itemIds,
+          locked: Boolean(tier.locked)
+        }))
+      )
+  );
+}
+
+function ShareHandoffDialog({
+  title,
+  alert,
+  escapeLocked = false,
+  onEscape,
+  children
+}: {
+  title: string;
+  alert: boolean;
+  escapeLocked?: boolean;
+  onEscape: () => void;
+  children: ReactNode;
+}) {
+  const panelRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const root = panelRef.current;
+    const first = root?.querySelector<HTMLButtonElement>("button:not([disabled])");
+    first?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (!escapeLocked) {
+          onEscape();
+        }
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) {
+        return;
+      }
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) {
+        return;
+      }
+      const firstEl = focusables[0];
+      const lastEl = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && active === firstEl) {
+        event.preventDefault();
+        lastEl.focus();
+      } else if (!event.shiftKey && active === lastEl) {
+        event.preventDefault();
+        firstEl.focus();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [escapeLocked, onEscape, title]);
+
+  return (
+    <div
+      className="move-sheet-backdrop"
+      role="presentation"
+      onClick={escapeLocked ? undefined : onEscape}
+    >
+      <section
+        ref={panelRef}
+        className="move-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tier-share-handoff-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {alert ? (
+          <p id="tier-share-handoff-title" className="move-sheet-section-label" role="alert">
+            {title}
+          </p>
+        ) : escapeLocked ? (
+          <p id="tier-share-handoff-title" className="move-sheet-section-label" role="status">
+            {title}
+          </p>
+        ) : (
+          <strong id="tier-share-handoff-title">{title}</strong>
+        )}
+        <div className="tier-login-prompt-actions">
+          {children}
+        </div>
+      </section>
+    </div>
   );
 }
 
