@@ -1,0 +1,231 @@
+{
+  "catalog_version": 1,
+  "task_id": "ATB-745-P0-CAPACITY",
+  "rule": "Only repository-proven values may be numeric. Unproven platform-plan limits are unknown_blocking and fail closed.",
+  "required_for_launch": [
+    "vercel_request_quota",
+    "vercel_function_duration_ms",
+    "vercel_concurrency_limit",
+    "vercel_bandwidth_quota",
+    "turso_request_quota",
+    "turso_row_quota",
+    "turso_storage_quota",
+    "expected_sns_peak_concurrency",
+    "expected_sns_burst_rps"
+  ],
+  "limits": {
+    "vercel_request_quota": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "requests",
+      "evidence": [],
+      "note": "No Hobby/Pro request quota is recorded in this repository."
+    },
+    "vercel_function_duration_ms": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "ms",
+      "evidence": [],
+      "note": "No maxDuration / platform function timeout is recorded in this repository."
+    },
+    "vercel_concurrency_limit": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "concurrent_invocations",
+      "evidence": [],
+      "note": "No Vercel concurrency quota is recorded in this repository."
+    },
+    "vercel_bandwidth_quota": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "bytes",
+      "evidence": [],
+      "note": "No bandwidth quota is recorded in this repository."
+    },
+    "turso_request_quota": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "requests",
+      "evidence": [],
+      "note": "No Turso row/request/storage quota is recorded in this repository."
+    },
+    "turso_row_quota": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "rows",
+      "evidence": [],
+      "note": "No Turso row quota is recorded in this repository."
+    },
+    "turso_storage_quota": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "bytes",
+      "evidence": [],
+      "note": "No Turso storage quota is recorded in this repository."
+    },
+    "expected_sns_peak_concurrency": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "concurrent_users",
+      "evidence": [],
+      "note": "Issue #745 requires SNS inflow comparison, but no peak concurrency figure is recorded in-repo."
+    },
+    "expected_sns_burst_rps": {
+      "status": "unknown_blocking",
+      "value": null,
+      "unit": "rps",
+      "evidence": [],
+      "note": "No expected SNS burst RPS is recorded. KPI 3000-5000 MAU in MONETIZATION_ROADMAP.md is not a burst figure."
+    }
+  },
+  "proven": {
+    "seasonal_cdn_cache_control": {
+      "status": "proven",
+      "value": "public, s-maxage=300, stale-while-revalidate=86400",
+      "evidence": [
+        "app/api/anime/seasonal/route.ts",
+        "tests/seasonal-api-cache-policy.test.ts"
+      ]
+    },
+    "client_seasonal_cache_ttl_ms": {
+      "status": "proven",
+      "value": 600000,
+      "evidence": [
+        "lib/seasonal-anime-client-cache.ts",
+        "docs/architecture/release-data-ssot.md"
+      ]
+    },
+    "freshness_fresh_max_age_ms": {
+      "status": "proven",
+      "value": 86400000,
+      "evidence": [
+        "lib/anime-sources/index.ts",
+        "docs/architecture/release-data-ssot.md"
+      ]
+    },
+    "freshness_stale_max_age_ms": {
+      "status": "proven",
+      "value": 604800000,
+      "evidence": [
+        "lib/anime-sources/index.ts",
+        "docs/architecture/release-data-ssot.md"
+      ]
+    },
+    "anilist_attempt_budget_ms": {
+      "status": "proven",
+      "value": 6000,
+      "evidence": [
+        "lib/anime-sources/anilist.ts",
+        "docs/architecture/release-data-ssot.md"
+      ]
+    },
+    "jikan_attempt_budget_ms": {
+      "status": "proven",
+      "value": 6000,
+      "evidence": [
+        "lib/anime-sources/jikan.ts",
+        "docs/architecture/release-data-ssot.md"
+      ]
+    },
+    "write_json_max_bytes": {
+      "status": "proven",
+      "value": 4096,
+      "evidence": ["lib/api/write-request-guard.ts"]
+    },
+    "share_payload_max_bytes": {
+      "status": "proven",
+      "value": 800000,
+      "evidence": ["app/api/shares/route.ts"]
+    },
+    "production_write_rate_limit": {
+      "status": "proven_absent",
+      "value": null,
+      "evidence": ["PRODUCT_REVIEW_AND_ROADMAP.md"],
+      "note": "Comment/reaction/share APIs have no rate limiter in production source. Fixture write harness supplies the missing test, not a production claim."
+    },
+    "production_write_idempotency": {
+      "status": "proven_absent",
+      "value": null,
+      "evidence": [],
+      "note": "No Idempotency-Key handling exists in repository source. Fixture write harness tests the gate contract, not production behavior."
+    },
+    "s1_stop_error_rate": {
+      "status": "proven",
+      "value": 0.01,
+      "evidence": ["scripts/load/read-harness.mjs", "tests/load-read-harness.test.mjs"]
+    },
+    "s1_concurrency_steps": {
+      "status": "proven",
+      "value": [1, 5, 10, 25],
+      "evidence": ["scripts/load/read-harness.mjs"]
+    },
+    "issue_745_observed_prod_smoke_2026_08_23": {
+      "status": "observed",
+      "value": {
+        "requests": 20,
+        "concurrency": 5,
+        "http_200": "20/20",
+        "median_s": 1.87,
+        "p95_s": 2.77,
+        "max_s": 4.5
+      },
+      "evidence": ["https://github.com/tnob39/anime-tier-board/issues/745"],
+      "note": "Historical observation only. Not an SLO and not a platform quota."
+    },
+    "mau_kpi_not_burst": {
+      "status": "observed",
+      "value": { "monthly_unique_users_target": [3000, 5000] },
+      "evidence": ["MONETIZATION_ROADMAP.md"],
+      "note": "Cannot be converted into SNS burst RPS without inventing a traffic model."
+    },
+    "vercel_turso_phase_prices": {
+      "status": "observed",
+      "value": {
+        "phase_0_2": "free",
+        "phase_3_vercel_pro_usd": 20,
+        "phase_3_turso_scaler_usd": 29
+      },
+      "evidence": ["MONETIZATION_ROADMAP.md"],
+      "note": "Prices are not request/row quotas."
+    }
+  },
+  "slo_alert_rollback": {
+    "latency_slo_ms": {
+      "status": "unknown_blocking",
+      "value": null,
+      "note": "Observed p95 2.77s at concurrency 5 is not promoted to an SLO."
+    },
+    "error_rate_stop": {
+      "status": "proven",
+      "value": 0.01,
+      "note": "Harness and #745 stop rule: error rate > 1% aborts."
+    },
+    "http_429_stop": {
+      "status": "proven",
+      "value": true,
+      "note": "Any 429 aborts staged load."
+    },
+    "timeout_stop": {
+      "status": "proven",
+      "value": true
+    },
+    "turso_error_stop": {
+      "status": "proven",
+      "value": true
+    },
+    "external_amplification_stop": {
+      "status": "proven",
+      "value": true
+    },
+    "alert_destination": {
+      "status": "unknown_blocking",
+      "value": null,
+      "note": "Live alert destination belongs to #742 evidence, not this catalog."
+    },
+    "rollback": {
+      "status": "proven_procedure",
+      "value": "docs/release/RELEASE_GATE.md#vercel-rollback",
+      "note": "Capacity incident uses the same Vercel rollback rehearsal as #742. Production high-parallel load remains forbidden."
+    }
+  }
+}

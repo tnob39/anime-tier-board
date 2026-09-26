@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "status": "unprovisioned",
+  "algorithm": "Ed25519",
+  "production": {
+    "keyId": null,
+    "publicKeyPem": null
+  },
+  "operatorProvisioning": {
+    "generate": "On a disconnected operator/CI host: node -e \"const {generateKeyPairSync}=require('node:crypto'); const k=generateKeyPairSync('ed25519'); process.stdout.write(k.publicKey.export({type:'spki',format:'pem'}));\"  Keep the private key only in CI secret store or HSM. Never commit, log, or test-embed the private key.",
+    "pin": "Keep the production key ID/public key in protected external CI/runtime configuration. A reviewed repository policy may record the same values only as a consistency check; it is never the trust root.",
+    "sign": "CI/operator builds a canonical manifest with EXACT keys schemaVersion,targetEnvironment,commit,generatedAt,capacityDecision,taskId,evidence. taskId is mandatory and identifies the accepted task/spec. generatedAt is UTC and must satisfy the trusted freshness window supplied by CI/CLI (never from evidence). evidence[] is unique normalized {path,sha256,semanticType} covering every release artifact with no missing/extra/duplicate paths or semantic mismatch. Detached Ed25519 is over that canonical UTF-8. The validator first requires the externally supplied protected key ID/public key and then requires this policy to match it. Expected commit/environment come from CI/CLI/HEAD, never evidence.releaseCommit.",
+    "result": "Until status is provisioned with a real production public key, every release and capacity decision is NO_GO."
+  }
+}

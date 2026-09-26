@@ -1,0 +1,12 @@
+{
+  "template": true,
+  "task_id": "ATB-745-P0-CAPACITY",
+  "decision": "NO_GO",
+  "reasons": [
+    "templateEvidence",
+    "unknownPlatformLimits",
+    "unknownLatencySlo",
+    "unknownAlertDestination"
+  ],
+  "note": "見本。SHA-256 で束縛した実ファイル証拠へ置換するまで GO にならない。source URL だけでは足りない。"
+}
