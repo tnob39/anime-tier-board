@@ -35,9 +35,9 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const HARNESS_PATH = path.join(ROOT, "scripts", "load", "read-harness.mjs");
 
-function tempReportPath(prefix = "atb745") {
+function tempReport(prefix = "atb745") {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
-  return path.join(dir, "report.json");
+  return { dir, report: path.join(dir, "report.json") };
 }
 
 function runCli(args, { timeoutMs = 60000 } = {}) {
@@ -420,11 +420,12 @@ test("summarizeResults never invents turso/external zeros when unobserved", () =
 });
 
 test("writeReportAtomic produces parseable JSON", () => {
-  const reportPath = tempReportPath("atomic");
-  writeReportAtomic(reportPath, { ok: true, n: 1 });
-  const parsed = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  const { dir, report } = tempReport("atomic");
+  writeReportAtomic(report, { ok: true, n: 1, task_id: "ATB-745-TEST" }, { trustedOutputRoot: dir });
+  const parsed = JSON.parse(fs.readFileSync(report, "utf8"));
   assert.equal(parsed.ok, true);
   assert.equal(parsed.n, 1);
+  assert.equal(parsed.provenance.task_id, "ATB-745-TEST");
 });
 
 test("fixture server: loopback random port, fixed modes, no external by default", async () => {
@@ -493,7 +494,7 @@ test("performGet uses GET + redirect manual against fixture", async () => {
 });
 
 async function runHarnessCase(overrides) {
-  const report = tempReportPath("run");
+  const { dir, report } = tempReport("run");
   const result = await runHarness({
     target: "fixture",
     scenario: "fresh",
@@ -502,6 +503,7 @@ async function runHarnessCase(overrides) {
     timeout_ms: 3000,
     path: "/api/anime/seasonal",
     report,
+    trustedOutputRoot: dir,
     inject: {},
     base_url: null,
     ...overrides,
@@ -603,7 +605,6 @@ test("stop case: turso error", async () => {
 });
 
 test("CLI: production base-url rejected before fetch (exit 2)", async () => {
-  const report = tempReportPath("prod");
   const { code, stderr } = await runCli([
     "--target",
     "local",
@@ -615,16 +616,13 @@ test("CLI: production base-url rejected before fetch (exit 2)", async () => {
     "1",
     "--requests",
     "1",
-    "--report",
-    report,
   ]);
   assert.equal(code, 2);
   assert.match(stderr, /SAFETY/);
-  assert.equal(fs.existsSync(report), false);
 });
 
 test("CLI: fixture happy path JSON parseable", async () => {
-  const report = tempReportPath("cli-ok");
+  const rel = `read-cli-${process.pid}.json`;
   const { code, stdout } = await runCli([
     "--target",
     "fixture",
@@ -637,20 +635,31 @@ test("CLI: fixture happy path JSON parseable", async () => {
     "--timeout-ms",
     "3000",
     "--report",
-    report,
+    rel,
   ]);
   assert.equal(code, 0);
   const line = JSON.parse(stdout.trim().split("\n").at(-1));
   assert.equal(line.ok, true);
-  const disk = JSON.parse(fs.readFileSync(report, "utf8"));
+  const diskPath = path.join(ROOT, "artifacts", "load", rel);
+  const disk = JSON.parse(fs.readFileSync(diskPath, "utf8"));
   assert.equal(disk.task_id, "ATB-745-S1-HERMES-v1");
   assert.equal(disk.target, "fixture");
   assert.ok(typeof disk.overall.throughput_rps === "number");
   assert.ok(disk.overall.latency_ms.p95 != null);
+  fs.unlinkSync(diskPath);
+});
+
+test("CLI rejects absolute Windows and traversal report paths", () => {
+  assert.throws(
+    () => parseArgs(["--report", "C:\\Windows\\Temp\\atb-745-read.json"]),
+    SafetyError,
+  );
+  assert.throws(() => parseArgs(["--report", "..\\..\\package.json"]), SafetyError);
 });
 
 test("CLI signal/cleanup: SIGTERM stops and closes fixture (partial)", async () => {
-  const report = tempReportPath("sig");
+  const rel = `read-sig-${process.pid}.json`;
+  const report = path.join(ROOT, "artifacts", "load", rel);
   const child = spawn(
     process.execPath,
     [
@@ -668,7 +677,7 @@ test("CLI signal/cleanup: SIGTERM stops and closes fixture (partial)", async () 
       "--delay-ms",
       "30",
       "--report",
-      report,
+      rel,
     ],
     { cwd: ROOT, stdio: ["ignore", "pipe", "pipe", "ipc"] },
   );
@@ -735,6 +744,7 @@ test("CLI signal/cleanup: SIGTERM stops and closes fixture (partial)", async () 
   await new Promise((resolve, reject) =>
     probe.close((err) => (err ? reject(err) : resolve())),
   );
+  if (fs.existsSync(report)) fs.unlinkSync(report);
 });
 
 test("buildFixturePayload modes are stable", () => {
@@ -784,7 +794,7 @@ test("local target against tiny loopback stub (GET only path)", async () => {
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
-  const report = tempReportPath("local");
+  const { dir, report } = tempReport("local");
   try {
     const result = await runHarness({
       target: "local",
@@ -795,6 +805,7 @@ test("local target against tiny loopback stub (GET only path)", async () => {
       timeout_ms: 3000,
       path: "/api/anime/seasonal",
       report,
+      trustedOutputRoot: dir,
       inject: {},
     });
     assert.equal(result.exitCode, 0);

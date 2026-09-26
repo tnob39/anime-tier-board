@@ -3,14 +3,15 @@
  * ATB-745-S1 — safe read-only load harness (fixture | local loopback only).
  * GET-only, redirect manual, no production / userinfo / env tokens / DB / live upstream.
  */
-import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { setTimeout as delay } from "node:timers/promises";
 import {
   MATRIX_ORDER,
   startFixtureServer,
 } from "./fixture-server.mjs";
+import { SafetyError } from "./safety-error.mjs";
+import { WORKSPACE_ROOT, resolveSafeOutputPath, writeJsonAtomicSafe } from "./safe-path.mjs";
+
+export { SafetyError };
 
 export const TASK_ID = "ATB-745-S1-HERMES-v1";
 export const DEFAULT_CONCURRENCY = Object.freeze([1, 5, 10, 25]);
@@ -28,14 +29,6 @@ const BLOCKED_HOST_FRAGMENTS = [
   "jikan.moe",
   "googleapis.com",
 ];
-
-export class SafetyError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "SafetyError";
-    this.exitCode = 2;
-  }
-}
 
 export function nearestRank(sortedAscending, percentile) {
   if (!Array.isArray(sortedAscending) || sortedAscending.length === 0) return null;
@@ -397,17 +390,11 @@ export function summarizeResults(results, { wallMs, started }) {
   };
 }
 
-export function writeReportAtomic(filePath, report) {
-  const dir = path.dirname(filePath);
-  fs.mkdirSync(dir, { recursive: true });
-  const tmp = path.join(
-    dir,
-    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.tmp`,
-  );
-  const json = `${JSON.stringify(report, null, 2)}\n`;
-  fs.writeFileSync(tmp, json, { encoding: "utf8", flag: "w" });
-  fs.renameSync(tmp, filePath);
-  return filePath;
+export function writeReportAtomic(filePath, report, options = {}) {
+  return writeJsonAtomicSafe(filePath, report, {
+    ...options,
+    purpose: options.purpose ?? "test-only-report",
+  });
 }
 
 export function parseArgs(argv = process.argv.slice(2)) {
@@ -516,6 +503,9 @@ export function parseArgs(argv = process.argv.slice(2)) {
     assertSafeUrl(out.base_url, { target: out.target });
   }
   assertNoForbiddenEnvUsage();
+  if (!out.help) {
+    resolveSafeOutputPath(out.report, { workspaceRoot: WORKSPACE_ROOT });
+  }
   return out;
 }
 
@@ -701,7 +691,11 @@ export async function runLoadStep({
 export async function runHarness(options) {
   const opts = { ...options };
   const modes = scenarioToModes(opts.scenario);
-  const reportPath = path.resolve(opts.report);
+  const pathOpts = {
+    workspaceRoot: opts.workspaceRoot ?? WORKSPACE_ROOT,
+    trustedOutputRoot: opts.trustedOutputRoot,
+  };
+  const reportPath = resolveSafeOutputPath(opts.report, pathOpts);
   const state = {
     stopped: false,
     abortController: new AbortController(),
@@ -825,11 +819,23 @@ export async function runHarness(options) {
       partial,
       stopped: Boolean(globalStop),
       stop_reason: globalStop,
+      testOnly: true,
+      provenance: {
+        generatedBy: "scripts/load/read-harness.mjs",
+        schema: "atb-745-load-report/v1",
+        task_id: TASK_ID,
+        taskId: TASK_ID,
+        attemptId: harnessStartedAt,
+        target: opts.target,
+        targetEnvironment: opts.target,
+        commit: "unspecified",
+        testOnly: true,
+      },
       overall,
       steps,
     };
 
-    writeReportAtomic(reportPath, report);
+    writeReportAtomic(reportPath, report, pathOpts);
     // Remove signal handlers before closing sockets to avoid Windows shutdown races.
     process.off("SIGINT", onSignal);
     process.off("SIGTERM", onSignal);

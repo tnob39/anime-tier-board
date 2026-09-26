@@ -11,8 +11,11 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "release:validate": "node scripts/validate-release-evidence.mjs",
-    "test:load": "node --test tests/load-read-harness.test.mjs",
-    "load:read:fixture": "node scripts/load/read-harness.mjs --target fixture --scenario matrix --concurrency 1,5,10,25 --requests 10 --timeout-ms 5000 --report artifacts/load/read-harness-fixture.json"
+    "test:load": "node --test tests/load-read-harness.test.mjs tests/load-write-harness.test.mjs tests/load-production-smoke.test.mjs tests/load-capacity-report.test.mjs tests/load-safe-path.test.mjs tests/load-signed-provenance.test.mjs tests/load-strict-json.test.mjs",
+    "load:read:fixture": "node scripts/load/read-harness.mjs --target fixture --scenario matrix --concurrency 1,5,10,25 --requests 10 --timeout-ms 5000 --report artifacts/load/read-harness-fixture.json",
+    "load:write:fixture": "node scripts/load/write-harness.mjs --target fixture --scenario matrix --concurrency 1,5,10,25 --requests 10 --timeout-ms 5000 --report artifacts/load/write-harness-fixture.json",
+    "load:production-smoke": "node scripts/load/production-smoke.mjs",
+    "load:capacity:report": "node scripts/load/capacity-report.mjs --catalog docs/release/capacity-limits.catalog.json --out artifacts/load/capacity-report.json"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
