@@ -59,7 +59,7 @@ export function createReportPostHandler(
     const originDenied = dependencies.assertSameOrigin(request);
     if (originDenied) return originDenied;
 
-    const limited = dependencies.consumeRateLimit(request, {
+    const limited = await dependencies.consumeRateLimit(request, {
       userId,
       policy: "commentReport",
       requireIp: true,

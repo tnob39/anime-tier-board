@@ -30,7 +30,7 @@ export const GET = withApiRoute("boards.GET", async (request: Request) => {
 
 export const PUT = withApiRoute("boards.PUT", async (request: Request) => {
   const identity = await requireWriteIdentity();
-  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  const denied = await admitCookieCapableWrite(request, identity, "userWrite");
   if (denied) return denied;
   const userId = identity.userId;
 

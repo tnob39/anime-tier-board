@@ -50,7 +50,7 @@ export const GET = withApiRoute("account.GET", async (_request: Request) => {
 
 export const DELETE = withApiRoute("account.DELETE", async (request: Request) => {
   const identity = await requireWriteIdentity();
-  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  const denied = await admitCookieCapableWrite(request, identity, "userWrite");
   if (denied) return denied;
   const userId = identity.userId;
 

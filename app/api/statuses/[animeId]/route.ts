@@ -98,7 +98,7 @@ export async function PATCH(
 
   return withApiRoute("statuses.[animeId].PATCH", async (req: Request) => {
     const identity = await requireWriteIdentity();
-    const denied = admitCookieCapableWrite(req, identity, "userWrite");
+    const denied = await admitCookieCapableWrite(req, identity, "userWrite");
     if (denied) return denied;
     const userId = identity.userId;
 

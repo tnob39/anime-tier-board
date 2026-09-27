@@ -23,7 +23,7 @@ export const GET = withApiRoute("statuses.GET", async () => {
 
 export const PUT = withApiRoute("statuses.PUT", async (request: Request) => {
   const identity = await requireWriteIdentity();
-  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  const denied = await admitCookieCapableWrite(request, identity, "userWrite");
   if (denied) return denied;
   const userId = identity.userId;
 
@@ -61,7 +61,7 @@ export const PUT = withApiRoute("statuses.PUT", async (request: Request) => {
 
 export const DELETE = withApiRoute("statuses.DELETE", async (request: Request) => {
   const identity = await requireWriteIdentity();
-  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  const denied = await admitCookieCapableWrite(request, identity, "userWrite");
   if (denied) return denied;
   const userId = identity.userId;
 

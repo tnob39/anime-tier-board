@@ -56,7 +56,7 @@ export async function POST(
   const idempotencyDenied = assertOptionalIdempotencyKey(request);
   if (idempotencyDenied) return idempotencyDenied;
 
-  const limited = consumeWriteRateLimit(request, {
+  const limited = await consumeWriteRateLimit(request, {
     userId,
     policy: "comment",
   });
@@ -130,7 +130,7 @@ export function createCommentsDeleteHandler(
     const originDenied = dependencies.assertSameOrigin(request);
     if (originDenied) return originDenied;
 
-    const limited = dependencies.consumeRateLimit(request, {
+    const limited = await dependencies.consumeRateLimit(request, {
       userId,
       policy: action === "hide" ? "commentModeration" : "commentDelete",
       requireIp: action === "hide",

@@ -22,7 +22,7 @@ async function postHandler(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const limited = consumeWriteRateLimit(request, {
+  const limited = await consumeWriteRateLimit(request, {
     policy: "feedback",
     requireIp: true,
   });

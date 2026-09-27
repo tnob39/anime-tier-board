@@ -50,11 +50,14 @@ AUTH_GOOGLE_ID=
 AUTH_GOOGLE_SECRET=
 TURSO_DATABASE_URL=
 TURSO_AUTH_TOKEN=
+WRITE_RATE_LIMIT_SECRET=
 AUTH_URL=
 AUTH_TRUST_HOST=true
 ```
 
 ローカルだけで動かす場合、`AUTH_URL` は未設定でも動きます。Vercel ではデプロイ先 URL を設定します。
+
+`WRITE_RATE_LIMIT_SECRET` は本番で必須です。32文字以上で、空白・制御文字を含めず、`AUTH_SECRET` とは別に生成してください。デプロイ間で同じ値を安定して使うと、Turso に保存する write API レート制限が Vercel の isolate を跨いで継続します。値をローテーションすると新しい namespace が使われ、旧 namespace のバケットが新しい quota を消費することはありません。旧バケットは期限切れ時に bounded cleanup で少しずつ削除されます。設定不備や limiter の障害時は汎用的な 503 で fail-closed になります。
 
 現在の Vercel preview URL:
 

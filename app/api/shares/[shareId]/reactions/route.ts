@@ -23,7 +23,7 @@ export async function POST(
   const originDenied = assertSameOriginBrowserWrite(request);
   if (originDenied) return originDenied;
 
-  const limited = consumeWriteRateLimit(request, {
+  const limited = await consumeWriteRateLimit(request, {
     userId,
     policy: "reaction",
   });

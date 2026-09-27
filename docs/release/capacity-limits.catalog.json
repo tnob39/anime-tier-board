@@ -138,10 +138,15 @@
       "evidence": ["app/api/shares/route.ts"]
     },
     "production_write_rate_limit": {
-      "status": "proven_absent",
-      "value": null,
-      "evidence": ["PRODUCT_REVIEW_AND_ROADMAP.md"],
-      "note": "Comment/reaction/share APIs have no rate limiter in production source. Fixture write harness supplies the missing test, not a production claim."
+      "status": "proven",
+      "value": "turso_persistent_user_ip_fixed_window",
+      "evidence": [
+        "lib/api/write-admission.ts",
+        "lib/api/write-rate-limit-store.ts",
+        "tests/write-rate-limit-store.test.ts",
+        "docs/security/write-api-protection.md"
+      ],
+      "note": "Public write routes use an atomic Turso-backed limiter shared across isolates. This source proof does not establish Vercel, Turso, or SNS traffic capacity."
     },
     "production_write_idempotency": {
       "status": "proven_absent",
