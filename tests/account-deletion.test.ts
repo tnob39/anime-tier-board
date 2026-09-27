@@ -61,6 +61,7 @@ async function countRows(
 }
 
 async function createAllKnownTables(client: AccountDeletionClient): Promise<void> {
+  await client.execute("pragma foreign_keys = on");
   await client.execute(`create table user_anime_statuses (
     user_id text not null,
     anime_id text not null,
@@ -143,6 +144,20 @@ async function createAllKnownTables(client: AccountDeletionClient): Promise<void
     body text not null,
     created_at text not null,
     updated_at text not null
+  )`);
+  await client.execute(
+    "create unique index idx_share_comments_share_comment on share_comments(share_id, comment_id)"
+  );
+  await client.execute(`create table share_comment_reports (
+    share_id text not null,
+    comment_id text not null,
+    reporter_user_id text not null,
+    reason text not null,
+    detail text,
+    created_at text not null,
+    primary key (comment_id, reporter_user_id),
+    foreign key (share_id, comment_id)
+      references share_comments(share_id, comment_id)
   )`);
   await client.execute(`create table share_reactions (
     share_id text not null,
@@ -316,6 +331,15 @@ test("ownership isolation and share comment/reaction dependency cascade", async 
       args: [now, now, now, now, now, now]
     });
     await client.execute({
+      sql: `insert into share_comment_reports
+              (share_id, comment_id, reporter_user_id, reason, detail, created_at)
+            values ('own-share', 'c-on-own', 'user-c', 'spam', null, ?),
+                   ('other-share', 'c-own-on-other', 'user-c', 'other', null, ?),
+                   ('other-share', 'c-other-on-other', 'user-a', 'spoiler', null, ?),
+                   ('other-share', 'c-other-on-other', 'user-b', 'harassment', null, ?)` ,
+      args: [now, now, now, now]
+    });
+    await client.execute({
       sql: `insert into share_reactions
               (share_id, reaction_key, user_id, kind, created_at)
             values ('own-share', 'user-b', 'user-b', 'like', ?),
@@ -340,6 +364,27 @@ test("ownership isolation and share comment/reaction dependency cascade", async 
     assert.equal(
       await countRows(client, "select count(*) as n from share_comments where share_id = 'own-share'"),
       0
+    );
+    assert.equal(
+      await countRows(
+        client,
+        "select count(*) as n from share_comment_reports where comment_id in ('c-on-own', 'c-own-on-other')"
+      ),
+      0
+    );
+    assert.equal(
+      await countRows(
+        client,
+        "select count(*) as n from share_comment_reports where reporter_user_id = 'user-a'"
+      ),
+      0
+    );
+    assert.equal(
+      await countRows(
+        client,
+        "select count(*) as n from share_comment_reports where comment_id = 'c-other-on-other' and reporter_user_id = 'user-b'"
+      ),
+      1
     );
     assert.equal(
       await countRows(client, "select count(*) as n from share_reactions where share_id = 'own-share'"),
@@ -420,6 +465,42 @@ test("absent lazily-created known tables are skipped safely", async () => {
     await assert.doesNotReject(() => deleteUserAccountData("user-a", emptyHarness.asAccountClient));
   } finally {
     await emptyHarness.close();
+  }
+});
+
+test("partial comment schema deletes dependent reports before owned comments", async () => {
+  const harness = createMemoryHarness();
+  const client = harness.asAccountClient;
+  try {
+    await client.execute("pragma foreign_keys = on");
+    await client.execute(`create table share_comments (
+      comment_id text primary key,
+      share_id text not null,
+      user_id text not null
+    )`);
+    await client.execute(
+      "create unique index idx_share_comments_share_comment on share_comments(share_id, comment_id)"
+    );
+    await client.execute(`create table share_comment_reports (
+      share_id text not null,
+      comment_id text not null,
+      reporter_user_id text not null,
+      primary key (comment_id, reporter_user_id),
+      foreign key (share_id, comment_id)
+        references share_comments(share_id, comment_id)
+    )`);
+    await client.execute(
+      "insert into share_comments (comment_id, share_id, user_id) values ('comment-a', 'share-a', 'user-a')"
+    );
+    await client.execute(
+      "insert into share_comment_reports (share_id, comment_id, reporter_user_id) values ('share-a', 'comment-a', 'reporter-a')"
+    );
+
+    await assert.doesNotReject(() => deleteUserAccountData("user-a", client));
+    assert.equal(await countRows(client, "select count(*) as n from share_comments"), 0);
+    assert.equal(await countRows(client, "select count(*) as n from share_comment_reports"), 0);
+  } finally {
+    await harness.close();
   }
 });
 

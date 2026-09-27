@@ -28,6 +28,7 @@ export const WRITE_RATE_LIMIT_MAX_BUCKETS = 8000;
 export const WRITE_BODY_MAX_BYTES = {
   jsonDefault: 4096,
   comment: 4096,
+  commentReport: 4096,
   reaction: 4096,
   share: 800_000,
   seasonShare: 8192,
@@ -45,6 +46,8 @@ export const WRITE_BODY_MAX_BYTES = {
 export type WriteRatePolicyName =
   | "comment"
   | "commentDelete"
+  | "commentReport"
+  | "commentModeration"
   | "reaction"
   | "shareCreate"
   | "feedback"
@@ -61,6 +64,8 @@ export const WRITE_RATE_POLICIES: Record<WriteRatePolicyName, WriteRatePolicy> =
   {
     comment: { name: "comment", limit: 10, windowMs: 10 * 60 * 1000 },
     commentDelete: { name: "commentDelete", limit: 20, windowMs: 10 * 60 * 1000 },
+    commentReport: { name: "commentReport", limit: 20, windowMs: 10 * 60 * 1000 },
+    commentModeration: { name: "commentModeration", limit: 30, windowMs: 10 * 60 * 1000 },
     reaction: { name: "reaction", limit: 60, windowMs: 10 * 60 * 1000 },
     shareCreate: { name: "shareCreate", limit: 10, windowMs: 10 * 60 * 1000 },
     feedback: { name: "feedback", limit: 5, windowMs: 10 * 60 * 1000 },

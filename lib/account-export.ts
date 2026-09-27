@@ -96,6 +96,9 @@ export type AccountExportPayload = {
   };
 };
 
+// Moderation reports are intentionally absent: exporting report rows would expose
+// reporter identities or report detail to account data consumers.
+
 function emptyData(): AccountExportPayload["data"] {
   return {
     userAnimeStatuses: [],

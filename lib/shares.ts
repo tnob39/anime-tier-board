@@ -34,6 +34,20 @@ export type ShareComment = {
   updatedAt: string;
 };
 
+export type CommentReportReason = "spam" | "harassment" | "spoiler" | "other";
+export type CommentReportResult =
+  | { outcome: "reported"; hidden: boolean }
+  | { outcome: "duplicate"; hidden: boolean }
+  | { outcome: "not_found" }
+  | { outcome: "self" };
+export type CommentModerationAction = "hide" | "delete";
+export type CommentModerationResult =
+  | { outcome: "moderated" }
+  | { outcome: "not_found" }
+  | { outcome: "forbidden" };
+
+type ShareDbClient = ReturnType<typeof getTursoClient>;
+
 export type BoardShare = {
   shareId: string;
   board: SharedBoard;
@@ -75,7 +89,7 @@ export type DashboardShare = {
   reactionCounts: ReactionCounts;
 };
 
-let shareSchemaReady: Promise<void> | null = null;
+const shareSchemaReady = new WeakMap<object, Promise<void>>();
 const COMMENT_LIST_LIMIT = 100;
 
 export async function createShare(
@@ -280,13 +294,16 @@ export async function getViewerReactions(
     .filter(isReactionKind);
 }
 
-export async function listComments(shareId: string): Promise<ShareComment[]> {
-  await ensureShareSchema();
+export async function listComments(
+  shareId: string,
+  client: ShareDbClient = getTursoClient()
+): Promise<ShareComment[]> {
+  await ensureShareSchema(client);
 
-  const result = await getTursoClient().execute({
+  const result = await client.execute({
     sql: `select comment_id, body, user_name, user_image, created_at, updated_at
           from share_comments
-          where share_id = ?
+          where share_id = ? and hidden_at is null
           order by created_at desc
           limit ?`,
     args: [shareId, COMMENT_LIST_LIMIT]
@@ -349,6 +366,208 @@ export async function addComment({
   return comment;
 }
 
+type ReportCommentInput = {
+  shareId: string;
+  commentId: string;
+  reporterUserId: string;
+  reason: CommentReportReason;
+  detail?: string | null;
+  client?: ShareDbClient;
+};
+
+export async function reportComment(input: ReportCommentInput): Promise<CommentReportResult> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await reportCommentOnce(input);
+    } catch (error) {
+      if (!isSqliteBusy(error) || attempt >= 5) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10 + attempt * 10));
+    }
+  }
+}
+
+async function reportCommentOnce({
+  shareId,
+  commentId,
+  reporterUserId,
+  reason,
+  detail,
+  client = getTursoClient()
+}: ReportCommentInput): Promise<CommentReportResult> {
+  await ensureShareSchema(client);
+
+  const tx = await client.transaction("write");
+  try {
+    const commentResult = await tx.execute({
+      sql: `select user_id, hidden_at
+            from share_comments
+            where comment_id = ? and share_id = ?
+            limit 1`,
+      args: [commentId, shareId]
+    });
+    const comment = commentResult.rows[0];
+    if (!comment) {
+      await tx.rollback();
+      return { outcome: "not_found" };
+    }
+    if (String(comment.user_id) === reporterUserId) {
+      await tx.rollback();
+      return { outcome: "self" };
+    }
+
+    const inserted = await tx.execute({
+      sql: `insert or ignore into share_comment_reports
+              (share_id, comment_id, reporter_user_id, reason, detail, created_at)
+            select share_id, comment_id, ?, ?, ?, ?
+            from share_comments
+            where comment_id = ? and share_id = ? and user_id <> ?`,
+      args: [
+        reporterUserId,
+        reason,
+        detail ?? null,
+        new Date().toISOString(),
+        commentId,
+        shareId,
+        reporterUserId
+      ]
+    });
+
+    if (!inserted.rowsAffected) {
+      await tx.commit();
+      return {
+        outcome: "duplicate",
+        hidden: comment.hidden_at != null
+      };
+    }
+
+    const countResult = await tx.execute({
+      sql: `select count(*) as count
+            from share_comment_reports
+            where comment_id = ? and share_id = ?`,
+      args: [commentId, shareId]
+    });
+    const reportCount = Number(countResult.rows[0]?.count ?? 0);
+    const hidden = comment.hidden_at != null || reportCount >= 3;
+
+    if (reportCount >= 3) {
+      await tx.execute({
+        sql: `update share_comments
+              set hidden_at = coalesce(hidden_at, ?)
+              where comment_id = ? and share_id = ?`,
+        args: [new Date().toISOString(), commentId, shareId]
+      });
+    }
+
+    await tx.commit();
+    return { outcome: "reported", hidden };
+  } catch (error) {
+    try {
+      await tx.rollback();
+    } catch {
+      // Preserve the database failure as the public operation failure.
+    }
+    throw error;
+  }
+}
+
+function isSqliteBusy(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("SQLITE_BUSY");
+}
+
+export async function moderateComment({
+  shareId,
+  commentId,
+  actorUserId,
+  action,
+  client = getTursoClient()
+}: {
+  shareId: string;
+  commentId: string;
+  actorUserId: string;
+  action: CommentModerationAction;
+  client?: ShareDbClient;
+}): Promise<CommentModerationResult> {
+  await ensureShareSchema(client);
+
+  const tx = await client.transaction("write");
+  try {
+    if (action === "hide") {
+      const result = await tx.execute({
+        sql: `update share_comments
+              set hidden_at = coalesce(hidden_at, ?)
+              where comment_id = ? and share_id = ?
+                and exists (
+                  select 1 from board_shares
+                  where board_shares.share_id = share_comments.share_id
+                    and board_shares.user_id = ?
+                )`,
+        args: [new Date().toISOString(), commentId, shareId, actorUserId]
+      });
+
+      if (result.rowsAffected) {
+        await tx.commit();
+        return { outcome: "moderated" };
+      }
+    } else {
+      await tx.execute({
+        sql: `delete from share_comment_reports
+              where comment_id = ? and share_id = ?
+                and exists (
+                  select 1 from share_comments
+                  where share_comments.comment_id = share_comment_reports.comment_id
+                    and share_comments.share_id = share_comment_reports.share_id
+                    and (
+                      share_comments.user_id = ? or exists (
+                        select 1 from board_shares
+                        where board_shares.share_id = share_comments.share_id
+                          and board_shares.user_id = ?
+                      )
+                    )
+                )`,
+        args: [commentId, shareId, actorUserId, actorUserId]
+      });
+      const result = await tx.execute({
+        sql: `delete from share_comments
+              where comment_id = ? and share_id = ?
+                and (
+                  user_id = ? or exists (
+                    select 1 from board_shares
+                    where board_shares.share_id = share_comments.share_id
+                      and board_shares.user_id = ?
+                  )
+                )`,
+        args: [commentId, shareId, actorUserId, actorUserId]
+      });
+
+      if (result.rowsAffected) {
+        await tx.commit();
+        return { outcome: "moderated" };
+      }
+    }
+
+    const target = await tx.execute({
+      sql: `select 1 from share_comments
+            where comment_id = ? and share_id = ?
+            limit 1`,
+      args: [commentId, shareId]
+    });
+    await tx.rollback();
+    if (action === "hide") {
+      return { outcome: "not_found" };
+    }
+    return target.rows.length ? { outcome: "forbidden" } : { outcome: "not_found" };
+  } catch (error) {
+    try {
+      await tx.rollback();
+    } catch {
+      // Preserve the database failure as the public operation failure.
+    }
+    throw error;
+  }
+}
+
 export function isReactionKind(value: string): value is ReactionKind {
   return REACTION_KINDS.includes(value as ReactionKind);
 }
@@ -393,10 +612,21 @@ function createEmptyReactionCounts(): ReactionCounts {
   };
 }
 
-function ensureShareSchema() {
-  shareSchemaReady ??= (async () => {
-    const client = getTursoClient();
+export function ensureShareSchema(client: ShareDbClient = getTursoClient()): Promise<void> {
+  const existing = shareSchemaReady.get(client);
+  if (existing) {
+    return existing;
+  }
 
+  const initialization = initializeShareSchema(client).catch((error) => {
+    shareSchemaReady.delete(client);
+    throw error;
+  });
+  shareSchemaReady.set(client, initialization);
+  return initialization;
+}
+
+async function initializeShareSchema(client: ShareDbClient): Promise<void> {
     await client.execute(`create table if not exists board_shares (
       share_id text primary key,
       user_id text,
@@ -421,24 +651,34 @@ function ensureShareSchema() {
       user_image text,
       body text not null,
       created_at text not null,
-      updated_at text not null
+      updated_at text not null,
+      hidden_at text
     )`);
-    await client
-      .execute("alter table board_shares add column user_id text")
-      .catch(() => undefined);
-    await client
-      .execute("alter table share_reactions add column user_id text")
-      .catch(() => undefined);
-    await client
-      .execute(`delete from share_reactions
+    await ensureColumn(client, "share_comments", "hidden_at", "text");
+    await client.execute(
+      "create unique index if not exists idx_share_comments_share_comment on share_comments(share_id, comment_id)"
+    );
+    await client.execute(`create table if not exists share_comment_reports (
+      share_id text not null,
+      comment_id text not null,
+      reporter_user_id text not null,
+      reason text not null check (reason in ('spam', 'harassment', 'spoiler', 'other')),
+      detail text,
+      created_at text not null,
+      primary key (comment_id, reporter_user_id),
+      foreign key (share_id, comment_id)
+        references share_comments(share_id, comment_id)
+    )`);
+    await ensureColumn(client, "board_shares", "user_id", "text");
+    await ensureColumn(client, "share_reactions", "user_id", "text");
+    await client.execute(`delete from share_reactions
         where user_id is not null
           and rowid not in (
             select max(rowid)
             from share_reactions
             where user_id is not null
             group by share_id, user_id
-          )`)
-      .catch(() => undefined);
+          )`);
     await client.execute(
       "create unique index if not exists idx_share_reactions_one_user on share_reactions(share_id, user_id) where user_id is not null"
     );
@@ -451,9 +691,56 @@ function ensureShareSchema() {
     await client.execute(
       "create index if not exists idx_share_comments_share_created on share_comments(share_id, created_at)"
     );
-  })();
+    await client.execute(
+      "create index if not exists idx_share_comment_reports_comment on share_comment_reports(comment_id, share_id)"
+    );
+    await client.execute(
+      "create index if not exists idx_share_comment_reports_reporter on share_comment_reports(reporter_user_id)"
+    );
+}
 
-  return shareSchemaReady;
+async function ensureColumn(
+  client: ShareDbClient,
+  table: "board_shares" | "share_comments" | "share_reactions",
+  column: "user_id" | "hidden_at",
+  definition: string
+): Promise<void> {
+  const before = await client.execute(`pragma table_info(${table})`);
+  if (!hasSchemaColumn(before, column)) {
+    try {
+      await client.execute(`alter table ${table} add column ${column} ${definition}`);
+    } catch (error) {
+      if (!isDuplicateColumnError(error)) {
+        throw error;
+      }
+
+      // Another isolate may have committed the same ALTER between our PRAGMA
+      // and ALTER. Accept that race only after observing the exact column.
+      const afterRace = await client.execute(`pragma table_info(${table})`);
+      if (!hasSchemaColumn(afterRace, column)) {
+        throw error;
+      }
+    }
+  }
+
+  const after = await client.execute(`pragma table_info(${table})`);
+  if (!hasSchemaColumn(after, column)) {
+    throw new Error(`Schema migration did not create ${table}.${column}.`);
+  }
+}
+
+function hasSchemaColumn(result: { rows: readonly unknown[] }, column: string): boolean {
+  return result.rows.some(
+    (row) =>
+      typeof row === "object" &&
+      row !== null &&
+      "name" in row &&
+      String((row as { name?: unknown }).name) === column
+  );
+}
+
+function isDuplicateColumnError(error: unknown): boolean {
+  return error instanceof Error && /duplicate column name/i.test(error.message);
 }
 
 function createShareId(): string {
