@@ -22,7 +22,7 @@ export const GET = withApiRoute("push.subscribe.GET", async () => {
 
 export const POST = withApiRoute("push.subscribe.POST", async (request: Request) => {
   const identity = await requireWriteIdentity();
-  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  const denied = await admitCookieCapableWrite(request, identity, "userWrite");
   if (denied) return denied;
   const userId = identity.userId;
 
@@ -52,7 +52,7 @@ export const POST = withApiRoute("push.subscribe.POST", async (request: Request)
 
 export const DELETE = withApiRoute("push.subscribe.DELETE", async (request: Request) => {
   const identity = await requireWriteIdentity();
-  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  const denied = await admitCookieCapableWrite(request, identity, "userWrite");
   if (denied) return denied;
   const userId = identity.userId;
 

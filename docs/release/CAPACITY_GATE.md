@@ -32,7 +32,7 @@ read と write はサーバー・harness・レポートを分ける。write は 
 - メトリクス欠損・非整数・負数
 - シグナル（SIGINT / SIGTERM）
 
-write の `rate-limit` シナリオだけは 429 を**確認項目**として記録し、確認後は発行を止めて cleanup する。本番 write の rate limit 実装を主張しない（ソース上は未実装）。
+write の `rate-limit` シナリオだけは 429 を**確認項目**として記録し、確認後は発行を止めて cleanup する。本番 write は Turso の永続バケットで isolate 横断の user / IP 制限を行うが、fixture の 429 は本番容量や外部サービス上限の証拠として扱わない。
 
 ## 記録する指標
 

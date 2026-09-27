@@ -24,7 +24,13 @@ S2 は共有の fail-closed 受付境界を公開 write に横断適用する。
 - 消費は preflight のあと一括。IP 上限で user カウンタは増えない。
 - 満杯時は期限切れだけ削除する。active を FIFO 退去させず 503。
 
-実装はプロセス内 Map。Vercel isolate を跨ぐ耐久カウンタは残ギャップ（新規インフラ禁止のため未導入）。
+## Turso レート制限ストアと secret rotation
+
+- 本番は `WRITE_RATE_LIMIT_SECRET` が必須。32文字以上で、空白・制御文字を含めず、`AUTH_SECRET` とは独立に生成する。値そのものはログ・レスポンス・ドキュメントに出さない。
+- デプロイ間で同じ secret を安定して使う。Turso の永続テーブルを使うため、Vercel isolate を跨いで同じ limiter 状態を共有する。
+- バケットには secret 自体ではなく、専用ドメインの HMAC から導出した非機密 namespace/version を保存する。同じ secret は同じ namespace を使い、secret rotation は新しい namespace を使う。
+- capacity の集計は現在の namespace のみ。旧 namespace の active バケットは新 secret の quota を消費しない。旧 namespace の期限切れ行は各 write 時の bounded cleanup で少しずつ削除する。
+- 設定不備、Turso 障害、バケット満杯など limiter が利用できない場合は詳細を露出しない汎用 503 で fail-closed にする。
 
 ## 本文上限（decode 前）
 
@@ -116,7 +122,7 @@ WRITE_TRUSTED_PROXY=vercel
 2. デプロイ後、正規 origin から comments POST が 200、別 origin が 403 であることを確認する。
 3. cookie session の `/api/statuses` PUT は Origin なしで 403、有効 Bearer は Origin なしで通ることを確認する。
 4. 同一ユーザーで comments を 11 回送り、11 回目が 429 かつ `Retry-After` が付くことを確認する。
-5. isolate 再起動で in-memory カウンタはリセットされる。持続的な ban が必要なら後続で耐久ストアを入れる。
+5. Turso-backed limiter は isolate を跨いで状態を共有する。同じ secret をデプロイ間で維持し、rotation 時は新 namespace と旧 namespace の bounded cleanup を確認する。
 
 ローカル:
 
@@ -127,7 +133,6 @@ WRITE_TRUSTED_PROXY=vercel
 
 | 項目 | 理由 | 次の安全な原子単位 |
 |---|---|---|
-| isolate 横断の耐久レート制限 | Redis/KV 等の新規インフラ禁止 | 許可されたストアを導入してから Map を置換 |
 | コメント通報テーブル / 自動 hide | スキーマ変更禁止 | `share_comments.hidden_at` と report テーブル |
 | 共有オーナーによる他人コメント削除 | `lib/shares.ts` が許可外。UI も禁止 | shares helper + 共有ページ操作 |
 | コメント削除 UI | `app/**/*.tsx` 禁止 | 共有ページに本人削除ボタン |
@@ -137,4 +142,4 @@ WRITE_TRUSTED_PROXY=vercel
 | native auth の audience fail-closed | `native-auth.ts` の検証強化は本スライス外 | 既存 #123 追跡 |
 | Idempotency-Key の応答 replay | 耐久ストアなし | 許可ストア導入後 |
 
-Issue #741 を close するには上表の耐久レート制限、moderation 永続化、DNS-bound proxy egress が残る。
+Issue #741 を close するには上表の moderation 永続化と DNS-bound proxy egress が残る。

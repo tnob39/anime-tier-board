@@ -27,7 +27,7 @@ export const GET = withApiRoute("subscriptions.GET", async () => {
 
 export const POST = withApiRoute("subscriptions.POST", async (request: Request) => {
   const identity = await requireWriteIdentity();
-  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  const denied = await admitCookieCapableWrite(request, identity, "userWrite");
   if (denied) return denied;
   const userId = identity.userId;
 

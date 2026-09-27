@@ -5,6 +5,13 @@ import {
   jsonWriteError,
   WRITE_REQUEST_MALFORMED,
 } from "./write-request-guard.ts";
+import {
+  createInMemoryWriteRateLimitStore,
+  createTursoWriteRateLimitStore,
+  type InMemoryWriteRateLimitStore,
+  type WriteRateLimitStore,
+  validateWriteRateLimitSecret,
+} from "./write-rate-limit-store.ts";
 
 /** 公開 write の日本語 429。Retry-After とセットで返す。 */
 export const WRITE_RATE_LIMITED =
@@ -175,22 +182,30 @@ export function assertSessionWriteSameOrigin(
   return assertSameOriginBrowserWrite(request);
 }
 
-type RateBucket = {
-  count: number;
-  resetAt: number;
-};
-
-const buckets = new Map<string, RateBucket>();
-
 let nowOverrideMs: number | null = null;
-let maxBucketsOverride: number | null = null;
+let injectedStore: WriteRateLimitStore | null = null;
+let testStore: InMemoryWriteRateLimitStore | null = null;
+let productionStoreCache: {
+  secret: string;
+  store: WriteRateLimitStore;
+} | null = null;
+let productionStoreCreationCount = 0;
 
 function nowMs(): number {
   return nowOverrideMs ?? Date.now();
 }
 
-function maxBuckets(): number {
-  return maxBucketsOverride ?? WRITE_RATE_LIMIT_MAX_BUCKETS;
+function getProductionWriteRateLimitStore(secretValue: unknown): WriteRateLimitStore {
+  const secret = validateWriteRateLimitSecret(secretValue);
+  if (productionStoreCache?.secret === secret) return productionStoreCache.store;
+
+  const store = createTursoWriteRateLimitStore({
+    maxBuckets: WRITE_RATE_LIMIT_MAX_BUCKETS,
+    secret,
+  });
+  productionStoreCache = { secret, store };
+  productionStoreCreationCount += 1;
+  return store;
 }
 
 export type TrustedProxyMode = "vercel" | "test";
@@ -282,14 +297,14 @@ export type WriteRateLimitSubject = {
   env?: AdmissionEnv;
 };
 
-function pruneExpiredBuckets(now: number): void {
-  for (const [key, bucket] of buckets) {
-    if (bucket.resetAt <= now) buckets.delete(key);
-  }
-}
-
 function identityTooLong(value: string): boolean {
   return value.length > WRITE_IDENTITY_MAX_LENGTH;
+}
+
+function resolveIdentity(value: unknown): string | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") return undefined;
+  return value.trim();
 }
 
 export function writeRateLimitedResponse(retryAfterSec: number): Response {
@@ -302,13 +317,16 @@ export function writeRateLimitedResponse(retryAfterSec: number): Response {
  * user キーと IP キーを独立に検査し、全て通ればまとめて消費する。
  * 片方の上限超過で他方を消費しない。満杯時は active を追い出さず 503。
  */
-export function consumeWriteRateLimit(
+export async function consumeWriteRateLimit(
   request: Request,
   subject: WriteRateLimitSubject
-): Response | null {
+): Promise<Response | null> {
   const policy = WRITE_RATE_POLICIES[subject.policy];
   const env = subject.env ?? process.env;
-  const userId = subject.userId?.trim() ?? "";
+  const userId = resolveIdentity(subject.userId);
+  if (userId === undefined) {
+    return jsonWriteError(WRITE_CLIENT_UNIDENTIFIED, 403);
+  }
   if (userId && identityTooLong(userId)) {
     return jsonWriteError(WRITE_CLIENT_UNIDENTIFIED, 403);
   }
@@ -321,67 +339,54 @@ export function consumeWriteRateLimit(
 
   let ipKey: string | null = null;
   if (ipResult.ok) {
-    ipKey = `${policy.name}:ip:${ipResult.ip}`;
+    ipKey = ipResult.ip;
   } else if (subject.requireIp) {
     if (isProductionRuntime(env)) {
       return jsonWriteError(WRITE_PROXY_UNCONFIGURED, 503);
     }
-    ipKey = `${policy.name}:ip:dev-local`;
+    ipKey = "dev-local";
   }
 
-  const keys: string[] = [];
-  if (userId) keys.push(`${policy.name}:user:${userId}`);
-  if (ipKey) keys.push(ipKey);
+  const keys: Array<{ kind: "user" | "ip"; value: string }> = [];
+  if (userId) keys.push({ kind: "user", value: userId });
+  if (ipKey) keys.push({ kind: "ip", value: ipKey });
 
   if (keys.length === 0) {
     return jsonWriteError(WRITE_CLIENT_UNIDENTIFIED, 403);
   }
 
   const now = nowMs();
-  pruneExpiredBuckets(now);
 
-  let retryAfterSec = 1;
-  let blocked = false;
-  for (const key of keys) {
-    const bucket = buckets.get(key);
-    if (bucket && now < bucket.resetAt && bucket.count >= policy.limit) {
-      blocked = true;
-      retryAfterSec = Math.max(
-        retryAfterSec,
-        Math.ceil((bucket.resetAt - now) / 1000)
-      );
+  try {
+    const store = isProductionRuntime(env)
+      ? getProductionWriteRateLimitStore(process.env.WRITE_RATE_LIMIT_SECRET ?? "")
+      : (injectedStore ?? (testStore ??= createInMemoryWriteRateLimitStore({
+          maxBuckets: WRITE_RATE_LIMIT_MAX_BUCKETS,
+          secret: "atb-local-write-rate-limit-test-key-32chars",
+        })));
+    const result = await store.consume({
+      policy: policy.name,
+      limit: policy.limit,
+      windowMs: policy.windowMs,
+      nowMs: now,
+      keys,
+    });
+    if (result.kind === "limited") {
+      return writeRateLimitedResponse(result.retryAfterSec);
     }
-  }
-  if (blocked) {
-    return writeRateLimitedResponse(retryAfterSec);
-  }
-
-  let newKeys = 0;
-  for (const key of keys) {
-    const bucket = buckets.get(key);
-    if (bucket == null || now >= bucket.resetAt) newKeys += 1;
-  }
-  if (buckets.size + newKeys > maxBuckets()) {
+  } catch {
     return jsonWriteError(WRITE_RATE_LIMIT_SATURATED, 503);
   }
 
-  for (const key of keys) {
-    let bucket = buckets.get(key);
-    if (bucket == null || now >= bucket.resetAt) {
-      bucket = { count: 0, resetAt: now + policy.windowMs };
-      buckets.set(key, bucket);
-    }
-    bucket.count += 1;
-  }
   return null;
 }
 
-export function admitCookieCapableWrite(
+export async function admitCookieCapableWrite(
   request: Request,
   identity: WriteAuthIdentity,
   policy: WriteRatePolicyName,
   env?: AdmissionEnv
-): Response | null {
+): Promise<Response | null> {
   const csrf = assertSessionWriteSameOrigin(request, identity);
   if (csrf) return csrf;
   return consumeWriteRateLimit(request, {
@@ -392,9 +397,26 @@ export function admitCookieCapableWrite(
 }
 
 export function resetWriteAdmissionForTests(): void {
-  buckets.clear();
+  injectedStore = null;
+  productionStoreCache = null;
+  productionStoreCreationCount = 0;
+  testStore ??= createInMemoryWriteRateLimitStore({
+    maxBuckets: WRITE_RATE_LIMIT_MAX_BUCKETS,
+    secret: "atb-local-write-rate-limit-test-key-32chars",
+  });
+  testStore.reset();
+  testStore.setMaxBuckets(WRITE_RATE_LIMIT_MAX_BUCKETS);
   nowOverrideMs = null;
-  maxBucketsOverride = null;
+}
+
+export function getWriteRateLimitStoreCreationCountForTests(): number {
+  return productionStoreCreationCount;
+}
+
+export function setWriteRateLimitStoreForTests(
+  store: WriteRateLimitStore | null
+): void {
+  injectedStore = store;
 }
 
 export function setWriteAdmissionNowForTests(now: number | null): void {
@@ -402,18 +424,19 @@ export function setWriteAdmissionNowForTests(now: number | null): void {
 }
 
 export function setWriteAdmissionMaxBucketsForTests(max: number | null): void {
-  maxBucketsOverride = max;
+  testStore ??= createInMemoryWriteRateLimitStore({
+    maxBuckets: WRITE_RATE_LIMIT_MAX_BUCKETS,
+    secret: "atb-local-write-rate-limit-test-key-32chars",
+  });
+  testStore.setMaxBuckets(max);
 }
 
 export function getWriteAdmissionBucketSizeForTests(): number {
-  return buckets.size;
+  return testStore?.size() ?? 0;
 }
 
 export function getWriteAdmissionBucketCountForTests(key: string): number {
-  const bucket = buckets.get(key);
-  if (bucket == null) return 0;
-  if (nowMs() >= bucket.resetAt) return 0;
-  return bucket.count;
+  return testStore?.countForKey(key, nowMs()) ?? 0;
 }
 
 export function seedWriteAdmissionBucketForTests(
@@ -421,7 +444,11 @@ export function seedWriteAdmissionBucketForTests(
   count: number,
   resetAt: number
 ): void {
-  buckets.set(key, { count, resetAt });
+  testStore ??= createInMemoryWriteRateLimitStore({
+    maxBuckets: WRITE_RATE_LIMIT_MAX_BUCKETS,
+    secret: "atb-local-write-rate-limit-test-key-32chars",
+  });
+  testStore.seed(key, count, resetAt);
 }
 
 /**

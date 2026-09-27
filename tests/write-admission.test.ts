@@ -132,17 +132,17 @@ test("authenticated burst returns 429 Retry-After Japanese contract then retries
     });
 
   for (let i = 0; i < policy.limit; i += 1) {
-    assert.equal(make(), null);
+    assert.equal(await make(), null);
   }
 
-  const denied = make();
+  const denied = await make();
   assert.ok(denied);
   assert.equal(denied.status, 429);
   assert.equal(denied.headers.get("Retry-After"), String(policy.windowMs / 1000));
   assert.deepEqual(await errorBody(denied), { error: WRITE_RATE_LIMITED });
 
   setWriteAdmissionNowForTests(started + policy.windowMs);
-  assert.equal(make(), null);
+  assert.equal(await make(), null);
 });
 
 test("parallel burst isolates users and returns 429 only for the overflowing key", async () => {
@@ -151,7 +151,7 @@ test("parallel burst isolates users and returns 429 only for the overflowing key
 
   const tasks = Array.from({ length: limit + 5 }, async (_, i) => {
     const sameUser = i < limit + 2;
-    const response = consumeWriteRateLimit(
+    const response = await consumeWriteRateLimit(
       requestWith({ ip: sameUser ? "198.51.100.30" : `198.51.100.${40 + i}` }),
       {
         policy: "comment",
@@ -172,7 +172,7 @@ test("parallel burst on one IP rate-limits across users", async () => {
   const limit = WRITE_RATE_POLICIES.comment.limit;
 
   const tasks = Array.from({ length: limit + 3 }, async (_, i) => {
-    const response = consumeWriteRateLimit(requestWith({ ip: "198.51.100.77" }), {
+    const response = await consumeWriteRateLimit(requestWith({ ip: "198.51.100.77" }), {
       policy: "comment",
       userId: `user-${i}`,
       env,
@@ -186,7 +186,7 @@ test("parallel burst on one IP rate-limits across users", async () => {
 });
 
 test("anonymous production without proxy config is 503 fail-closed", async () => {
-  const denied = consumeWriteRateLimit(requestWith({}), {
+  const denied = await consumeWriteRateLimit(requestWith({}), {
     policy: "feedback",
     requireIp: true,
     env: { NODE_ENV: "production" },
@@ -196,12 +196,12 @@ test("anonymous production without proxy config is 503 fail-closed", async () =>
   assert.deepEqual(await errorBody(denied), { error: WRITE_PROXY_UNCONFIGURED });
 });
 
-test("anonymous development without proxy uses shared dev-local key", () => {
+test("anonymous development without proxy uses shared dev-local key", async () => {
   const env = { NODE_ENV: "development" };
   const policy = WRITE_RATE_POLICIES.feedback;
   for (let i = 0; i < policy.limit; i += 1) {
     assert.equal(
-      consumeWriteRateLimit(requestWith({}), {
+      await consumeWriteRateLimit(requestWith({}), {
         policy: "feedback",
         requireIp: true,
         env,
@@ -209,7 +209,7 @@ test("anonymous development without proxy uses shared dev-local key", () => {
       null
     );
   }
-  const denied = consumeWriteRateLimit(requestWith({}), {
+  const denied = await consumeWriteRateLimit(requestWith({}), {
     policy: "feedback",
     requireIp: true,
     env,
@@ -218,7 +218,7 @@ test("anonymous development without proxy uses shared dev-local key", () => {
 });
 
 test("invalid proxy identity is 403 not a shared anonymous key", async () => {
-  const denied = consumeWriteRateLimit(
+  const denied = await consumeWriteRateLimit(
     requestWith({ vercelIp: "not-an-ip" }),
     {
       policy: "feedback",
@@ -254,7 +254,7 @@ test("WRITE_TRUSTED_PROXY=test is rejected in production", async () => {
   const ip = resolveTrustedClientIp(requestWith({ ip: "198.51.100.9" }), env);
   assert.equal(ip.ok, false);
 
-  const denied = consumeWriteRateLimit(requestWith({ ip: "198.51.100.9" }), {
+  const denied = await consumeWriteRateLimit(requestWith({ ip: "198.51.100.9" }), {
     policy: "feedback",
     requireIp: true,
     env,
@@ -264,7 +264,7 @@ test("WRITE_TRUSTED_PROXY=test is rejected in production", async () => {
   assert.deepEqual(await errorBody(denied), { error: WRITE_PROXY_UNCONFIGURED });
 });
 
-test("exhausted IP does not consume the user bucket", () => {
+test("exhausted IP does not consume the user bucket", async () => {
   const env = { WRITE_TRUSTED_PROXY: "test", NODE_ENV: "test" };
   const now = 1_800_000_000_000;
   setWriteAdmissionNowForTests(now);
@@ -275,7 +275,7 @@ test("exhausted IP does not consume the user bucket", () => {
     now + policy.windowMs
   );
 
-  const denied = consumeWriteRateLimit(requestWith({ ip: "198.51.100.50" }), {
+  const denied = await consumeWriteRateLimit(requestWith({ ip: "198.51.100.50" }), {
     policy: "comment",
     userId: "rollback-user",
     env,
@@ -286,7 +286,7 @@ test("exhausted IP does not consume the user bucket", () => {
     0
   );
 
-  const allowed = consumeWriteRateLimit(
+  const allowed = await consumeWriteRateLimit(
     requestWith({ ip: "198.51.100.51" }),
     { policy: "comment", userId: "rollback-user", env }
   );
@@ -297,7 +297,7 @@ test("exhausted IP does not consume the user bucket", () => {
   );
 });
 
-test("rate limiter fails closed at capacity and does not FIFO-evict active keys", () => {
+test("rate limiter fails closed at capacity and does not FIFO-evict active keys", async () => {
   const env = { WRITE_TRUSTED_PROXY: "test", NODE_ENV: "test" };
   const now = 1_810_000_000_000;
   setWriteAdmissionNowForTests(now);
@@ -306,7 +306,7 @@ test("rate limiter fails closed at capacity and does not FIFO-evict active keys"
   seedWriteAdmissionBucketForTests("comment:user:keep-a", 1, resetAt);
   seedWriteAdmissionBucketForTests("comment:user:keep-b", 1, resetAt);
 
-  const denied = consumeWriteRateLimit(requestWith({ ip: "198.51.100.60" }), {
+  const denied = await consumeWriteRateLimit(requestWith({ ip: "198.51.100.60" }), {
     policy: "comment",
     userId: "new-user",
     env,
@@ -319,7 +319,7 @@ test("rate limiter fails closed at capacity and does not FIFO-evict active keys"
   assert.equal(getWriteAdmissionBucketSizeForTests(), 2);
 });
 
-test("expired buckets are pruned before capacity check so churn can proceed", () => {
+test("expired buckets are pruned before capacity check so churn can proceed", async () => {
   const env = { WRITE_TRUSTED_PROXY: "test", NODE_ENV: "test" };
   const now = 1_820_000_000_000;
   setWriteAdmissionNowForTests(now);
@@ -327,7 +327,7 @@ test("expired buckets are pruned before capacity check so churn can proceed", ()
   seedWriteAdmissionBucketForTests("comment:user:old-a", 3, now - 1);
   seedWriteAdmissionBucketForTests("comment:user:old-b", 3, now - 1);
 
-  const allowed = consumeWriteRateLimit(
+  const allowed = await consumeWriteRateLimit(
     requestWith({ ip: "198.51.100.70" }),
     { policy: "comment", userId: "fresh-user", env }
   );
@@ -336,10 +336,10 @@ test("expired buckets are pruned before capacity check so churn can proceed", ()
   assert.ok(getWriteAdmissionBucketCountForTests("comment:user:fresh-user") >= 1);
 });
 
-test("oversized identity keys are rejected without creating a bucket", () => {
+test("oversized identity keys are rejected without creating a bucket", async () => {
   const env = { WRITE_TRUSTED_PROXY: "test", NODE_ENV: "test" };
   const oversized = "u".repeat(WRITE_IDENTITY_MAX_LENGTH + 1);
-  const denied = consumeWriteRateLimit(requestWith({ ip: "198.51.100.80" }), {
+  const denied = await consumeWriteRateLimit(requestWith({ ip: "198.51.100.80" }), {
     policy: "comment",
     userId: oversized,
     env,
@@ -390,11 +390,11 @@ test("session writes require same-origin; bearer writes do not", async () => {
   assert.equal(assertSessionWriteSameOrigin(evil, bearer), null);
 });
 
-test("admitCookieCapableWrite blocks cookie CSRF before rate-limit consume", () => {
+test("admitCookieCapableWrite blocks cookie CSRF before rate-limit consume", async () => {
   const env = { WRITE_TRUSTED_PROXY: "test", NODE_ENV: "test" };
   const session = classifyWriteAuth({ sessionUserId: "csrf-user" });
   assert.ok(session);
-  const denied = admitCookieCapableWrite(
+  const denied = await admitCookieCapableWrite(
     new Request("https://anime-tier-board.vercel.app/api/boards", {
       method: "PUT",
     }),
@@ -407,7 +407,7 @@ test("admitCookieCapableWrite blocks cookie CSRF before rate-limit consume", () 
 
   const bearer = classifyWriteAuth({ bearerUserId: "csrf-user" });
   assert.ok(bearer);
-  const allowed = admitCookieCapableWrite(
+  const allowed = await admitCookieCapableWrite(
     new Request("https://anime-tier-board.vercel.app/api/boards", {
       method: "PUT",
       headers: { "x-test-client-ip": "198.51.100.90" },

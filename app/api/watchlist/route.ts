@@ -26,7 +26,7 @@ export const GET = withApiRoute("watchlist.GET", async () => {
 
 export const PUT = withApiRoute("watchlist.PUT", async (request: Request) => {
   const identity = await requireWriteIdentity();
-  const denied = admitCookieCapableWrite(request, identity, "userWrite");
+  const denied = await admitCookieCapableWrite(request, identity, "userWrite");
   if (denied) return denied;
   const userId = identity.userId;
 

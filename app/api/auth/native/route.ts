@@ -39,7 +39,7 @@ function isValidExchangePayload(value: unknown): value is ExchangePayload {
 }
 
 export const POST = withApiRoute("auth.native.POST", async (request: Request) => {
-  const limited = consumeWriteRateLimit(request, {
+  const limited = await consumeWriteRateLimit(request, {
     policy: "nativeAuth",
     requireIp: true,
   });
@@ -135,7 +135,7 @@ export const GET = withApiRoute("auth.native.GET", async (request: Request) => {
 });
 
 export const DELETE = withApiRoute("auth.native.DELETE", async (request: Request) => {
-  const limited = consumeWriteRateLimit(request, {
+  const limited = await consumeWriteRateLimit(request, {
     policy: "nativeAuth",
     requireIp: true,
   });
