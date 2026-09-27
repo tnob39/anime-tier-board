@@ -269,6 +269,64 @@ export function parseCommentWriteBody(data: unknown): CommentWriteBodyResult {
   return { ok: true, body };
 }
 
+export const COMMENT_REPORT_REASONS = [
+  "spam",
+  "harassment",
+  "spoiler",
+  "other",
+] as const;
+
+export type CommentReportReason = (typeof COMMENT_REPORT_REASONS)[number];
+export type CommentReportBodySuccess = {
+  ok: true;
+  reason: CommentReportReason;
+  detail: string | null;
+};
+export type CommentReportBodyResult =
+  | CommentReportBodySuccess
+  | CommentWriteBodyFailure;
+
+export const COMMENT_REPORT_INVALID = "報告内容が正しくありません。";
+export const COMMENT_NOT_FOUND = "コメントが見つかりません。";
+export const COMMENT_MODERATION_FORBIDDEN = "コメントを操作する権限がありません。";
+export const COMMENT_OPERATION_FAILED = "コメントの処理に失敗しました。";
+
+export function isCommentReportReason(value: string): value is CommentReportReason {
+  return COMMENT_REPORT_REASONS.includes(value as CommentReportReason);
+}
+
+/** Reports accept only a reason and a short, non-control-text detail. */
+export function parseCommentReportBody(data: unknown): CommentReportBodyResult {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return { ok: false, response: jsonError(COMMENT_REPORT_INVALID, 400) };
+  }
+
+  const record = data as Record<string, unknown>;
+  if (Object.keys(record).some((key) => key !== "reason" && key !== "detail")) {
+    return { ok: false, response: jsonError(COMMENT_REPORT_INVALID, 400) };
+  }
+
+  const reason = record.reason;
+  if (typeof reason !== "string" || !isCommentReportReason(reason)) {
+    return { ok: false, response: jsonError(COMMENT_REPORT_INVALID, 400) };
+  }
+
+  const rawDetail = record.detail;
+  if (rawDetail === undefined) {
+    return { ok: true, reason, detail: null };
+  }
+  if (typeof rawDetail !== "string") {
+    return { ok: false, response: jsonError(COMMENT_REPORT_INVALID, 400) };
+  }
+
+  const detail = rawDetail.trim();
+  if (detail.length > 500 || /[\u0000-\u001f\u007f]/u.test(detail)) {
+    return { ok: false, response: jsonError(COMMENT_REPORT_INVALID, 400) };
+  }
+
+  return { ok: true, reason, detail: detail || null };
+}
+
 export type ReactionWriteBodySuccess = { ok: true; kind: string };
 export type ReactionWriteBodyFailure = { ok: false; response: Response };
 export type ReactionWriteBodyResult =

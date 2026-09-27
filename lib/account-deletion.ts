@@ -6,6 +6,7 @@ export const ACCOUNT_DELETION_CONFIRMATION = "削除する";
 /** Known app-owned tables that may be lazily created. */
 export const ACCOUNT_DELETION_TABLES = [
   "share_comments",
+  "share_comment_reports",
   "share_reactions",
   "board_shares",
   "user_anime_statuses",
@@ -100,6 +101,18 @@ async function runAccountDeletionStatements(
 
   // Own board shares: cascade all comments/reactions on those shares (including other users').
   if (has("board_shares")) {
+    if (has("share_comment_reports") && has("share_comments")) {
+      await run({
+        sql: `delete from share_comment_reports
+              where comment_id in (
+                select comment_id from share_comments
+                where share_id in (
+                  select share_id from board_shares where user_id = ?
+                )
+              )`,
+        args: [userId]
+      });
+    }
     if (has("share_comments")) {
       await run({
         sql: `delete from share_comments
@@ -122,8 +135,24 @@ async function runAccountDeletionStatements(
 
   // Own comments/reactions on other users' shares (and any remaining own rows).
   if (has("share_comments")) {
+    if (has("share_comment_reports")) {
+      await run({
+        sql: `delete from share_comment_reports
+              where comment_id in (
+                select comment_id from share_comments where user_id = ?
+              )`,
+        args: [userId]
+      });
+    }
     await run({
       sql: "delete from share_comments where user_id = ?",
+      args: [userId]
+    });
+  }
+  if (has("share_comment_reports")) {
+    // Reporter identity is removed without exporting or retaining report rows.
+    await run({
+      sql: "delete from share_comment_reports where reporter_user_id = ?",
       args: [userId]
     });
   }

@@ -7,6 +7,7 @@
     "dev:local": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
+    "test:moderation-s3": "node --experimental-loader ./tests/alias-loader.mjs --test tests/comment-moderation.test.ts tests/comment-route-handlers.test.ts tests/account-deletion.test.ts tests/account-export.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
