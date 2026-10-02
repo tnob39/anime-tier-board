@@ -509,6 +509,22 @@ button:disabled {
   display: none;
 }
 
+.tier-area-nav {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.tier-area-nav .command-button {
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.tier-area-nav [aria-current="page"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .topbar {
   position: sticky;
   top: 48px;
@@ -592,6 +608,48 @@ button:disabled {
   outline: 0;
   background: transparent;
   color: var(--ink);
+}
+
+.season-context-control {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 12px 0;
+}
+
+.season-context-status {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.season-context-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.season-context-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.season-context-adjacent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.season-context-adjacent .command-button {
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .command-button,
@@ -1702,6 +1760,11 @@ button:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .control-bar-season > .season-context-control {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .control-bar-actions {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1803,8 +1866,8 @@ button:disabled {
   }
 
   body {
-    /* reserved >= measured nav height (62) + bottom offset (10) + 8 */
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    /* Reserve the nav height, bottom offset, and a gap above the last action. */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
     max-width: 100%;
     overflow-x: hidden;
   }
@@ -1850,6 +1913,14 @@ button:disabled {
   .mobile-bottom-nav-link.is-active {
     background: var(--nav-active-bg);
     color: var(--accent);
+  }
+
+  .mobile-nav-tier-label {
+    white-space: nowrap;
+  }
+
+  .mobile-bottom-nav-tier {
+    padding-inline: 0;
   }
 
   .mobile-nav-icon-wrap {
@@ -1918,6 +1989,23 @@ button:disabled {
   .field select {
     width: 100%;
     min-width: 0;
+  }
+
+  .season-context-fields,
+  .season-context-adjacent {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .season-context-fields > .field,
+  .season-context-adjacent .command-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .season-context-fields > .season-context-adjacent {
+    grid-column: 1 / -1;
   }
 
   .app-main {
@@ -6134,6 +6222,7 @@ a.cl-history-title:hover {
   flex-direction: column;
   gap: 10px;
   align-items: center;
+  margin-bottom: 24px;
 }
 
 .home-guest-login-notice {
@@ -6237,6 +6326,7 @@ a.cl-history-title:hover {
 }
 
 .home-add-season-toggle-btn {
+  min-height: 44px;
   padding: 6px 14px;
   border: 1px solid var(--line);
   border-radius: 999px;

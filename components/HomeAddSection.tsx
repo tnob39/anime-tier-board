@@ -11,7 +11,7 @@ import { isOwnerEmail } from "@/lib/owner";
 import type { ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
 
-export type SeasonScope = "current" | "next";
+export type SeasonScope = "current" | "next" | "selected";
 
 type HomeAddSectionProps = {
   items: AnimeItem[];
@@ -27,6 +27,7 @@ type HomeAddSectionProps = {
 const SEASON_SCOPE_HEADING: Record<SeasonScope, string> = {
   current: "今期から追加",
   next: "来期から追加",
+  selected: "選択中の期から追加",
 };
 
 export default function HomeAddSection({

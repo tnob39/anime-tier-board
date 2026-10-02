@@ -2,7 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchSeasonalAnime } from "@/lib/anime-sources";
-import { getCurrentAnimeSeason, getNextAnimeSeason, normalizeSeason, seasonLabelJa } from "@/lib/season";
+import { SeasonContextControl } from "@/components/SeasonContextControl";
+import {
+  getCurrentAnimeSeason,
+  getNextAnimeSeason,
+  getPreviousAnimeSeason,
+  listSeasonSelectorYears,
+  parseSeasonPathParts,
+  seasonHeadingJa,
+  seasonLabelJa
+} from "@/lib/season";
+import { serializeSeasonQuery } from "@/lib/season-url";
 import {
   buildProviderMapWithStats,
   enrichWithStreamingProviders,
@@ -24,37 +34,8 @@ function getSiteOrigin(): string {
   return origin.replace(/\/$/, "");
 }
 
-function parseParams(params: SeasonPageParams): {
-  year: number;
-  season: AnimeSeason;
-} | null {
-  const year = Number(params.year);
-  const season = normalizeSeason(params.season);
-
-  if (
-    !Number.isInteger(year) ||
-    year < 1900 ||
-    year > 2100 ||
-    !season ||
-    params.season !== params.season.toLowerCase()
-  ) {
-    return null;
-  }
-
-  return { year, season };
-}
-
-const SEASON_ORDER: AnimeSeason[] = ["WINTER", "SPRING", "SUMMER", "FALL"];
-
-function getPreviousAnimeSeason(base: { year: number; season: AnimeSeason }): {
-  year: number;
-  season: AnimeSeason;
-} {
-  const index = SEASON_ORDER.indexOf(base.season);
-  if (index === 0) {
-    return { year: base.year - 1, season: "FALL" };
-  }
-  return { year: base.year, season: SEASON_ORDER[index - 1] };
+function parseParams(params: SeasonPageParams) {
+  return parseSeasonPathParts(params.year, params.season);
 }
 
 // 期切替ナビは「実際の現在シーズン」基準の前期/今期/来期に固定する
@@ -67,7 +48,7 @@ function buildSeasonNav(viewing: { year: number; season: AnimeSeason }): Array<{
 }> {
   const current = getCurrentAnimeSeason();
   const next = getNextAnimeSeason();
-  const prev = getPreviousAnimeSeason(current);
+  const prev = getPreviousAnimeSeason();
 
   return [
     { ...prev, caption: "前期" },
@@ -181,12 +162,19 @@ export default async function SeasonPage({
           {parsed.year}年{seasonName}アニメ 配信どこで見れる一覧
         </h1>
         <p>
-          {parsed.year}年{seasonName}のアニメを、見放題の配信サービスとあわせて一覧で確認できます。
+          {seasonHeadingJa(parsed)}のアニメを、見放題の配信サービスとあわせて一覧で確認できます。
+          今期は {seasonHeadingJa(getCurrentAnimeSeason())} です。
         </p>
-        <Link className="season-page-cta" href="/">
+        <Link className="season-page-cta" href={`/?${serializeSeasonQuery(parsed)}`}>
           自分のTier表を作る
         </Link>
       </header>
+
+      <SeasonContextControl
+        value={parsed}
+        years={listSeasonSelectorYears({ selectedYear: parsed.year })}
+        navigationMode="path"
+      />
 
       <nav className="season-page-nav" aria-label="シーズン切り替え">
         {buildSeasonNav(parsed).map((item) =>
@@ -297,7 +285,7 @@ export default async function SeasonPage({
 
       <footer className="season-page-footer">
         <p>データ提供: AniList / Jikan</p>
-        <Link className="season-page-cta" href="/">
+        <Link className="season-page-cta" href={`/tier?${serializeSeasonQuery(parsed)}`}>
           自分のTier表を作る
         </Link>
       </footer>

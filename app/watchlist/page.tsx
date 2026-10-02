@@ -1,6 +1,9 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { fetchCurrentSeasonAnimeForHome } from "@/lib/home-seasonal-add";
+import { getCurrentAnimeSeason } from "@/lib/season";
+import { canonicalizeSeasonSearchParams } from "@/lib/season-url";
 import { listStatuses } from "@/lib/statuses";
 import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
 import type { AnimeItem } from "@/lib/types";
@@ -11,19 +14,38 @@ export const metadata: Metadata = {
   title: "マイリスト — numanie"
 };
 
-export default async function WatchlistPage() {
+type WatchlistPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function WatchlistPage({ searchParams }: WatchlistPageProps) {
   const session = await auth();
   const userId = (session?.user as { id?: string } | undefined)?.id;
 
+  const rawSearch = await searchParams;
+  const canonical = canonicalizeSeasonSearchParams(rawSearch);
+  if (canonical.didChange) {
+    redirect(canonical.search ? `/watchlist?${canonical.search}` : "/watchlist");
+  }
+
   if (!userId) {
-    redirect("/?login=required&returnTo=%2Fwatchlist");
+    const returnTo = canonical.search
+      ? encodeURIComponent(`/watchlist?${canonical.search}`)
+      : "%2Fwatchlist";
+    redirect(`/?login=required&returnTo=${returnTo}`);
   }
 
   const items = await listStatuses(userId);
 
   const watchlistAnime = items.map((record) => record.anime).filter((anime): anime is AnimeItem => Boolean(anime));
+  const seasonRef = canonical.explicit ? canonical.ref : getCurrentAnimeSeason();
+
   if (watchlistAnime.length === 0) {
-    return <WatchlistClientV2Grok initialItems={items} />;
+    return (
+      <Suspense fallback={null}>
+        <WatchlistClientV2Grok initialItems={items} initialSeasonRef={seasonRef} />
+      </Suspense>
+    );
   }
 
   const seasonalAnime = await fetchCurrentSeasonAnimeForHome().catch(() => []);
@@ -63,10 +85,13 @@ export default async function WatchlistPage() {
   const enrichedRecommended = enrichWithStreamingProviders(recommended, providerMap);
 
   return (
-    <WatchlistClientV2Grok
-      initialItems={enrichedItems}
-      recommendedAnime={enrichedRecommended}
-      recommendedByGenre={recommendedByGenre}
-    />
+    <Suspense fallback={null}>
+      <WatchlistClientV2Grok
+        initialItems={enrichedItems}
+        recommendedAnime={enrichedRecommended}
+        recommendedByGenre={recommendedByGenre}
+        initialSeasonRef={seasonRef}
+      />
+    </Suspense>
   );
 }

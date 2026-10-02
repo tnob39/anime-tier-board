@@ -142,9 +142,13 @@ async function requestSeasonalAnime(
     throw new Error(payload.error ?? "季節アニメの取得に失敗しました。");
   }
 
+  if (payload.year !== year || payload.season !== season) {
+    throw new Error("取得した期が表示と一致しませんでした。");
+  }
+
   const data: SeasonalAnimeClientResponse = {
-    year: payload.year ?? year,
-    season: payload.season ?? season,
+    year,
+    season,
     items: payload.items,
     source: payload.source,
     cached: payload.cached,

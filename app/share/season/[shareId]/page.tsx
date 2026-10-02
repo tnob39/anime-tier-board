@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { normalizeSeason, seasonLabelJa } from "@/lib/season";
+import { normalizeSeason, seasonHeadingJa } from "@/lib/season";
 import { getSeasonShare } from "@/lib/season-share";
 import { listStatuses } from "@/lib/statuses";
 import { SeasonShareClient } from "./season-share-client";
@@ -31,7 +31,7 @@ export default async function SeasonSharePage({
 
   return (
     <SeasonShareClient
-      label={seasonLabelJa(share.season, share.seasonYear)}
+      label={seasonHeadingJa({ year: share.seasonYear, season: share.season })}
       comment={share.comment}
       items={items}
     />

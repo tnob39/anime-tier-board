@@ -63,7 +63,15 @@ import {
   fetchSeasonalAnimeClient,
   seedSeasonalAnimeCache,
 } from "@/lib/seasonal-anime-client-cache";
-import { getCurrentAnimeSeason, normalizeSeason } from "@/lib/season";
+import { SeasonContextControl } from "@/components/SeasonContextControl";
+import {
+  getCurrentAnimeSeason,
+  listCompactSeasonSelectorYears,
+  normalizeSeason,
+  seasonHeadingJa,
+  type SeasonRef
+} from "@/lib/season";
+import { applySeasonQuery, resolveSeasonQuery } from "@/lib/season-url";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import {
@@ -72,7 +80,7 @@ import {
   STREAMING_PLATFORM_VISIBLE_LIMIT
 } from "@/lib/streaming-services";
 import type { AnimeItem, AnimeSeason } from "@/lib/types";
-import { SEASON_LABELS, SEASONS } from "@/lib/types";
+import { SEASON_LABELS } from "@/lib/types";
 
 const STORAGE_VERSION = 1;
 const STORAGE_PREFIX = "anime-tier-board:v1";
@@ -451,6 +459,18 @@ export function TierBoardApp({
 
   const [seasonYear, setSeasonYear] = useState(startYear);
   const [season, setSeason] = useState<AnimeSeason>(startSeason);
+  const loadGenerationRef = useRef(0);
+  const activeLoadContextRef = useRef(getStorageKey(startYear, startSeason));
+  const applySeasonRef = useCallback((next: SeasonRef) => {
+    const nextKey = getStorageKey(next.year, next.season);
+    if (activeLoadContextRef.current !== nextKey) {
+      // Invalidate synchronously, including history changes before effect cleanup.
+      activeLoadContextRef.current = nextKey;
+      loadGenerationRef.current += 1;
+    }
+    setSeasonYear(next.year);
+    setSeason(next.season);
+  }, []);
 
   // Prefill items from SSR seed for the initial current season to avoid loading skeleton flash
   const [items, setItems] = useState<AnimeItem[]>(() =>
@@ -682,10 +702,49 @@ export function TierBoardApp({
     [tierIdSet]
   );
 
-  const yearOptions = useMemo(() => {
-    const start = currentSeason.year - 3;
-    return Array.from({ length: 8 }, (_, index) => start + index);
-  }, [currentSeason.year]);
+  const yearOptions = useMemo(
+    () => listCompactSeasonSelectorYears(new Date(), seasonYear),
+    [seasonYear]
+  );
+
+  const writeSeasonQuery = useCallback(
+    (next: SeasonRef, historyMode: "push" | "replace") => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      const search = applySeasonQuery(new URLSearchParams(window.location.search), next);
+      const href = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
+      if (historyMode === "push") {
+        window.history.pushState(null, "", href);
+      } else {
+        window.history.replaceState(null, "", href);
+      }
+    },
+    []
+  );
+
+  const handleSeasonRefChange = useCallback(
+    (next: SeasonRef) => {
+      if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+        return;
+      }
+      applySeasonRef(next);
+      writeSeasonQuery(next, "push");
+    },
+    [applySeasonRef, writeSeasonQuery]
+  );
+
+  useEffect(() => {
+    function onPopState() {
+      if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+        return;
+      }
+      const resolved = resolveSeasonQuery(new URLSearchParams(window.location.search));
+      applySeasonRef(resolved.ref);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [applySeasonRef]);
 
   // True once auth-return evaluation finished (or guest). Leaving protected→none must not
   // re-trigger loadAnime (would remote-GET and overwrite the preserved local board).
@@ -698,22 +757,27 @@ export function TierBoardApp({
     }
 
     // Wait for pending-share auth-return evaluation before any board source choice.
-    if (!authReturnReady) {
+    if (!authReturnReady || activeLoadContextRef.current !== storageKey) {
       return;
     }
 
+    const generation = ++loadGenerationRef.current;
+    const isCurrent = () =>
+      generation === loadGenerationRef.current && activeLoadContextRef.current === storageKey;
     setLoading(true);
     setError(null);
     setWarning(null);
 
     try {
       const payload = await fetchSeasonalAnimeClient(seasonYear, season);
+      if (!isCurrent()) return;
       const nextItems = payload.items;
       // Guarded auth-return: never use remote as the board source (local only).
       const storedBoard =
         isAuthenticated && !protectLocalBoardRef.current
           ? await readRemoteBoard(seasonYear, season)
           : readStoredBoard(storageKey);
+      if (!isCurrent()) return;
       const nextBoard = reconcileBoard(
         storedBoard ?? createDefaultBoard(seasonYear, season, nextItems),
         nextItems,
@@ -725,6 +789,7 @@ export function TierBoardApp({
       setBoard(nextBoard);
       setWarning(payload.warning ?? payload.enrichWarning ?? null);
     } catch (loadError) {
+      if (!isCurrent()) return;
       setError(loadError instanceof Error ? loadError.message : String(loadError));
       if (protectLocalBoardRef.current) {
         // Guarded seasonal failure: keep existing local board/storage and guard.
@@ -735,7 +800,7 @@ export function TierBoardApp({
       setItems([]);
       setBoard(createDefaultBoard(seasonYear, season, []));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [authReturnReady, authStatus, isAuthenticated, season, seasonYear, storageKey]);
 
@@ -743,6 +808,7 @@ export function TierBoardApp({
     // For the very first load of the seeded current season, fetch will hit cache instantly.
     // We still invoke loadAnime to populate warning/board consistently.
     void loadAnime();
+    return () => { loadGenerationRef.current += 1; };
   }, [loadAnime]);
 
   // Auth-return guard: evaluate metadata-only pending share intent before remote board load.
@@ -800,8 +866,8 @@ export function TierBoardApp({
         evaluation.year != null &&
         evaluation.season != null
       ) {
-        setSeasonYear(evaluation.year);
-        setSeason(evaluation.season);
+        applySeasonRef({ year: evaluation.year, season: evaluation.season });
+        writeSeasonQuery({ year: evaluation.year, season: evaluation.season }, "replace");
       }
 
       if (isHandoffGenerationCurrent(generation)) {
@@ -934,7 +1000,7 @@ export function TierBoardApp({
     return () => {
       bumpHandoffGeneration();
     };
-  }, [authStatus]);
+  }, [applySeasonRef, authStatus]);
 
   useEffect(() => {
     function onStorage(event: StorageEvent) {
@@ -1047,7 +1113,12 @@ export function TierBoardApp({
   }, [season, seasonYear]);
 
   useEffect(() => {
-    if (!board) {
+    if (
+      !board ||
+      board.seasonYear !== seasonYear ||
+      board.season !== season ||
+      activeLoadContextRef.current !== storageKey
+    ) {
       return;
     }
 
@@ -1086,6 +1157,7 @@ export function TierBoardApp({
       }
       void saveRemoteBoard(board, controller.signal)
         .then(() => {
+          if (controller.signal.aborted || activeLoadContextRef.current !== storageKey) return;
           setSaveState("saved");
           setSaveSuccessVisible(true);
           saveSuccessTimeoutRef.current = window.setTimeout(() => {
@@ -1094,7 +1166,7 @@ export function TierBoardApp({
           }, 2000);
         })
         .catch(() => {
-          if (!controller.signal.aborted) {
+          if (!controller.signal.aborted && activeLoadContextRef.current === storageKey) {
             setSaveState("error");
           }
         });
@@ -1104,7 +1176,7 @@ export function TierBoardApp({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [board, isAuthenticated, storageKey]);
+  }, [board, isAuthenticated, season, seasonYear, storageKey]);
 
   async function handleRetrySave() {
     // Phase lock first: pending|evaluating must never remote-PUT, including retry.
@@ -1751,8 +1823,8 @@ export function TierBoardApp({
       handoffShareBoardRef.current = chosenBoard;
     }
     protectLocalBoardRef.current = true;
-    setSeasonYear(marker.year);
-    setSeason(marker.season);
+    applySeasonRef({ year: marker.year, season: marker.season });
+    writeSeasonQuery({ year: marker.year, season: marker.season }, "replace");
     if (!isHandoffGenerationCurrent(generation)) {
       return true;
     }
@@ -2522,7 +2594,11 @@ export function TierBoardApp({
       ) : null}
       <header className="topbar">
         <div className="title-block">
-          <h1>今期アニメTier表</h1>
+          <h1>
+            {seasonYear === currentSeason.year && season === currentSeason.season
+              ? "今期アニメTier表"
+              : `${seasonHeadingJa({ year: seasonYear, season })}アニメTier表`}
+          </h1>
           <div className="status-line">
             {items.length}作品
             {isAuthenticated && saveState === "saving" ? (
@@ -2554,46 +2630,13 @@ export function TierBoardApp({
         </div>
 
         <div className="control-bar">
-          <div className="control-bar-season" aria-label="年と季節">
-            <label className="field">
-              <span>年</span>
-              <select
-                value={seasonYear}
-                onChange={(event) => {
-                  if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
-                    return;
-                  }
-                  setSeasonYear(Number(event.target.value));
-                }}
-                disabled={isAuthReturnLocked}
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span>期</span>
-              <select
-                value={season}
-                onChange={(event) => {
-                  if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
-                    return;
-                  }
-                  setSeason(event.target.value as AnimeSeason);
-                }}
-                disabled={isAuthReturnLocked}
-              >
-                {SEASONS.map((option) => (
-                  <option key={option} value={option}>
-                    {SEASON_LABELS[option]}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="control-bar-season" aria-label="年とクール">
+            <SeasonContextControl
+              value={{ year: seasonYear, season }}
+              years={yearOptions}
+              disabled={isAuthReturnLocked}
+              onChange={handleSeasonRefChange}
+            />
           </div>
 
           <div className="control-bar-actions" aria-label="ツールバー操作">

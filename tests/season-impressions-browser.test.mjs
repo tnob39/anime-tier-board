@@ -81,7 +81,7 @@ async function harness({ guest = false, mode = "simple", initialRecords = [], wi
     return route.abort();
   });
   // Every URL is fulfilled/aborted in-process; there is no HTTP server or outbound request.
-  await page.goto("https://impressions.test/test");
+  await page.goto("https://impressions.test/test?year=2026&season=FALL");
   await page.evaluate(({ guest, mode }) => {
     localStorage.setItem("numanie-display-mode", mode);
     document.documentElement.dataset.theme = "light";
@@ -409,13 +409,85 @@ test("Visual/Simple parity, 200% text, keyboard-sized viewport and season switch
     await page.keyboard.press("Escape");
     await page.setViewportSize({ width: 1280, height: 900 });
     page.once("dialog", (dialog) => dialog.accept());
-    await page.getByLabel("年", { exact: true }).fill("2025");
+    await page.getByLabel("年", { exact: true }).selectOption("2025");
     await page.getByLabel("クール", { exact: true }).selectOption("SUMMER");
-    await page.getByRole("button", { name: "クールを表示" }).click();
     await expect(page.getByRole("status").first()).toContainText("2025年夏");
     assert.equal(state.images, count);
     assert.equal(state.writes.length, 0);
-    assert.equal(await page.getByRole("navigation", { name: "Tierのページ" }).getByRole("link").count(), 2);
+    assert.equal(await page.getByRole("navigation", { name: "Tierの表示切り替え" }).getByRole("link").count(), 2);
     await page.screenshot({ path: path.join(output, "desktop-simple.png"), fullPage: true });
+  } finally { await h.close(); }
+});
+
+test("season controls cancel cleanly and save/delete/share all use the canonical selection", async () => {
+  const h = await harness();
+  const { page, state } = h;
+  try {
+    await page.getByRole("button", { name: /日本語アニメ一/ }).click();
+    await page.getByRole("dialog").getByLabel("一言（任意・140文字以内）").fill("秋の下書き");
+    await page.keyboard.press("Escape");
+    page.once("dialog", (dialog) => dialog.dismiss());
+    await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2025");
+    await expect(page.getByRole("combobox", { name: "年", exact: true })).toHaveValue("2026");
+    await expect(page).toHaveURL(/year=2026&season=FALL$/);
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2025");
+    await page.getByRole("combobox", { name: "クール", exact: true }).selectOption("SUMMER");
+    await expect(page.locator("[data-season-heading]")).toHaveText("選択中の期（2025年夏）");
+    await page.getByRole("button", { name: /日本語アニメ一/ }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByLabel("一言（任意・140文字以内）")).toHaveValue("");
+    await dialog.getByRole("button", { name: "保存して次へ" }).click();
+    await expect(dialog.getByRole("heading")).toHaveText("日本語アニメ二");
+    await page.keyboard.press("Escape");
+    await page.getByRole("group", { name: "日本語アニメ一", exact: true }).getByLabel("この作品を公開").check();
+    await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
+    await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
+    await expect(page.getByRole("link", { name: "作成した共有を開く" })).toBeVisible();
+    await page.getByRole("button", { name: /日本語アニメ一/ }).click();
+    await dialog.getByRole("button", { name: "確認記録を削除", exact: true }).click();
+    await dialog.getByRole("button", { name: "削除を確定する" }).click();
+    await expect(dialog).not.toBeVisible();
+    assert.deepEqual(state.writes.map(({ method, body }) => ({ method, year: body.year, season: body.season })), [
+      { method: "PUT", year: 2025, season: "SUMMER" },
+      { method: "POST", year: 2025, season: "SUMMER" },
+      { method: "DELETE", year: 2025, season: "SUMMER" }
+    ]);
+  } finally { await h.close(); }
+});
+
+test("late owner records and save responses cannot cross a season change or a return to the same season", async () => {
+  const h = await harness();
+  const { page } = h;
+  try {
+    let heldRead;
+    await page.route("**/api/season-impressions?year=2025&season=FALL", (route) => { heldRead = route; }, { times: 1 });
+    await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2025");
+    await expect.poll(() => !!heldRead).toBe(true);
+    await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2024");
+    await expect(page.getByRole("button", { name: /日本語アニメ一/ })).toBeEnabled();
+    await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2025");
+    await expect(page.getByRole("button", { name: /日本語アニメ一/ })).toBeEnabled();
+    const readFinished = page.waitForEvent("requestfinished", (request) => request === heldRead.request());
+    await heldRead.fulfill({ json: { impressions: [record(anime("anilist-99", "OLD_PRIVATE_RECORD"), { year: 2025 })], deletedRevisions: [] } });
+    await readFinished;
+    await page.getByRole("button", { name: /日本語アニメ一/ }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(page.getByText("OLD_PRIVATE_RECORD")).toHaveCount(0);
+    let heldWrite;
+    await page.route("**/api/season-impressions/anilist-1", (route) => { heldWrite = route; }, { times: 1 });
+    await dialog.getByRole("button", { name: "保存して次へ" }).click();
+    await expect.poll(() => !!heldWrite).toBe(true);
+    assert.equal(heldWrite.request().postDataJSON().year, 2025);
+    await page.evaluate(() => history.pushState(null, "", "?year=2024&season=SUMMER"));
+    await expect(page.locator("[data-season-heading]")).toHaveText("選択中の期（2024年夏）");
+    await expect(dialog).not.toBeVisible();
+    const writeFinished = page.waitForEvent("requestfinished", (request) => request === heldWrite.request());
+    await heldWrite.fulfill({ json: { impression: record(candidates[0], { year: 2025, note: "OLD_SAVE" }) } });
+    await writeFinished;
+    await page.getByRole("button", { name: /日本語アニメ一/ }).click();
+    await expect(dialog.getByLabel("一言（任意・140文字以内）")).toHaveValue("");
+    await expect(page.getByRole("button", { name: /日本語アニメ一.*未確認/ })).toBeVisible();
+    await expect(page.getByText("OLD_PRIVATE_RECORD")).toHaveCount(0);
   } finally { await h.close(); }
 });

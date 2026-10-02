@@ -2,11 +2,18 @@
 
 import { ExternalLink, Loader2, PlayCircle, Plus, Search, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { SeasonContextControl } from "@/components/SeasonContextControl";
 import { track } from "@/lib/analytics";
 import { filterAnimeItems } from "@/lib/anime-filters";
 import { getAnimePopularity as getPopularity } from "@/lib/home-seasonal-add";
+import {
+  getCurrentAnimeSeason,
+  listSeasonSelectorYears,
+  type SeasonRef
+} from "@/lib/season";
+import { applySeasonQuery, resolveSeasonQuery } from "@/lib/season-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import {
   STREAMING_SERVICES,
@@ -341,13 +348,34 @@ export function resolveSeasonalFreshnessView(args: {
 
 export function ExploreClient({
   initialStatuses,
-  initialSubscriptions
+  initialSubscriptions,
+  initialYear,
+  initialSeason,
+  initialYearScope
 }: {
   initialStatuses: AnimeStatusRecord[];
   initialSubscriptions: UserSubscription[];
+  initialYear: number;
+  initialSeason: SeasonRef["season"];
+  initialYearScope: boolean;
 }) {
-  const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
+  const current = getCurrentAnimeSeason();
+  const currentYear = current.year;
+  const [year, setYear] = useState(initialYear);
+  const [season, setSeason] = useState<SeasonRef["season"]>(initialSeason);
+  const [yearScope, setYearScope] = useState(initialYearScope);
+  const loadGenerationRef = useRef(0);
+  const activeLoadContextRef = useRef(`${initialYear}:${initialYearScope ? "all" : initialSeason}`);
+  const applySeasonContext = useCallback((nextYear: number, nextSeason: SeasonRef["season"], nextYearScope: boolean) => {
+    const nextKey = `${nextYear}:${nextYearScope ? "all" : nextSeason}`;
+    if (activeLoadContextRef.current !== nextKey) {
+      activeLoadContextRef.current = nextKey;
+      loadGenerationRef.current += 1;
+    }
+    setYear(nextYear);
+    setSeason(nextSeason);
+    setYearScope(nextYearScope);
+  }, []);
   const [sortMode, setSortMode] = useState<SortMode>("fit");
   const [items, setItems] = useState<AnimeItem[]>([]);
   const [statusMap, setStatusMap] = useState<Record<string, ViewingStatus>>(() =>
@@ -371,10 +399,42 @@ export function ExploreClient({
   );
   const hasSubscriptions = subscribedProviderIds.length > 0;
   const preferences = useMemo(() => buildPreferences(initialStatuses), [initialStatuses]);
-  const yearOptions = useMemo(() => {
-    const start = 1990;
-    return Array.from({ length: currentYear - start + 1 }, (_, index) => currentYear - index);
-  }, [currentYear]);
+  const yearOptions = useMemo(
+    () => listSeasonSelectorYears({ selectedYear: year, endYear: currentYear + 1 }),
+    [currentYear, year]
+  );
+
+  function writeExploreUrl(nextYear: number, nextSeason: SeasonRef["season"], nextYearScope: boolean) {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const params = new URLSearchParams(applySeasonQuery(new URLSearchParams(window.location.search), {
+      year: nextYear,
+      season: nextSeason
+    }));
+    if (nextYearScope) {
+      params.delete("season");
+      params.set("year", String(nextYear));
+    }
+    const query = params.toString();
+    const href = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+    window.history.pushState(null, "", href);
+  }
+
+  useEffect(() => {
+    function onPopState() {
+      const resolved = resolveSeasonQuery(new URLSearchParams(window.location.search), new Date(), {
+        allowYearOnly: true
+      });
+      applySeasonContext(
+        resolved.explicit ? resolved.ref.year : current.year,
+        resolved.ref.season,
+        !resolved.explicit || resolved.yearScope
+      );
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [applySeasonContext, current.year]);
 
   const genreOptions = useMemo(() => {
     const countMap = new Map<string, number>();
@@ -440,19 +500,27 @@ export function ExploreClient({
   }, [items, sortMode, searchQuery, selectedGenres]);
 
   async function loadYear() {
+    const seasonQuery = yearScope ? "all" : season;
+    const contextKey = `${year}:${seasonQuery}`;
+    if (activeLoadContextRef.current !== contextKey) return;
+    const generation = ++loadGenerationRef.current;
+    const isCurrent = () =>
+      generation === loadGenerationRef.current && activeLoadContextRef.current === contextKey;
     setLoading(true);
     setNotice(null);
 
     try {
-      const response = await fetch(`/api/anime/seasonal?year=${year}&season=all`, {
+      const response = await fetch(`/api/anime/seasonal?year=${year}&season=${seasonQuery}`, {
         cache: "no-store"
       });
+      if (!isCurrent()) return;
       let payload: unknown = null;
       try {
         payload = await response.json();
       } catch {
         payload = null;
       }
+      if (!isCurrent()) return;
 
       const resolved = resolveSeasonalFreshnessView({
         ok: response.ok,
@@ -461,6 +529,7 @@ export function ExploreClient({
       setItems(resolved.items);
       setNotice(resolved.notice);
     } catch {
+      if (!isCurrent()) return;
       // Network/transport failure — same unavailable UX; さがす is the only retry.
       setItems([]);
       setNotice({
@@ -468,15 +537,16 @@ export function ExploreClient({
         role: "alert"
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }
 
   // 開いた直後・年代を変更した直後に自動的に読み込む（「さがす」ボタンは手動再取得用に残す）
   useEffect(() => {
     void loadYear();
+    return () => { loadGenerationRef.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year]);
+  }, [year, season, yearScope]);
 
   async function addToWatchlist(item: AnimeItem) {
     setSavingId(item.id);
@@ -528,16 +598,20 @@ export function ExploreClient({
       </header>
 
       <section className="explore-controls">
-        <label className="field">
-          <span>年代</span>
-          <select value={year} onChange={(event) => setYear(Number(event.target.value))}>
-            {yearOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}年
-              </option>
-            ))}
-          </select>
-        </label>
+        <SeasonContextControl
+          value={{ year, season }}
+          years={yearOptions}
+          allowYearScope
+          yearScope={yearScope}
+          onYearScopeChange={(nextYear) => {
+            applySeasonContext(nextYear, season, true);
+            writeExploreUrl(nextYear, season, true);
+          }}
+          onChange={(next) => {
+            applySeasonContext(next.year, next.season, false);
+            writeExploreUrl(next.year, next.season, false);
+          }}
+        />
         <div className="explore-search">
           <Search size={18} aria-hidden="true" />
           <input

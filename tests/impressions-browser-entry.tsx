@@ -8,6 +8,7 @@ window.__impressionAuth = {
 };
 window.__impressionNavigation = {
   usePathname: () => window.fixture.path,
+  useSearchParams: () => new URLSearchParams(location.search),
   useRouter: () => ({ push: (url) => {
     const parsed = new URL(url, location.origin);
     window.fixture.path = parsed.pathname;
@@ -22,9 +23,14 @@ const { TierAreaNav } = require("../components/TierAreaNav");
 const { DisplayModeProvider } = require("../components/display-mode/DisplayModeProvider");
 const { ImpressionSnapshotView } = require("../components/ImpressionSnapshotView");
 const root = createRoot(document.getElementById("root"));
+for (const method of ["pushState", "replaceState"] as const) {
+  const original = history[method].bind(history);
+  history[method] = (...args) => { original(...args); window.renderImpressions(); };
+}
+window.addEventListener("popstate", () => window.renderImpressions());
 window.renderImpressions = () => root.render(<DisplayModeProvider>
   {window.fixture.publicSnapshot ? <div className="impressions-page"><ImpressionSnapshotView snapshot={window.fixture.publicSnapshot} /></div> : <>
-    <TierAreaNav /><ImpressionsClient key={`${window.fixture.mount}:${window.fixture.seasonKey.year}:${window.fixture.seasonKey.season}`}
+    <TierAreaNav /><ImpressionsClient key={window.fixture.mount}
       seasonKey={window.fixture.seasonKey} resumeToken={window.fixture.resumeToken ?? null} />
   </>}
 </DisplayModeProvider>);

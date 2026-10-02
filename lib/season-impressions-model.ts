@@ -1,4 +1,5 @@
-import { SEASONS, type AnimeSeason, type AnimeItem } from "@/lib/types";
+import type { AnimeSeason, AnimeItem } from "@/lib/types";
+import { parseSeasonYear, normalizeSeason } from "@/lib/season";
 
 export const IMPRESSION_RATINGS = ["liked", "neutral", "not_for_me"] as const;
 export const IMPRESSION_SPOILERS = ["unspecified", "no_spoiler", "has_spoiler"] as const;
@@ -34,8 +35,14 @@ export function isImpressionAnimeId(value: unknown): value is string {
   return typeof value === "string" && /^(anilist|jikan)-[1-9]\d{0,14}$/.test(value);
 }
 export function isImpressionSeason(value: unknown): value is ImpressionSeason & Record<string, unknown> {
-  return isRecord(value) && Number.isInteger(value.year) && Number(value.year) >= 1900 && Number(value.year) <= 2100
-    && SEASONS.includes(value.season as AnimeSeason);
+  const key = parseImpressionSeason(value);
+  return key !== null && isRecord(value) && value.year === key.year && value.season === key.season;
+}
+export function parseImpressionSeason(value: unknown): ImpressionSeason | null {
+  if (!isRecord(value)) return null;
+  const year = parseSeasonYear(value.year);
+  const season = typeof value.season === "string" ? normalizeSeason(value.season) : null;
+  return year !== null && season !== null ? { year, season } : null;
 }
 export function isRevision(value: unknown, minimum = 0): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= minimum;
@@ -60,23 +67,26 @@ export function readImpressionAnime(value: unknown): ImpressionAnime | null {
   return { id: value.id, source: value.source as ImpressionAnime["source"], title: value.title, imageUrl: value.imageUrl };
 }
 export function parseImpressionInput(value: unknown, animeId: string): ImpressionInput | null {
+  const key = parseImpressionSeason(value);
   if (!isRecord(value) || !hasOnly(value, ["year", "season", "revision", "anime", "rating", "note", "spoiler"])
-    || !isImpressionSeason(value) || !isRevision(value.revision)
+    || !key || !isRevision(value.revision)
     || (value.rating !== null && !IMPRESSION_RATINGS.includes(value.rating as ImpressionRating))
     || (value.note !== null && !validText(value.note, 140))
     || !IMPRESSION_SPOILERS.includes(value.spoiler as ImpressionSpoiler)) return null;
   const anime = readImpressionAnime(value.anime);
   if (!anime || anime.id !== animeId) return null;
-  return { year: value.year, season: value.season, revision: value.revision, anime,
+  return { ...key, revision: value.revision, anime,
     rating: value.rating as ImpressionRating | null, note: value.note as string | null, spoiler: value.spoiler as ImpressionSpoiler };
 }
 export function parseImpressionDelete(value: unknown): (ImpressionSeason & { revision: number }) | null {
-  if (!isRecord(value) || !hasOnly(value, ["year", "season", "revision"]) || !isImpressionSeason(value) || !isRevision(value.revision, 1)) return null;
-  return { year: value.year, season: value.season, revision: value.revision };
+  const key = parseImpressionSeason(value);
+  if (!isRecord(value) || !hasOnly(value, ["year", "season", "revision"]) || !key || !isRevision(value.revision, 1)) return null;
+  return { ...key, revision: value.revision };
 }
 export function parseImpressionShare(value: unknown): ImpressionShareInput | null {
+  const key = parseImpressionSeason(value);
   if (!isRecord(value) || !hasOnly(value, ["kind", "year", "season", "selections"]) || value.kind !== "season-impressions"
-    || !isImpressionSeason(value) || !Array.isArray(value.selections) || !value.selections.length || value.selections.length > 300) return null;
+    || !key || !Array.isArray(value.selections) || !value.selections.length || value.selections.length > 300) return null;
   const ids = new Set<string>();
   const selections: ImpressionSelection[] = [];
   for (const item of value.selections) {
@@ -86,7 +96,7 @@ export function parseImpressionShare(value: unknown): ImpressionShareInput | nul
     ids.add(item.animeId);
     selections.push({ animeId: item.animeId, revision: item.revision, includeRating: item.includeRating, includeNote: item.includeNote });
   }
-  return { kind: "season-impressions", year: value.year, season: value.season, selections };
+  return { kind: "season-impressions", ...key, selections };
 }
 
 /** Used by both preview and creation. Missing/changed records invalidate the entire preview. */
