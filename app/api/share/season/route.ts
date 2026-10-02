@@ -9,7 +9,7 @@ import {
   readJsonWithByteLimit,
 } from "@/lib/api/write-request-guard";
 import { normalizeComment } from "@/lib/evangelist-cards";
-import { getCurrentAnimeSeason, normalizeSeason } from "@/lib/season";
+import { getCurrentAnimeSeason, normalizeSeason, parseSeasonYear } from "@/lib/season";
 import { createSeasonShare } from "@/lib/season-share";
 
 const ALLOWED_STATUSES = ["watching", "planned", "completed"] as const;
@@ -52,9 +52,9 @@ export async function POST(request: Request) {
       ? normalizeSeason(payload.season)
       : current.season;
   const seasonYear =
-    payload.seasonYear === undefined ? current.year : Number(payload.seasonYear);
+    payload.seasonYear === undefined ? current.year : parseSeasonYear(payload.seasonYear);
 
-  if (!season || !Number.isInteger(seasonYear) || seasonYear < 1900 || seasonYear > 2200) {
+  if (!season || seasonYear == null) {
     return NextResponse.json({ error: "Invalid season" }, { status: 400 });
   }
 

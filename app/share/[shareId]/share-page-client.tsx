@@ -8,7 +8,7 @@ import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
 import { ShareCardCTA } from "@/components/ShareCardCTA";
 import type { BoardShare, ShareComment } from "@/lib/shares";
 import type { AnimeItem } from "@/lib/types";
-import { SEASON_LABELS } from "@/lib/types";
+import { seasonHeadingJa } from "@/lib/season";
 
 const UNRANKED_TIER_ID = "tier-unranked";
 
@@ -31,7 +31,10 @@ export function SharePageClient({
     (tier) => tier.id !== UNRANKED_TIER_ID
   );
   const isAuthenticated = authStatus === "authenticated";
-  const seasonLabel = `${initialShare.board.seasonYear}年${SEASON_LABELS[initialShare.board.season]}`;
+  const seasonLabel = seasonHeadingJa({
+    year: initialShare.board.seasonYear,
+    season: initialShare.board.season
+  });
 
   useEffect(() => {
     let cancelled = false;

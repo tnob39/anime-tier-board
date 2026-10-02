@@ -1,5 +1,9 @@
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { fetchCurrentSeasonAnimeForHome } from "@/lib/home-seasonal-add";
+import { getCurrentAnimeSeason } from "@/lib/season";
+import { canonicalizeSeasonSearchParams } from "@/lib/season-url";
 import { listStatuses } from "@/lib/statuses";
 import { buildProviderMapWithStats, enrichWithStreamingProviders } from "@/lib/streaming-providers";
 import type { AnimeItem } from "@/lib/types";
@@ -21,22 +25,33 @@ function getValidatedReturnTo(raw: string | string[] | undefined): string | unde
 }
 
 type HomePageProps = {
-  searchParams: Promise<{ login?: string; returnTo?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
+  const rawSearch = await searchParams;
+  const canonical = canonicalizeSeasonSearchParams(rawSearch);
+  if (canonical.didChange) {
+    redirect(canonical.search ? `/?${canonical.search}` : "/");
+  }
+
   const session = await auth();
   const userId = (session?.user as { id?: string } | undefined)?.id;
+  const seasonRef = canonical.explicit ? canonical.ref : getCurrentAnimeSeason();
 
   if (!userId) {
-    const { login, returnTo: rawReturnTo } = await searchParams;
+    const login = typeof rawSearch.login === "string" ? rawSearch.login : undefined;
+    const rawReturnTo = rawSearch.returnTo;
     const returnTo = getValidatedReturnTo(rawReturnTo);
     const loginRedirectTo = returnTo ?? (rawReturnTo === undefined ? undefined : "/");
     return (
-      <HomeGuest
-        loginRequired={login === "required"}
-        loginRedirectTo={loginRedirectTo}
-      />
+      <Suspense fallback={null}>
+        <HomeGuest
+          loginRequired={login === "required"}
+          loginRedirectTo={loginRedirectTo}
+          initialSeasonRef={seasonRef}
+        />
+      </Suspense>
     );
   }
 
@@ -57,5 +72,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       : record
   );
 
-  return <HomeClient initialItems={enrichedItems} initialSeasonalAnime={enrichedSeasonal} />;
+  return (
+    <Suspense fallback={null}>
+      <HomeClient
+        initialItems={enrichedItems}
+        initialSeasonalAnime={enrichedSeasonal}
+        initialSeasonRef={seasonRef}
+      />
+    </Suspense>
+  );
 }

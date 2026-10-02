@@ -63,7 +63,15 @@ import {
   fetchSeasonalAnimeClient,
   seedSeasonalAnimeCache,
 } from "@/lib/seasonal-anime-client-cache";
-import { getCurrentAnimeSeason, normalizeSeason } from "@/lib/season";
+import { SeasonContextControl } from "@/components/SeasonContextControl";
+import {
+  getCurrentAnimeSeason,
+  listCompactSeasonSelectorYears,
+  normalizeSeason,
+  seasonHeadingJa,
+  type SeasonRef
+} from "@/lib/season";
+import { applySeasonQuery, resolveSeasonQuery } from "@/lib/season-url";
 import { shareOrCopyUrl, type ShareOutcome } from "@/lib/share-url";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import {
@@ -72,7 +80,7 @@ import {
   STREAMING_PLATFORM_VISIBLE_LIMIT
 } from "@/lib/streaming-services";
 import type { AnimeItem, AnimeSeason } from "@/lib/types";
-import { SEASON_LABELS, SEASONS } from "@/lib/types";
+import { SEASON_LABELS } from "@/lib/types";
 
 const STORAGE_VERSION = 1;
 const STORAGE_PREFIX = "anime-tier-board:v1";
@@ -682,10 +690,51 @@ export function TierBoardApp({
     [tierIdSet]
   );
 
-  const yearOptions = useMemo(() => {
-    const start = currentSeason.year - 3;
-    return Array.from({ length: 8 }, (_, index) => start + index);
-  }, [currentSeason.year]);
+  const yearOptions = useMemo(
+    () => listCompactSeasonSelectorYears(new Date(), seasonYear),
+    [seasonYear]
+  );
+
+  const writeSeasonQuery = useCallback(
+    (next: SeasonRef, historyMode: "push" | "replace") => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      const search = applySeasonQuery(new URLSearchParams(window.location.search), next);
+      const href = `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`;
+      if (historyMode === "push") {
+        window.history.pushState(null, "", href);
+      } else {
+        window.history.replaceState(null, "", href);
+      }
+    },
+    []
+  );
+
+  const handleSeasonRefChange = useCallback(
+    (next: SeasonRef) => {
+      if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+        return;
+      }
+      setSeasonYear(next.year);
+      setSeason(next.season);
+      writeSeasonQuery(next, "push");
+    },
+    [writeSeasonQuery]
+  );
+
+  useEffect(() => {
+    function onPopState() {
+      if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
+        return;
+      }
+      const resolved = resolveSeasonQuery(new URLSearchParams(window.location.search));
+      setSeasonYear(resolved.ref.year);
+      setSeason(resolved.ref.season);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   // True once auth-return evaluation finished (or guest). Leaving protected→none must not
   // re-trigger loadAnime (would remote-GET and overwrite the preserved local board).
@@ -802,6 +851,7 @@ export function TierBoardApp({
       ) {
         setSeasonYear(evaluation.year);
         setSeason(evaluation.season);
+        writeSeasonQuery({ year: evaluation.year, season: evaluation.season }, "replace");
       }
 
       if (isHandoffGenerationCurrent(generation)) {
@@ -1753,6 +1803,7 @@ export function TierBoardApp({
     protectLocalBoardRef.current = true;
     setSeasonYear(marker.year);
     setSeason(marker.season);
+    writeSeasonQuery({ year: marker.year, season: marker.season }, "replace");
     if (!isHandoffGenerationCurrent(generation)) {
       return true;
     }
@@ -2522,7 +2573,11 @@ export function TierBoardApp({
       ) : null}
       <header className="topbar">
         <div className="title-block">
-          <h1>今期アニメTier表</h1>
+          <h1>
+            {seasonYear === currentSeason.year && season === currentSeason.season
+              ? "今期アニメTier表"
+              : `${seasonHeadingJa({ year: seasonYear, season })}アニメTier表`}
+          </h1>
           <div className="status-line">
             {items.length}作品
             {isAuthenticated && saveState === "saving" ? (
@@ -2554,46 +2609,13 @@ export function TierBoardApp({
         </div>
 
         <div className="control-bar">
-          <div className="control-bar-season" aria-label="年と季節">
-            <label className="field">
-              <span>年</span>
-              <select
-                value={seasonYear}
-                onChange={(event) => {
-                  if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
-                    return;
-                  }
-                  setSeasonYear(Number(event.target.value));
-                }}
-                disabled={isAuthReturnLocked}
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span>期</span>
-              <select
-                value={season}
-                onChange={(event) => {
-                  if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
-                    return;
-                  }
-                  setSeason(event.target.value as AnimeSeason);
-                }}
-                disabled={isAuthReturnLocked}
-              >
-                {SEASONS.map((option) => (
-                  <option key={option} value={option}>
-                    {SEASON_LABELS[option]}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div className="control-bar-season" aria-label="年とクール">
+            <SeasonContextControl
+              value={{ year: seasonYear, season }}
+              years={yearOptions}
+              disabled={isAuthReturnLocked}
+              onChange={handleSeasonRefChange}
+            />
           </div>
 
           <div className="control-bar-actions" aria-label="ツールバー操作">

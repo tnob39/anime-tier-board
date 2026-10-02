@@ -11,9 +11,15 @@ import { WeeklyBroadcastCalendar } from "@/components/WeeklyBroadcastCalendar";
 import { track } from "@/lib/analytics";
 import { BROADCAST_WEEKDAYS, groupItemsByBroadcastDay, withFreshAiring } from "@/lib/broadcast-calendar";
 import type { HomeNextAction } from "@/lib/home-next-actions";
+import { SeasonContextControl } from "@/components/SeasonContextControl";
+import { useSeasonUrlState } from "@/components/useSeasonUrlState";
 import { bucketBySeason } from "@/lib/season-bucket";
 import { selectUnregisteredSeasonalAnime } from "@/lib/home-seasonal-add";
-import { getNextAnimeSeason } from "@/lib/season";
+import {
+  equalSeasonRef,
+  getNextAnimeSeason,
+  type SeasonRef
+} from "@/lib/season";
 import { useSeasonalPrefetch } from "@/lib/use-seasonal-prefetch";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import type { AnimeItem } from "@/lib/types";
@@ -25,6 +31,7 @@ import "./watchlist/watchlist-v2-grok.css";
 type HomeClientProps = {
   initialItems: AnimeStatusRecord[];
   initialSeasonalAnime: AnimeItem[];
+  initialSeasonRef: SeasonRef;
 };
 
 type HomeNextActionViewState =
@@ -122,13 +129,25 @@ function formatNextActionMeta(action: HomeNextAction): string | null {
  * ログイン済みホームは「今週の放映カレンダー」を中心に構成する。
  * ステータス変更の楽観更新はここで一元管理し、今期から追加 ↔ 視聴中/見たい の反映を担う。
  */
-export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientProps) {
+export function HomeClient({
+  initialItems,
+  initialSeasonalAnime,
+  initialSeasonRef
+}: HomeClientProps) {
   const router = useRouter();
   const { mode, hydrated } = useDisplayMode();
   const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
   const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(false);
-  const [seasonScope, setSeasonScope] = useState<SeasonScope>("current");
-  const [nextSeasonAnime, setNextSeasonAnime] = useState<AnimeItem[] | null>(null);
+  const seasonUrl = useSeasonUrlState(initialSeasonRef);
+  const currentSeasonRef = seasonUrl.current;
+  const nextSeasonRef = useMemo(() => getNextAnimeSeason(), []);
+  const seasonScope: SeasonScope = equalSeasonRef(seasonUrl.ref, currentSeasonRef)
+    ? "current"
+    : equalSeasonRef(seasonUrl.ref, nextSeasonRef)
+      ? "next"
+      : "selected";
+  const [selectedSeasonAnime, setSelectedSeasonAnime] = useState<AnimeItem[] | null>(null);
+  const [selectedSeasonKey, setSelectedSeasonKey] = useState<string | null>(null);
   const [nextSeasonLoading, setNextSeasonLoading] = useState(false);
   const [nextSeasonError, setNextSeasonError] = useState<string | null>(null);
   const [nextActionState, setNextActionState] = useState<HomeNextActionViewState>({ kind: "loading" });
@@ -236,46 +255,92 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
     return items.find((r) => r.animeId === statusSheetRecord.animeId) ?? statusSheetRecord;
   }, [items, statusSheetRecord]);
 
+  const selectedKey = `${seasonUrl.ref.year}-${seasonUrl.ref.season}`;
+  const currentKey = `${currentSeasonRef.year}-${currentSeasonRef.season}`;
+  const addSourceAnime =
+    selectedKey === currentKey
+      ? initialSeasonalAnime
+      : selectedSeasonKey === selectedKey
+        ? selectedSeasonAnime ?? []
+        : [];
+
   const addSectionItems = useMemo(
     () =>
       selectUnregisteredSeasonalAnime(
-        seasonScope === "current" ? initialSeasonalAnime : nextSeasonAnime ?? [],
+        addSourceAnime,
         items,
         // ホームでは「もっと見る」で段階的に表示するため、ここでは絞り込まず
         // 未登録の今期/来期作品をまとめて渡す（実際の表示件数はHomeAddSection側で制御）。
         200
       ),
-    [initialSeasonalAnime, nextSeasonAnime, seasonScope, items]
+    [addSourceAnime, items]
   );
+
+  useEffect(() => {
+    if (selectedKey === currentKey) {
+      return;
+    }
+    if (selectedSeasonKey === selectedKey && selectedSeasonAnime) {
+      return;
+    }
+
+    let cancelled = false;
+    setNextSeasonLoading(true);
+    setNextSeasonError(null);
+    const { year, season } = seasonUrl.ref;
+    fetch(`/api/anime/seasonal?year=${year}&season=${season}`, { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          year?: number;
+          season?: string;
+          items?: AnimeItem[];
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(payload.error ?? "選択中の期のアニメ取得に失敗しました。");
+        }
+        if (
+          payload.year !== year ||
+          payload.season !== season
+        ) {
+          throw new Error("取得した期が表示と一致しませんでした。");
+        }
+        if (!cancelled) {
+          setSelectedSeasonAnime(payload.items ?? []);
+          setSelectedSeasonKey(`${year}-${season}`);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setSelectedSeasonAnime(null);
+          setSelectedSeasonKey(null);
+          setNextSeasonError(
+            error instanceof Error ? error.message : "選択中の期のアニメ取得に失敗しました。"
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setNextSeasonLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentKey, selectedKey, selectedSeasonAnime, selectedSeasonKey, seasonUrl.ref]);
 
   const handleSelectSeasonScope = useCallback(
     (scope: SeasonScope) => {
-      setSeasonScope(scope);
-
-      if (scope !== "next" || nextSeasonAnime !== null || nextSeasonLoading) {
+      if (scope === "current") {
+        seasonUrl.setRef(currentSeasonRef, "implicit-current");
         return;
       }
-
-      setNextSeasonLoading(true);
-      setNextSeasonError(null);
-
-      const { year, season } = getNextAnimeSeason();
-      fetch(`/api/anime/seasonal?year=${year}&season=${season}`, { cache: "no-store" })
-        .then(async (response) => {
-          const payload = (await response.json()) as { items?: AnimeItem[]; error?: string };
-          if (!response.ok) {
-            throw new Error(payload.error ?? "来期アニメの取得に失敗しました。");
-          }
-          setNextSeasonAnime(payload.items ?? []);
-        })
-        .catch((error: unknown) => {
-          // nextSeasonAnime は null のままにする。「来期」を再度選ぶとガード
-          // (nextSeasonAnime !== null) に引っかからず再フェッチできる。
-          setNextSeasonError(error instanceof Error ? error.message : "来期アニメの取得に失敗しました。");
-        })
-        .finally(() => setNextSeasonLoading(false));
+      if (scope === "next") {
+        seasonUrl.setRef(nextSeasonRef, "explicit");
+      }
     },
-    [nextSeasonAnime, nextSeasonLoading]
+    [currentSeasonRef, nextSeasonRef, seasonUrl]
   );
 
   const addSection = (
@@ -290,13 +355,19 @@ export function HomeClient({ initialItems, initialSeasonalAnime }: HomeClientPro
           {message}
         </div>
       ) : null}
+      <div style={{ margin: "0 12px" }}>
+        <SeasonContextControl
+          value={seasonUrl.ref}
+          onChange={(next) => seasonUrl.setRef(next, "explicit")}
+        />
+      </div>
       <HomeAddSection
         items={addSectionItems}
         onQuickStatus={quickSetStatus}
         seasonScope={seasonScope}
         onSelectSeasonScope={handleSelectSeasonScope}
-        loading={seasonScope === "next" && nextSeasonLoading}
-        error={seasonScope === "next" ? nextSeasonError : null}
+        loading={seasonScope !== "current" && nextSeasonLoading}
+        error={seasonScope !== "current" ? nextSeasonError : null}
         showImages={hydrated && mode === "visual"}
       />
     </>

@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { AppBadgeUpdater } from "./AppBadgeUpdater";
 import { GlobalNav } from "./GlobalNav";
 import { LegalFooter } from "./LegalFooter";
-import { MobileNav } from "./MobileNav";
+import { MobileNav, TierAreaNav } from "./MobileNav";
 
 const PUBLIC_PREFIXES = [
   "/share/",
@@ -30,13 +31,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <GlobalNav />
+      <Suspense fallback={null}>
+        <GlobalNav />
+      </Suspense>
       <AppBadgeUpdater />
       <main id="main-content" tabIndex={-1}>
+        <Suspense fallback={null}>
+          <TierAreaNav />
+        </Suspense>
         {children}
       </main>
       <LegalFooter />
-      <MobileNav />
+      <Suspense fallback={null}>
+        <MobileNav />
+      </Suspense>
     </>
   );
 }

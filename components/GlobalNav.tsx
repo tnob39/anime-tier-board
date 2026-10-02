@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { LogOut, Menu, User, UserCircle2 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
 import { useNavV5 } from "@/lib/nav-flag";
 import { isOwnerEmail } from "@/lib/owner";
+import { seasonAwareHref } from "@/lib/season-url";
 
 const NAV_ITEMS = [
   { href: "/", label: "ホーム", exact: true },
@@ -24,6 +25,7 @@ export function GlobalNav() {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isOwner = isOwnerEmail(session?.user?.email);
   const navV5 = useNavV5();
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.ownerOnly || isOwner);
@@ -100,7 +102,7 @@ export function GlobalNav() {
               <Menu size={20} />
             </button>
           )}
-          <Link href="/" className="global-nav-logo" aria-label="numanie トップへ">
+          <Link href={seasonAwareHref("/", pathname, new URLSearchParams(searchParams.toString()))} className="global-nav-logo" aria-label="numanie トップへ">
             numanie
           </Link>
           <nav className="global-nav-links" aria-label="主要ページ（デスクトップ）">
@@ -112,7 +114,7 @@ export function GlobalNav() {
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={seasonAwareHref(item.href, pathname, new URLSearchParams(searchParams.toString()))}
                   className={active ? "global-nav-link is-active" : "global-nav-link"}
                   aria-current={active ? "page" : undefined}
                 >

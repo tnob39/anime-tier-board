@@ -8,15 +8,16 @@ import { readJsonWithByteLimit } from "@/lib/api/write-request-guard";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { getBoard, saveBoard } from "@/lib/boards";
 import { AppError } from "@/lib/errors/app-error";
+import { normalizeSeason, parseSeasonYear } from "@/lib/season";
 import { SEASONS, type AnimeSeason } from "@/lib/types";
 
 export const GET = withApiRoute("boards.GET", async (request: Request) => {
   const userId = await requireUserId();
 
   const url = new URL(request.url);
-  const year = Number(url.searchParams.get("year"));
-  const season = url.searchParams.get("season") as AnimeSeason | null;
-  if (!Number.isInteger(year) || !season || !SEASONS.includes(season)) {
+  const year = parseSeasonYear(url.searchParams.get("year"));
+  const season = normalizeSeason(url.searchParams.get("season"));
+  if (year == null || !season) {
     throw new AppError({
       message: "ボードの指定が不正です。",
       status: 400,

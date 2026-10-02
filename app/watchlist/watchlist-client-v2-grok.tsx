@@ -18,11 +18,14 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { SeasonContextControl } from "@/components/SeasonContextControl";
 import { useDisplayMode } from "@/components/display-mode/DisplayModeProvider";
+import { useSeasonUrlState } from "@/components/useSeasonUrlState";
 import StatusBottomSheet from "@/components/StatusBottomSheet";
 import { track } from "@/lib/analytics";
 import { isOwnerEmail } from "@/lib/owner";
 import { bucketBySeason } from "@/lib/season-bucket";
+import { getCurrentAnimeSeason, normalizeSeason, selectedSeasonLabelJa, type SeasonRef } from "@/lib/season";
 import type { AnimeStatusRecord, ViewingStatus } from "@/lib/statuses";
 import { matchServiceIdByProviderName } from "@/lib/streaming-services";
 import type { AnimeItem } from "@/lib/types";
@@ -439,10 +442,12 @@ export function WatchlistClientV2Grok({
   initialItems,
   recommendedAnime = [],
   recommendedByGenre = false,
+  initialSeasonRef,
 }: {
   initialItems: AnimeStatusRecord[];
   recommendedAnime?: AnimeItem[];
   recommendedByGenre?: boolean;
+  initialSeasonRef?: SeasonRef;
 }) {
   const editor = useWatchlistV2Editor(initialItems);
   const {
@@ -474,6 +479,7 @@ export function WatchlistClientV2Grok({
     patchRecord,
   } = editor;
 
+  const seasonUrl = useSeasonUrlState(initialSeasonRef ?? getCurrentAnimeSeason());
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
   const [tierMap, setTierMap] = useState<Record<string, { label: string; color: string }>>({});
@@ -505,6 +511,17 @@ export function WatchlistClientV2Grok({
     return list;
   }, [visibleItems, filter, search]);
 
+  const selectedSeasonItems = useMemo(
+    () =>
+      filteredItems.filter((record) => {
+        const season = normalizeSeason(record.anime?.season ?? null);
+        return season === seasonUrl.ref.season && record.anime?.seasonYear === seasonUrl.ref.year;
+      }),
+    [filteredItems, seasonUrl.ref]
+  );
+
+  const showSelectedSeasonOnly = seasonUrl.explicit && !seasonUrl.isCurrent;
+
   // 期セクション（今期 / 来期 / その他）。通常版と共通の bucketBySeason を使用。
   // 上部フィルタチップで絞った filteredItems を期で分割する。
   const seasonBuckets = useMemo(() => bucketBySeason(filteredItems), [filteredItems]);
@@ -530,6 +547,11 @@ export function WatchlistClientV2Grok({
           <div className="wl2g-title">マイリスト</div>
           <div className="wl2g-avatar" aria-hidden />
         </div>
+
+        <SeasonContextControl
+          value={seasonUrl.ref}
+          onChange={(next) => seasonUrl.setRef(next, "explicit")}
+        />
 
         <div className="wl2g-search">
           <span aria-hidden="true">🔍</span>
@@ -604,6 +626,36 @@ export function WatchlistClientV2Grok({
               ホームから作品を追加する →
             </Link>
           </div>
+        </div>
+      ) : showSelectedSeasonOnly ? (
+        <div>
+          <div className="wl2g-sec">
+            <h3>{selectedSeasonLabelJa(seasonUrl.ref)}</h3>
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>
+              {selectedSeasonItems.length}件
+            </span>
+          </div>
+          {selectedSeasonItems.length ? (
+            <div className="wl2g-lane">
+              {selectedSeasonItems.map((record) => {
+                const tier = tierMap[record.animeId];
+                return (
+                  <PosterCard
+                    key={record.animeId}
+                    record={record}
+                    onOpen={() => openSheet(record)}
+                    onChangeStatus={() => setStatusSheetRecord(record)}
+                    onRemove={() => void removeItem(record)}
+                    tier={tier}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <p style={{ margin: "8px 12px", color: "var(--muted)", fontSize: 13 }}>
+              この選択中の期に該当する作品はありません。
+            </p>
+          )}
         </div>
       ) : seasonBuckets.length ? (
         seasonBuckets.map((bucket) => (

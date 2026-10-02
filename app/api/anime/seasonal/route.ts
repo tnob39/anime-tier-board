@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchSeasonalAnime, fetchYearlyAnime } from "@/lib/anime-sources";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { AppError } from "@/lib/errors/app-error";
-import { getCurrentAnimeSeason, normalizeSeason } from "@/lib/season";
+import { getCurrentAnimeSeason, normalizeSeason, parseSeasonYear } from "@/lib/season";
 import {
   buildProviderMapWithStats,
   enrichWithStreamingProviders,
@@ -17,10 +17,10 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
   const rawSeason = url.searchParams.get("season");
   const isYearScope = rawSeason?.toLowerCase() === "all";
   const seasonParam = isYearScope ? null : normalizeSeason(rawSeason);
-  const year = yearParam ? Number(yearParam) : current.year;
-  const season = seasonParam ?? current.season;
+  const year = yearParam == null || yearParam === "" ? current.year : parseSeasonYear(yearParam);
+  const season = isYearScope ? current.season : seasonParam ?? (rawSeason == null || rawSeason === "" ? current.season : null);
 
-  if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+  if (year == null) {
     throw new AppError({
       message: "yearは1900から2100の整数で指定してください。",
       status: 400,
@@ -29,11 +29,22 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
     });
   }
 
+  if (!isYearScope && season == null) {
+    throw new AppError({
+      message: "seasonはWINTER / SPRING / SUMMER / FALL で指定してください。",
+      status: 400,
+      code: "VALIDATION",
+      expose: true,
+    });
+  }
+
+  const resolvedSeason = season ?? current.season;
+
   let result;
   try {
     result = isYearScope
       ? await fetchYearlyAnime(year)
-      : await fetchSeasonalAnime(year, season);
+      : await fetchSeasonalAnime(year, resolvedSeason);
   } catch (error) {
     throw new AppError({
       message:
@@ -58,7 +69,7 @@ export const GET = withApiRoute("anime.seasonal.GET", async (request: Request) =
   return NextResponse.json(
     {
       year,
-      season: isYearScope ? "ALL" : season,
+      season: isYearScope ? "ALL" : resolvedSeason,
       generatedAt: new Date().toISOString(),
       ...result,
       items: enrichedItems,
