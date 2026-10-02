@@ -1,5 +1,7 @@
 import { getTursoClient } from "@/lib/turso";
 import { ACCOUNT_DELETION_TABLES, type AccountDeletionTable } from "@/lib/account-deletion";
+import { impressionFromRow } from "@/lib/season-impressions";
+import type { SeasonImpression } from "@/lib/season-impressions-model";
 
 /** Stable export schema version. Bump only with intentional breaking changes. */
 export const ACCOUNT_EXPORT_SCHEMA_VERSION = 1 as const;
@@ -19,6 +21,7 @@ export type AccountExportPayload = {
   exportedAt: string;
   userId: string;
   data: {
+    seasonImpressions: SeasonImpression[];
     userAnimeStatuses: Array<{
       animeId: string;
       status: string;
@@ -101,6 +104,7 @@ export type AccountExportPayload = {
 
 function emptyData(): AccountExportPayload["data"] {
   return {
+    seasonImpressions: [],
     userAnimeStatuses: [],
     tierBoards: [],
     userSubscriptions: [],
@@ -160,6 +164,14 @@ export async function exportUserAccountData(
 
   const existing = await listExistingAccountTables(client);
   const data = emptyData();
+
+  if (existing.has("season_impressions")) {
+    const result = await client.execute({
+      sql: "select * from season_impressions where user_id = ? and deleted_at is null",
+      args: [userId]
+    });
+    data.seasonImpressions = result.rows.map(impressionFromRow);
+  }
 
   if (existing.has("user_anime_statuses")) {
     const result = await client.execute({
