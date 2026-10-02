@@ -277,10 +277,9 @@ export function HomeClient({
   );
 
   useEffect(() => {
-    if (selectedKey === currentKey) {
-      return;
-    }
-    if (selectedSeasonKey === selectedKey && selectedSeasonAnime) {
+    if (selectedKey === currentKey || (selectedSeasonKey === selectedKey && selectedSeasonAnime)) {
+      setNextSeasonLoading(false);
+      setNextSeasonError(null);
       return;
     }
 
@@ -312,8 +311,6 @@ export function HomeClient({
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          setSelectedSeasonAnime(null);
-          setSelectedSeasonKey(null);
           setNextSeasonError(
             error instanceof Error ? error.message : "選択中の期のアニメ取得に失敗しました。"
           );

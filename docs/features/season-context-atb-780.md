@@ -29,7 +29,7 @@ URL 契約: `lib/season-url.ts`。共通 UI: `components/SeasonContextControl.ts
 | Dashboard | 季節依存データなし `app/api/dashboard/route.ts:6-8` | 分析自体は season 非依存 | なし | なし | nav が query を付けて往復可能 | セレクタは置かない |
 | Tier 共有 | `app/share/[shareId]/share-page-client.tsx` `seasonHeadingJa` | `/share/[shareId]` スナップショット | なし | 共有ボードの年＋期 | スナップショット固定 | 既存 URL 維持 |
 | 期まとめ共有 | `app/share/season/[shareId]/page.tsx` | `/share/season/[shareId]` | なし | `seasonHeadingJa` | スナップショット固定 | 既存 URL 維持 |
-| 今期チェック共有 | #779 は main にマージ済み。この base には未収録・禁止パス | — | — | — | — | 後述の rebase 手順 |
+| 今期チェック編集・共有 | 編集は共通 URL ref。共有は share id のスナップショット | `/tier/impressions?year=&season=` / `/share/impressions/[shareId]` | 編集だけ共通セレクタ | 暗黙今期 / 明示選択。公開は `seasonHeadingJa` | Tier 切り替えは両方向に保持 | #779 rebase 後の統合を実施 |
 | seasonal API | `app/api/anime/seasonal/route.ts:15-45` | `year` + `season` / `all` | — | 応答の year/season | 欠落は現在期。不正は 400 | URL と応答を混ぜない |
 | boards API | `app/api/boards/route.ts:18-19` | `year` + `season` 必須 | — | — | 不正は 400 | `parseSeasonYear` + `normalizeSeason` |
 | statuses API | `app/api/statuses/route.ts` は期パラメータなし | 作品 JSON の season/seasonYear を保持 | — | — | 変換時に失わない | 変更なし |
@@ -45,7 +45,7 @@ URL 契約: `lib/season-url.ts`。共通 UI: `components/SeasonContextControl.ts
 
 ## #779（今期チェック）rebase 手順
 
-#779 はリリース済み。ローカル `origin/main` は `8c0d2c1`（PR #781）、この worktree の HEAD は `4d944ee`。ネットワーク取得・rebase は今回実施していない。impressions 実装をこの base にコピー／新規作成しない。
+#779 はリリース済み。以下は rebase 前に定めた統合手順。2026-10-02 の integration pass は、`8c0d2c1`（PR #781）への rebase が済んだ HEAD `fa160ec` から開始した。ネットワーク取得・rebase・commit・push・deploy は実施しない。
 
 1. **#780 の本ブランチを、#779 を含む最新 main へ rebase** する。既存の未コミット差分を保持してから行う。共有ナビの二重追加はしない。
 2. `app/tier/impressions/**` で query を `canonicalizeSeasonSearchParams` に通し、不正 query を正規化。独自 JST/月判定・parser を `getCurrentAnimeSeason` / `parseSeasonRef` に置き換える。
@@ -56,7 +56,17 @@ URL 契約: `lib/season-url.ts`。共通 UI: `components/SeasonContextControl.ts
 7. `tests/season-context.spec.ts` の `post-779 simple` / `post-779 visual` はルートファイルの存在で自動的に有効になる。Home の既存 Tier 枠を **1 タップ** → `/tier/impressions?year=2024&season=SUMMER` → 正しい active state・セレクタ → `Tier表` に同じ期で戻る、を両モードで通す。fixture が必要なら実際の #779 API 契約に合わせて追加し、アサーションは緩めない。
 8. shared/source テスト、API/Tier 回帰、Playwright 全 browser spec、tsc、通常 build を再実行する。rebase 前の共有ナビ検証だけでは impressions 画面の統合完了とはしない。
 
-禁止パス（触らない）: `app/tier/impressions/**`, `app/share/impressions/**`, `app/api/season-impressions/**`, `lib/season-impression*.ts`, `tests/season-impressions*`。
+rebase 前の禁止パスだった `app/tier/impressions/**`, `app/share/impressions/**`, `app/api/season-impressions/**`, `lib/season-impression*.ts`, `tests/season-impressions*` は、今回の明示依頼で上記統合の対象になった。
+
+## post-#779 integration の実装
+
+- 編集 SSR は `canonicalizeSeasonSearchParams` で期を解決し、クライアントの `useSeasonUrlState` が同じ ref と URL を同期する。URL 正規化はブラウザで行い、無関係な query と fragment を保持する。
+- `SeasonContextControl` は暗黙今期と明示選択を区別する。年・クールの変更は即時反映し、未保存入力の確認をキャンセルした場合は表示も URL も変更しない。
+- workspace をアカウント＋年＋期で分離。取得、下書き、保存、削除、共有プレビューは同じ ref に束縛し、旧 workspace の非同期応答を反映しない。GET の世代も検査する。
+- `GET /api/season-impressions` の年・期が両方欠落した場合は JST 今期。片方のみ・不正値は 400。PUT / DELETE / 共有は従来どおり対象期の明示が必須。共通の `parseSeasonYear` / `normalizeSeason` で、整数年＋大文字クールの既存キーへ正規化する。GET 応答形・認証順・owner guard・revision・tombstone・公開フィールド・rate limit は維持する。
+- 公開ページは保存済みスナップショットだけを参照し、`seasonHeadingJa` を使う。現在期や編集用セレクタを参照しない。
+- rebase で重複した Tier 切り替えを `components/TierAreaNav.tsx` に集約し、AppShell から一度だけ表示する。既存 mobile nav の Tier 枠は見える `今期チェック` を保持する。
+- post-779 Simple / visual の skip を除去。#779 が受け付ける数値作品 ID に fixture を合わせ、既存 assertion を維持したまま、44px・幅・本文・両方向遷移を追加検証する。
 
 ## corrective continuation: URL 同期とモバイル入口
 
@@ -109,3 +119,49 @@ URL 契約: `lib/season-url.ts`。共通 UI: `components/SeasonContextControl.ts
 **全体として合格とはしない。** 外部通信禁止に依存する検証と、未解決の認証・既存画面検証は別途調査が必要。今回の修正を根拠に一括して「既存問題」とは断定しない。
 
 元 HEAD の比較は現在の worktree を変更せず `git archive HEAD` を一時ディレクトリへ展開した。認証引き継ぎの失敗 5 ケースは元 HEAD でも失敗（`baseline-browser.log`）。一時配置の依存リンクのため比較用サーバーは webpack / port 3781 を使用し、一部は失敗箇所も異なる。**全失敗が既存問題であるとの証明ではない**。Dashboard は今回未変更の owner gate と、旧 UI を期待する既存 spec が不一致。
+
+## rebase 後の検証（2026-10-03 JST）
+
+対象 HEAD は `fa160ec`、`git merge-base --is-ancestor 8c0d2c1 HEAD` は exit 0。以下は今回の実測で、上記 rebase 前の結果とは別。証跡ルートは `C:/Users/Nobu/AppData/Local/Temp/atb780-integration-vt38hibr/`。ACK はメモリ上の validator 呼び出しだけで検証した。
+
+共通環境は次のとおり。Node の外部 fetch/socket を遮断し、Chromium の外部アクセスを loopback の拒否先 proxy に向けた。DB はローカル SQLite、認証キーはダミーで、本番や外部 API には接続していない。
+
+```powershell
+$env:NODE_OPTIONS='--require=C:/Users/Nobu/AppData/Local/Temp/atb780-integration-vt38hibr/offline.cjs'
+$env:NEXT_TELEMETRY_DISABLED='1'
+$env:AUTH_SECRET='local-guest-router-tests-no-authentication-issued'
+$env:TURSO_AUTH_TOKEN='local-only'
+```
+
+実行コマンドと最終結果:
+
+| コマンド | 結果 | ログ |
+|---|---|---|
+| `node --experimental-loader ./tests/alias-loader.mjs --test tests/season-contract.test.ts tests/source/season-context-ui.test.ts tests/season-impressions.test.ts` | **50/50 成功**, exit 0 | `unit-complete.log` |
+| `node --experimental-loader ./tests/alias-loader.mjs --test tests/season-contract.test.ts tests/source/season-context-ui.test.ts tests/season-impressions.test.ts tests/seasonal-api-cache-policy.test.ts tests/seasonal-fetch-policy.test.ts tests/seasonal-snapshot-store.test.ts tests/home-api.test.ts tests/home-week.test.ts tests/home-next-actions.test.ts tests/source/tier-rating-queue.test.ts tests/source/tier-toolbar-mobile-layout.test.ts tests/write-admission.test.ts` | **200/200 成功**, exit 0 | `unit-regression.log` |
+| `node --test tests/season-impressions-browser.test.mjs` | **13/13 成功**, exit 0 | `component-browser-complete.log` |
+| `npm.cmd run test:moderation-s3` | **27/27 成功**, exit 0 | `moderation.log` |
+| `node node_modules/@playwright/test/cli.js test --config C:/Users/Nobu/AppData/Local/Temp/atb780-integration-vt38hibr/router-tier.config.ts` | **70/70 成功・skip 0**, exit 0 | `router-tier-final.log` |
+| `node node_modules/typescript/bin/tsc --noEmit` | exit 0（生成変更を復元後） | `tsc-restored.log` |
+| `npm.cmd run build` | exit 0、TypeScript と **54 static pages** を含む通常 build | `build.log` |
+| `git diff --check` | exit 0 | `diff-check.log` |
+
+70 件の内訳は `season-context.spec.ts` 36 件、`season-impressions.spec.ts` 10 件、`tier-rating-queue.spec.ts` 20 件、`tier-toolbar-mobile.spec.ts` 4 件（それぞれ chromium / mobile-chrome）。一時設定 `router-tier.config.ts` は既存の実 App Router 設定を合成し、Tier 回帰のみに必要な既存 JWT fixture を使う。impressions spec は引き続きゲストの実 session/API を検証する。DB は `file:C:/Users/Nobu/AppData/Local/Temp/atb780-integration-vt38hibr/router-tier.sqlite`、サーバーは `node node_modules/next/dist/bin/next dev --hostname localhost --port 3179`。タイムアウトの緩和・追加 retry・sleep はない。
+
+追加検証は、JST 四半期境界と年越し、欠落 GET / 不正・正規化 query、整数年＋大文字クールの既存キー、revision / tombstone、公開 snapshot と日本語見出しの固定、明示今期と暗黙今期、同一イベント内の連続操作と両方向の履歴、キャンセル時の URL/表示、保存・削除・共有の対象期、旧 catalog / owner GET / save 応答の隔離を含む。375px の画像は `router-tier-final-results/` に保存し、Simple / visual の本文、常時表示の今期チェック、単一 Tier 切り替え、44px、横 overflow なしを確認した。
+
+修正前の失敗も保持している。年変更でセレクタごと remount すると同一イベント内の次のクール変更が失われたため、セレクタを残し期別データだけを remount した。サーバー redirect が fragment を落とすため URL 正規化は共通 hook に任せた。保存直後の Escape は最新の busy ref を参照する。初回 Tier 回帰はゲスト専用設定のため認証 fixture が足りず中止し、正しい設定で上記全件を実行した。dev 実行中の tsc は生成中の `.next/dev/types/routes.d.ts` で失敗したが、通常 build と生成変更復元後の tsc は成功した。
+
+**全ブラウザ spec のゲートは未合格。** 次のコマンドで 454 件を収集し、最初の失敗で停止した。個別テストの skip・assertion・timeout・retry は変更していない。
+
+```powershell
+$env:AUTH_URL='http://localhost:3000'
+$env:TURSO_DATABASE_URL='file:C:/Users/Nobu/AppData/Local/Temp/atb780-integration-vt38hibr/all-browser-direct.sqlite'
+node node_modules/@playwright/test/cli.js test --config C:/Users/Nobu/AppData/Local/Temp/atb780-integration-vt38hibr/all-browser.config.ts --max-failures=1
+```
+
+`all-browser.config.ts` は既存全体設定を継承し、browser spec のみを選択、ローカル Next CLI を直接起動、`/api/auth/session` の readiness を確認する。結果は **13 成功 / 1 失敗 / 440 未実行、exit 1**（`all-browser-direct.log`）。`tests/dashboard.spec.ts:8` は `好み分析ダッシュボード` を期待するが実画面は `分析`。Dashboard 本体と当該 spec は今回未変更。対象の 70 件を根拠に、全 454 件の合格とはしない。
+
+既存設定のままの `node node_modules/@playwright/test/cli.js test '\.spec\.ts$' --max-failures=1 --reporter=list --output C:/Users/Nobu/AppData/Local/Temp/atb780-integration-vt38hibr/all-browser-results` は、ローカル API が HTML 404 を返す起動で認証メニュー待ちに失敗した（6 成功 / 1 失敗 / 447 未実行、`all-browser.log`）。直接起動と API readiness に揃えると認証メニューを含む account-data 13 件は成功し、上記 Dashboard の失敗まで進んだ。過去の全体結果のすべてを今回の回帰とは断定していない。
+
+通常 build の DB は `file:C:/Users/Nobu/AppData/Local/Temp/atb780-integration-vt38hibr/build.sqlite`。`AGENTS.md` と `next-env.d.ts` は開始時のバイト列へ復元し、最終 UTF-8 / mojibake / diff 検査を実施。commit / push / deploy / 外部通信なし。依頼に従い、この報告と実装は未コミット差分として残す。

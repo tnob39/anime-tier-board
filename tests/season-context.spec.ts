@@ -1,9 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
-import { existsSync } from "node:fs";
-import path from "node:path";
 import { getCurrentAnimeSeason } from "../lib/season";
 
-const hasImpressionsPage = existsSync(path.resolve(__dirname, "../app/tier/impressions/page.tsx"));
 
 test.use({
   storageState: { cookies: [], origins: [] },
@@ -18,7 +15,7 @@ function seasonalPayload(year: number, season: string) {
     season,
     items: [
       {
-        id: `anilist-e2e-${year}-${season}`,
+        id: `anilist-${year}${["WINTER", "SPRING", "SUMMER", "FALL"].indexOf(season) + 1}`,
         source: "anilist",
         title: `${year}${season} フィクスチャ`,
         titles: { native: `${year}${season} フィクスチャ` },
@@ -290,7 +287,7 @@ test.describe("ATB-780 season context", () => {
     expect(payload.error ?? JSON.stringify(payload)).toMatch(/season/i);
   });
 
-  for (const pathname of ["/", "/tier"]) {
+  for (const pathname of ["/", "/tier", "/tier/impressions"]) {
     test(`${pathname} same-task selections and both history directions use canonical location`, async ({ page }) => {
       await page.addInitScript(() => localStorage.setItem("numanie-display-mode", "simple"));
       await page.goto(`${pathname}?year=2023&season=FALL&keep=1#context`);
@@ -376,8 +373,6 @@ test.describe("ATB-780 season context", () => {
         );
         await page.screenshot({ path: testInfo.outputPath(`tier-nav-${mode}-${navV5}.png`) });
 
-        // The shared shell is testable even while this base returns a 404 for #779.
-        // The actual impressions editor and one-tap flow are tested after rebase below.
         await page.goto("/tier/impressions?year=2024&season=SUMMER");
         await expect(check).toHaveAttribute("aria-current", "page");
         await expect(area.getByRole("link", { name: "今期チェック", exact: true })).toHaveAttribute("aria-current", "page");
@@ -388,8 +383,7 @@ test.describe("ATB-780 season context", () => {
       });
     }
 
-    test(`post-779 ${mode}: one tap opens impressions and preserves active state and season on return`, async ({ page }) => {
-      test.skip(!hasImpressionsPage, "ATB-780 must first rebase onto #779; forbidden route is absent from this base.");
+    test(`post-779 ${mode}: one tap opens impressions and preserves active state and season on return`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width: 375, height: 812 });
       await page.addInitScript((mode) => {
         localStorage.setItem("numanie-display-mode", mode);
@@ -403,14 +397,28 @@ test.describe("ATB-780 season context", () => {
       await expect(page.getByRole("heading", { name: "今期チェック", exact: true })).toBeVisible();
       await expect(nav.getByRole("link", { name: "Tier 今期チェック" })).toHaveAttribute("aria-current", "page");
       const area = page.getByRole("navigation", { name: "Tierの表示切り替え" });
+      await expect(page.locator(".tier-area-nav")).toHaveCount(1);
       await expect(area.getByRole("link", { name: "今期チェック", exact: true })).toHaveAttribute("aria-current", "page");
       await expect(area.getByRole("link", { name: "Tier表", exact: true })).not.toHaveAttribute("aria-current", "page");
       const control = await waitForSeasonControl(page);
       await expect(control).toHaveAttribute("data-season-context-year", "2024");
       await expect(control).toHaveAttribute("data-season-context-season", "SUMMER");
+      await expect(control.locator("[data-season-heading]")).toHaveText("選択中の期（2024年夏）");
+      await expect(page.getByRole("button", { name: /2024SUMMER フィクスチャ/ })).toBeEnabled();
+      for (const target of [...await control.getByRole("combobox").all(), ...await control.getByRole("button").all(), ...await area.getByRole("link").all()]) {
+        const box = await target.boundingBox();
+        expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+        expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`impressions-${mode}-375.png`), fullPage: true });
       await area.getByRole("link", { name: "Tier表", exact: true }).click();
       await expect(page).toHaveURL(/\/tier\?year=2024&season=SUMMER$/);
       await expect(page.getByRole("heading", { name: "2024年夏アニメTier表" })).toBeVisible();
+      await expect(area.getByRole("link", { name: "Tier表", exact: true })).toHaveAttribute("aria-current", "page");
+      await area.getByRole("link", { name: "今期チェック", exact: true }).click();
+      await expect(page).toHaveURL(/\/tier\/impressions\?year=2024&season=SUMMER$/);
+      await expect(control.locator("[data-season-heading]")).toHaveText("選択中の期（2024年夏）");
     });
   }
 });

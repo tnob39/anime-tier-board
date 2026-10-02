@@ -1,17 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction, type RefObject } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { DisplayModeToggle } from "@/components/display-mode/DisplayModeToggle";
 import { ImpressionArtwork } from "@/components/ImpressionSnapshotView";
+import { SeasonContextControl } from "@/components/SeasonContextControl";
+import { useSeasonUrlState } from "@/components/useSeasonUrlState";
+import { seasonHeadingJa } from "@/lib/season";
 import { fetchSeasonalAnimeClient } from "@/lib/seasonal-anime-client-cache";
 import { IMPRESSION_DRAFT_KEY, readImpressionDraft, impressionReturnPath, ownerImpressionDraftKey, readOwnerImpressionDrafts,
   type ImpressionDraft, type OwnerImpressionDrafts } from "@/lib/season-impression-draft";
 import { IMPRESSION_RATINGS, IMPRESSION_RATING_LABELS, impressionNoteLength, readImpressionAnime,
   type ImpressionAnime, type ImpressionInput, type ImpressionSeason, type ImpressionSeasonState, type ImpressionRevisionCursor, type SeasonImpression } from "@/lib/season-impressions-model";
-import { SEASONS, SEASON_LABELS, type AnimeSeason } from "@/lib/types";
 import { ImpressionSharing } from "./impression-sharing";
 import { impressionError, impressionRequest } from "./impressions-request";
 
@@ -21,16 +22,27 @@ function errorStatus(error: unknown): number | undefined {
   return error instanceof Error ? (error as Error & { status?: number }).status : undefined;
 }
 export function ImpressionsClient(props: Props) {
+  const { ref, explicit, setRef } = useSeasonUrlState(props.seasonKey);
+  const [pending, setPending] = useState(false);
+  const canChangeSeason = useRef(() => true);
   const { data: session, status } = useSession();
   if (status === "loading") return <div className="impressions-page" role="status">今期チェックを準備しています…</div>;
   const userId = status === "authenticated" ? (session?.user as { id?: string } | undefined)?.id ?? null : null;
-  return <ImpressionsWorkspace key={userId ? `owner:${userId}` : "guest"} {...props} userId={userId} />;
+  return <div className="impressions-page">
+    <h1>今期チェック</h1>
+    <p>作品を確認して、今の印象を残しましょう。確認は視聴完了を表すものではありません。</p>
+    <SeasonContextControl value={ref} explicit={explicit} disabled={pending} onChange={(next) => {
+      if (!canChangeSeason.current()) return false;
+      setRef(next);
+    }} />
+    <ImpressionsWorkspace key={`${userId ? `owner:${userId}` : "guest"}:${ref.year}:${ref.season}`}
+      {...props} seasonKey={ref} userId={userId} pending={pending} setPending={setPending} canChangeSeason={canChangeSeason} />
+  </div>;
 }
 
-function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { userId: string | null }) {
-  const router = useRouter();
-  const [year, setYear] = useState(String(seasonKey.year));
-  const [season, setSeason] = useState(seasonKey.season);
+function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPending, canChangeSeason }: Props & {
+  userId: string | null; pending: boolean; setPending: Dispatch<SetStateAction<boolean>>; canChangeSeason: RefObject<() => boolean>;
+}) {
   const [anime, setAnime] = useState<ImpressionAnime[]>([]);
   const [records, setRecords] = useState<SeasonImpression[]>([]);
   const [deletedRevisions, setDeletedRevisions] = useState<ImpressionRevisionCursor[]>([]);
@@ -43,7 +55,6 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
   const [storageError, setStorageError] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [deferred, setDeferred] = useState<string[]>([]);
-  const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [conflict, setConflict] = useState(false);
@@ -54,8 +65,16 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
   const busy = useRef(false);
   const editorRef = useRef<HTMLFormElement>(null);
   const requestVersion = useRef(0);
+  const recordsVersion = useRef(0);
   const editingInput = editing ? drafts[editing] : undefined;
   const saved = records.find((record) => record.anime.id === editing);
+
+  useLayoutEffect(() => {
+    setPending(false);
+    canChangeSeason.current = () => !busy.current && (!Object.keys(draftRef.current).length
+      || window.confirm("未保存の入力があります。クールを切り替えますか？"));
+    return () => { canChangeSeason.current = () => true; };
+  }, [canChangeSeason, setPending]);
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -75,10 +94,11 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
 
   const readRecords = useCallback(async () => {
     if (!userId) return [];
+    const version = ++recordsVersion.current;
     const result = await impressionRequest<ImpressionSeasonState>(`/api/season-impressions?year=${seasonKey.year}&season=${seasonKey.season}`, {
       headers: { "X-Impression-Owner": encodeURIComponent(userId) }
     });
-    if (mounted.current) { setRecords(result.impressions); setDeletedRevisions(result.deletedRevisions); setRecordsReady(true); setAuthRequired(false); }
+    if (mounted.current && version === recordsVersion.current) { setRecords(result.impressions); setDeletedRevisions(result.deletedRevisions); setRecordsReady(true); setAuthRequired(false); }
     return result.impressions;
   }, [userId, seasonKey.year, seasonKey.season]);
 
@@ -104,7 +124,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
   useEffect(() => {
     mounted.current = true;
     void load();
-    return () => { mounted.current = false; requestVersion.current += 1; };
+    return () => { mounted.current = false; requestVersion.current += 1; recordsVersion.current += 1; };
   }, [load]);
 
   useEffect(() => {
@@ -196,7 +216,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
     busy.current = true; setPending(true); setError("");
     try {
       const result = await impressionRequest<{ impression: SeasonImpression }>(`/api/season-impressions/${encodeURIComponent(editingInput.anime.id)}`, {
-        method: "PUT", headers: { "Content-Type": "application/json", "X-Impression-Owner": encodeURIComponent(userId) }, body: JSON.stringify(editingInput)
+        method: "PUT", headers: { "Content-Type": "application/json", "X-Impression-Owner": encodeURIComponent(userId) }, body: JSON.stringify({ ...editingInput, ...seasonKey })
       });
       if (!mounted.current) return;
       setRecords((current) => [...current.filter((entry) => entry.anime.id !== result.impression.anime.id), result.impression]);
@@ -207,6 +227,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
       const next = unchecked.find((item) => item.id !== editingInput.anime.id);
       if (next) open(next); else setEditing(null);
     } catch (failure) {
+      if (!mounted.current) return;
       setError(impressionError(failure));
       if (errorStatus(failure) === 409) { setConflict(true); setLatestLoaded(false); }
       if (errorStatus(failure) === 401) setAuthRequired(true);
@@ -227,6 +248,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
       keepDrafts(remaining, null);
       clearAuthDraft(); setEditing(null); setMessage("確認記録を削除しました。公開済みの共有は、公開履歴から停止できます。");
     } catch (failure) {
+      if (!mounted.current) return;
       setError(impressionError(failure));
       if (errorStatus(failure) === 409) { setConflict(true); setLatestLoaded(false); }
       if (errorStatus(failure) === 401) setAuthRequired(true);
@@ -240,20 +262,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
     setMessage("保存せず、このセッションの後ろへ回しました。");
   }
 
-  return <div className="impressions-page">
-    <h1>今期チェック</h1>
-    <p>作品を確認して、今の印象を残しましょう。確認は視聴完了を表すものではありません。</p>
-    <form className="impressions-season" onSubmit={(event) => {
-      event.preventDefault();
-      if (Object.keys(drafts).length && !window.confirm("未保存の入力があります。クールを切り替えますか？")) return;
-      router.push(`/tier/impressions?year=${Number(year)}&season=${season}`);
-    }}>
-      <div className="impressions-season-field"><label htmlFor="impressions-year">年</label><input id="impressions-year" type="number" required min={1900} max={2100} step={1} value={year} onChange={(event) => setYear(event.target.value)} /></div>
-      <div className="impressions-season-field"><label htmlFor="impressions-season">クール</label><select id="impressions-season" value={season} onChange={(event) => setSeason(event.target.value as AnimeSeason)}>
-        {SEASONS.map((value) => <option key={value} value={value}>{SEASON_LABELS[value]}</option>)}
-      </select></div>
-      <button type="submit" disabled={pending}>クールを表示</button>
-    </form>
+  return <>
     <DisplayModeToggle />
     {!userId && <p>閲覧・入力できます。記録の保存にはGoogleログインが必要です。</p>}
     {(!userId || authRequired) && <div><p>ログイン中に入力した下書きは、元のアカウントで再ログインすると復元できます。</p>
@@ -262,7 +271,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
           .catch((failure) => setStorageError(impressionError(failure)));
       }}>元のアカウントで再ログイン</button></div>}
     {storageError && <p role="alert">{storageError}</p>}
-    <p role="status" aria-live="polite">{message || `${seasonKey.year}年${SEASON_LABELS[seasonKey.season]}：${records.length}作品を確認済み`}</p>
+    <p role="status" aria-live="polite">{message || `${seasonHeadingJa(seasonKey)}：${records.length}作品を確認済み`}</p>
     {loadError && <div role="alert"><p>{loadError}</p><button type="button" onClick={() => void load()} disabled={loading}>読み込みを再試行</button></div>}
     {warning && <p>{warning}</p>}
     {loading && <p role="status">作品と記録を読み込んでいます…</p>}
@@ -282,7 +291,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
       })}
     </ul>
     {userId && <ImpressionSharing key={`${seasonKey.year}:${seasonKey.season}`} userId={userId} seasonKey={seasonKey} records={records} reloadRecords={readRecords} />}
-    <BottomSheet open={!!editingInput} onOpenChange={(openState) => { if (!openState && !pending) setEditing(null); }}
+    <BottomSheet open={!!editingInput} onOpenChange={(openState) => { if (!openState && !busy.current) setEditing(null); }}
       title={editingInput?.anime.title} description="確認のみでも保存できます。入力は「保存して次へ」で確定します。" className="impressions-sheet">
       {editingInput && <form ref={editorRef} className="impressions-editor" onSubmit={(event) => { event.preventDefault(); void save(); }}>
         <fieldset disabled={pending}><legend>今の印象（任意）</legend>
@@ -320,5 +329,5 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId }: Props & { user
         </div>
       </form>}
     </BottomSheet>
-  </div>;
+  </>;
 }

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { getCurrentAnimeSeason } from "@/lib/season";
-import { isImpressionSeason } from "@/lib/season-impressions-model";
+import { canonicalizeSeasonSearchParams } from "@/lib/season-url";
 import { ImpressionsClient } from "./impressions-client";
 import "./impressions.css";
 
@@ -8,7 +7,7 @@ export const metadata: Metadata = { title: "今期チェック — numanie", rob
 
 export default async function ImpressionsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const query = await searchParams;
-  const candidate = { year: Number(query.year), season: query.season };
-  const season = isImpressionSeason(candidate) ? candidate : getCurrentAnimeSeason();
-  return <ImpressionsClient key={`${season.year}:${season.season}`} seasonKey={season} resumeToken={typeof query.resume === "string" ? query.resume : null} />;
+  const canonical = canonicalizeSeasonSearchParams(query);
+  // The client canonicalizes history so the browser-only fragment is preserved.
+  return <ImpressionsClient seasonKey={canonical.ref} resumeToken={typeof query.resume === "string" ? query.resume : null} />;
 }

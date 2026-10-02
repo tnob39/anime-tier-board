@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { AppBadgeUpdater } from "./AppBadgeUpdater";
 import { GlobalNav } from "./GlobalNav";
 import { LegalFooter } from "./LegalFooter";
-import { MobileNav, TierAreaNav } from "./MobileNav";
+import { MobileNav } from "./MobileNav";
+import { TierAreaNav } from "./TierAreaNav";
 
 const PUBLIC_PREFIXES = [
   "/share/",

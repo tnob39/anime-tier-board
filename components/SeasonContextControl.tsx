@@ -25,7 +25,8 @@ import {
 
 type SeasonContextControlProps = {
   value: SeasonRef;
-  onChange?: (next: SeasonRef) => void;
+  onChange?: (next: SeasonRef) => void | boolean;
+  explicit?: boolean;
   years?: number[];
   disabled?: boolean;
   navigationMode?: "query" | "path";
@@ -38,6 +39,7 @@ type SeasonContextControlProps = {
 export function SeasonContextControl({
   value,
   onChange,
+  explicit,
   years,
   disabled = false,
   navigationMode = "query",
@@ -131,9 +133,10 @@ export function SeasonContextControl({
       return;
     }
     const canonical = liveCanonical();
-    if (!(pendingYearScopeRef.current ?? displayYearScope) && equalSeasonRef(next, canonical)) {
+    if (explicit !== false && !(pendingYearScopeRef.current ?? displayYearScope) && equalSeasonRef(next, canonical)) {
       return;
     }
+    if (navigationMode === "query" && onChange?.(next) === false) return;
     latestRef.current = next;
     pendingRef.current = next;
     pendingYearScopeRef.current = false;
@@ -143,7 +146,6 @@ export function SeasonContextControl({
       router.push(serializeSeasonPath(next));
       return;
     }
-    onChange?.(next);
   }
 
   function commitYearScope(year: number) {
@@ -159,7 +161,7 @@ export function SeasonContextControl({
     onYearScopeChange?.(year);
   }
 
-  const isCurrent = !displayYearScope && equalSeasonRef(display, current);
+  const isCurrent = !displayYearScope && explicit !== true && equalSeasonRef(display, current);
   const statusText = displayYearScope
     ? `選択中の年（${display.year}年・全年）`
     : isCurrent
@@ -184,7 +186,7 @@ export function SeasonContextControl({
         <p className="season-context-note">
           {display.year}年の全年です。クールを選ぶと{selectedSeasonLabelJa(display)}になります。今期は {currentSeasonLabelJa(current)} です。
         </p>
-      ) : isCurrent ? (
+      ) : equalSeasonRef(display, current) ? (
         <p className="season-context-note">自動判定は {autoDetectedSeasonLabelJa(current)} です。</p>
       ) : (
         <p className="season-context-note">

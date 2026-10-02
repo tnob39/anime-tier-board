@@ -2,7 +2,7 @@ import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 3780;
-const ORIGIN = `http://127.0.0.1:${PORT}`;
+const ORIGIN = `http://localhost:${PORT}`;
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 
 export default defineConfig({
@@ -28,17 +28,30 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         storageState: { cookies: [], origins: [] }
       }
+    },
+    {
+      name: "mobile-chrome",
+      use: {
+        ...devices["Pixel 5"],
+        viewport: { width: 375, height: 812 },
+        storageState: { cookies: [], origins: [] }
+      }
     }
   ],
   webServer: {
-    command: "npx.cmd --no-install next dev -p 3780 -H 127.0.0.1",
+    command: "node node_modules/next/dist/bin/next dev --hostname localhost --port 3780",
     cwd: PROJECT_ROOT,
-    url: ORIGIN,
+    url: `${ORIGIN}/api/auth/session`,
     reuseExistingServer: false,
     timeout: 180_000,
     env: {
       AUTH_URL: ORIGIN,
-      AUTH_SECRET: "season-context-e2e-dummy-secret-at-least-32-chars"
+      AUTH_SECRET: "season-context-e2e-dummy-secret-at-least-32-chars",
+      NEXT_TELEMETRY_DISABLED: "1",
+      AUTH_GOOGLE_ID: "",
+      AUTH_GOOGLE_SECRET: "",
+      TURSO_DATABASE_URL: "file::memory:",
+      TURSO_AUTH_TOKEN: "local-only"
     }
   }
 });

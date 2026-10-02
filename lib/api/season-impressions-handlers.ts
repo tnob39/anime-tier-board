@@ -2,7 +2,8 @@ import { requireWriteIdentity } from "@/lib/api/auth-helpers";
 import { admitCookieCapableWrite, assertOptionalIdempotencyKey, WRITE_BODY_MAX_BYTES } from "@/lib/api/write-admission";
 import { jsonWriteError, readJsonWithByteLimit } from "@/lib/api/write-request-guard";
 import { withApiRoute } from "@/lib/api/with-api-route";
-import { isImpressionAnimeId, isImpressionSeason, parseImpressionInput, parseImpressionDelete } from "@/lib/season-impressions-model";
+import { isImpressionAnimeId, parseImpressionSeason, parseImpressionInput, parseImpressionDelete } from "@/lib/season-impressions-model";
+import { getCurrentAnimeSeason } from "@/lib/season";
 import { readImpressionSeasonState, saveSeasonImpression, deleteSeasonImpression } from "@/lib/season-impressions";
 
 export const IMPRESSION_CONFLICT = "別の画面で記録が変更されました。入力を残したまま最新の記録を確認してください。";
@@ -30,8 +31,9 @@ export function createImpressionHandlers(overrides: Partial<{
     const mismatch = assertImpressionOwner(request, userId);
     if (mismatch) return mismatch;
     const query = new URL(request.url).searchParams;
-    const key = { year: Number(query.get("year")), season: query.get("season") };
-    if (!isImpressionSeason(key)) return jsonWriteError("クールの指定が不正です。", 400);
+    const key = !query.has("year") && !query.has("season") ? getCurrentAnimeSeason()
+      : parseImpressionSeason({ year: query.get("year"), season: query.get("season") });
+    if (!key) return jsonWriteError("クールの指定が不正です。", 400);
     return Response.json(await deps.list(userId, key), { headers: IMPRESSION_PRIVATE_HEADERS });
   });
   const mutate = (method: "PUT" | "DELETE", request: Request, context: Context) => withApiRoute(`season-impressions.${method}`, async () => {

@@ -459,6 +459,18 @@ export function TierBoardApp({
 
   const [seasonYear, setSeasonYear] = useState(startYear);
   const [season, setSeason] = useState<AnimeSeason>(startSeason);
+  const loadGenerationRef = useRef(0);
+  const activeLoadContextRef = useRef(getStorageKey(startYear, startSeason));
+  const applySeasonRef = useCallback((next: SeasonRef) => {
+    const nextKey = getStorageKey(next.year, next.season);
+    if (activeLoadContextRef.current !== nextKey) {
+      // Invalidate synchronously, including history changes before effect cleanup.
+      activeLoadContextRef.current = nextKey;
+      loadGenerationRef.current += 1;
+    }
+    setSeasonYear(next.year);
+    setSeason(next.season);
+  }, []);
 
   // Prefill items from SSR seed for the initial current season to avoid loading skeleton flash
   const [items, setItems] = useState<AnimeItem[]>(() =>
@@ -716,11 +728,10 @@ export function TierBoardApp({
       if (isAuthReturnPhaseLocked(authReturnPhaseRef.current)) {
         return;
       }
-      setSeasonYear(next.year);
-      setSeason(next.season);
+      applySeasonRef(next);
       writeSeasonQuery(next, "push");
     },
-    [writeSeasonQuery]
+    [applySeasonRef, writeSeasonQuery]
   );
 
   useEffect(() => {
@@ -729,12 +740,11 @@ export function TierBoardApp({
         return;
       }
       const resolved = resolveSeasonQuery(new URLSearchParams(window.location.search));
-      setSeasonYear(resolved.ref.year);
-      setSeason(resolved.ref.season);
+      applySeasonRef(resolved.ref);
     }
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, []);
+  }, [applySeasonRef]);
 
   // True once auth-return evaluation finished (or guest). Leaving protected→none must not
   // re-trigger loadAnime (would remote-GET and overwrite the preserved local board).
@@ -747,22 +757,27 @@ export function TierBoardApp({
     }
 
     // Wait for pending-share auth-return evaluation before any board source choice.
-    if (!authReturnReady) {
+    if (!authReturnReady || activeLoadContextRef.current !== storageKey) {
       return;
     }
 
+    const generation = ++loadGenerationRef.current;
+    const isCurrent = () =>
+      generation === loadGenerationRef.current && activeLoadContextRef.current === storageKey;
     setLoading(true);
     setError(null);
     setWarning(null);
 
     try {
       const payload = await fetchSeasonalAnimeClient(seasonYear, season);
+      if (!isCurrent()) return;
       const nextItems = payload.items;
       // Guarded auth-return: never use remote as the board source (local only).
       const storedBoard =
         isAuthenticated && !protectLocalBoardRef.current
           ? await readRemoteBoard(seasonYear, season)
           : readStoredBoard(storageKey);
+      if (!isCurrent()) return;
       const nextBoard = reconcileBoard(
         storedBoard ?? createDefaultBoard(seasonYear, season, nextItems),
         nextItems,
@@ -774,6 +789,7 @@ export function TierBoardApp({
       setBoard(nextBoard);
       setWarning(payload.warning ?? payload.enrichWarning ?? null);
     } catch (loadError) {
+      if (!isCurrent()) return;
       setError(loadError instanceof Error ? loadError.message : String(loadError));
       if (protectLocalBoardRef.current) {
         // Guarded seasonal failure: keep existing local board/storage and guard.
@@ -784,7 +800,7 @@ export function TierBoardApp({
       setItems([]);
       setBoard(createDefaultBoard(seasonYear, season, []));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [authReturnReady, authStatus, isAuthenticated, season, seasonYear, storageKey]);
 
@@ -792,6 +808,7 @@ export function TierBoardApp({
     // For the very first load of the seeded current season, fetch will hit cache instantly.
     // We still invoke loadAnime to populate warning/board consistently.
     void loadAnime();
+    return () => { loadGenerationRef.current += 1; };
   }, [loadAnime]);
 
   // Auth-return guard: evaluate metadata-only pending share intent before remote board load.
@@ -849,8 +866,7 @@ export function TierBoardApp({
         evaluation.year != null &&
         evaluation.season != null
       ) {
-        setSeasonYear(evaluation.year);
-        setSeason(evaluation.season);
+        applySeasonRef({ year: evaluation.year, season: evaluation.season });
         writeSeasonQuery({ year: evaluation.year, season: evaluation.season }, "replace");
       }
 
@@ -984,7 +1000,7 @@ export function TierBoardApp({
     return () => {
       bumpHandoffGeneration();
     };
-  }, [authStatus]);
+  }, [applySeasonRef, authStatus]);
 
   useEffect(() => {
     function onStorage(event: StorageEvent) {
@@ -1097,7 +1113,12 @@ export function TierBoardApp({
   }, [season, seasonYear]);
 
   useEffect(() => {
-    if (!board) {
+    if (
+      !board ||
+      board.seasonYear !== seasonYear ||
+      board.season !== season ||
+      activeLoadContextRef.current !== storageKey
+    ) {
       return;
     }
 
@@ -1136,6 +1157,7 @@ export function TierBoardApp({
       }
       void saveRemoteBoard(board, controller.signal)
         .then(() => {
+          if (controller.signal.aborted || activeLoadContextRef.current !== storageKey) return;
           setSaveState("saved");
           setSaveSuccessVisible(true);
           saveSuccessTimeoutRef.current = window.setTimeout(() => {
@@ -1144,7 +1166,7 @@ export function TierBoardApp({
           }, 2000);
         })
         .catch(() => {
-          if (!controller.signal.aborted) {
+          if (!controller.signal.aborted && activeLoadContextRef.current === storageKey) {
             setSaveState("error");
           }
         });
@@ -1154,7 +1176,7 @@ export function TierBoardApp({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [board, isAuthenticated, storageKey]);
+  }, [board, isAuthenticated, season, seasonYear, storageKey]);
 
   async function handleRetrySave() {
     // Phase lock first: pending|evaluating must never remote-PUT, including retry.
@@ -1801,8 +1823,7 @@ export function TierBoardApp({
       handoffShareBoardRef.current = chosenBoard;
     }
     protectLocalBoardRef.current = true;
-    setSeasonYear(marker.year);
-    setSeason(marker.season);
+    applySeasonRef({ year: marker.year, season: marker.season });
     writeSeasonQuery({ year: marker.year, season: marker.season }, "replace");
     if (!isHandoffGenerationCurrent(generation)) {
       return true;

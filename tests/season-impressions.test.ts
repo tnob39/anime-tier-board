@@ -20,6 +20,7 @@ import { exportUserAccountData } from "../lib/account-export.ts";
 import { resetWriteAdmissionForTests, seedWriteAdmissionBucketForTests, WRITE_BODY_MAX_BYTES } from "../lib/api/write-admission.ts";
 import { AppError } from "../lib/errors/app-error.ts";
 import { readImpressionDraft, readOwnerImpressionDrafts, ownerImpressionDraftKey, impressionReturnPath, IMPRESSION_DRAFT_TTL } from "../lib/season-impression-draft.ts";
+import { getCurrentAnimeSeason, seasonHeadingJa } from "../lib/season.ts";
 
 const key = { year: 2026, season: "FALL" as const };
 const origin = "https://anime-tier-board.test";
@@ -140,7 +141,7 @@ test("route validation rejects malformed values and counts Unicode code points",
   for (const body of invalid) assert.equal((await api.PUT(request("/api/season-impressions/anilist-1", "PUT", body), context())).status, 400, JSON.stringify(body));
   for (const id of ["1", "anilist:1", "anilist-0", "jikan-1/../../", "other-1"]) assert.equal((await api.PUT(request("/x", "PUT", input()), context(id))).status, 400);
   assert.equal((await api.PUT(request("/x", "PUT", input({ note: "😀".repeat(140) })), context())).status, 200);
-  for (const query of ["", "?year=2026.1&season=FALL", "?year=2101&season=FALL", "?year=2026&season=fall"]) assert.equal((await api.GET(request(`/api/season-impressions${query}`))).status, 400);
+  for (const query of ["?year=2026", "?season=FALL", "?year=2026.1&season=FALL", "?year=2101&season=FALL", "?year=2026&season=banana", "?year=2e3&season=FALL", "?year=&season=FALL"]) assert.equal((await api.GET(request(`/api/season-impressions${query}`))).status, 400);
   assert.equal((await api.DELETE(request("/x", "DELETE", { ...key, revision: 0 }), context())).status, 400);
 });
 
@@ -430,4 +431,86 @@ test("dedicated public page HTML/metadata contains only snapshot fields and revo
   assert.equal((metadata.robots as { index: boolean }).index, false);
   await stopImpressionShare("owner", shareId);
   await assert.rejects(() => Page({ params: Promise.resolve({ shareId }) }), /NEXT_HTTP_ERROR_FALLBACK;404/);
+});
+
+test("missing GET season follows every JST quarter boundary including the new year", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-01-01T00:00:00Z") });
+  for (const [instant, expected] of [
+    ["2025-12-31T14:59:59.999Z", { year: 2025, season: "FALL" }],
+    ["2025-12-31T15:00:00.000Z", { year: 2026, season: "WINTER" }],
+    ["2026-03-31T14:59:59.999Z", { year: 2026, season: "WINTER" }],
+    ["2026-03-31T15:00:00.000Z", { year: 2026, season: "SPRING" }],
+    ["2026-06-30T14:59:59.999Z", { year: 2026, season: "SPRING" }],
+    ["2026-06-30T15:00:00.000Z", { year: 2026, season: "SUMMER" }],
+    ["2026-09-30T14:59:59.999Z", { year: 2026, season: "SUMMER" }],
+    ["2026-09-30T15:00:00.000Z", { year: 2026, season: "FALL" }],
+    ["2026-12-31T15:00:00.000Z", { year: 2027, season: "WINTER" }]
+  ] as const) {
+    t.mock.timers.setTime(new Date(instant).getTime());
+    let target: unknown;
+    const api = createImpressionHandlers({ identity: async () => ({ userId: "owner", source: "session" }),
+      list: async (_owner, key) => { target = key; return { impressions: [], deletedRevisions: [] }; } });
+    const response = await api.GET(request("/api/season-impressions"));
+    assert.equal(response.status, 200);
+    assert.deepEqual(target, expected, instant);
+    assert.match(response.headers.get("cache-control")!, /private, no-store/);
+  }
+});
+
+test("normalized API inputs address released keys, revisions, tombstones and share snapshots", async () => {
+  const api = handlers();
+  await saveSeasonImpression("owner", input());
+  const normalized = { year: " 2026 ", season: " fall " };
+  const read = await api.GET(request("/api/season-impressions?year=%202026%20&season=%20fall%20"));
+  assert.equal(read.status, 200);
+  assert.equal((await read.json()).impressions[0].revision, 1);
+  const update = await api.PUT(request("/api/season-impressions/anilist-1", "PUT", { ...input({ revision: 1 }), ...normalized }), context());
+  assert.equal(update.status, 200);
+  assert.deepEqual((await update.json()).impression, (await listSeasonImpressions("owner", key))[0]);
+  const publish = await shares().POST(request("/api/shares", "POST", { ...selection(2), ...normalized }));
+  assert.equal(publish.status, 200);
+  const { shareId } = await publish.json();
+  assert.equal((await getImpressionShare(shareId))?.season, "FALL");
+  const removed = await api.DELETE(request("/api/season-impressions/anilist-1", "DELETE", { ...normalized, revision: 2 }), context());
+  assert.equal(removed.status, 200);
+  assert.deepEqual((await removed.json()).cursor, { animeId: "anilist-1", revision: 3 });
+  assert.equal((await api.PUT(request("/api/season-impressions/anilist-1", "PUT", { ...input(), ...normalized }), context())).status, 409);
+  const rows = (await getTursoClient().execute("select season_year, season, revision from season_impressions")).rows;
+  assert.equal(rows.length, 1);
+  assert.deepEqual({ ...rows[0] }, { season_year: 2026, season: "FALL", revision: 3 });
+  assert.equal(ownerImpressionDraftKey("owner", key), "numanie:impressions:owner-drafts:v2:owner:2026:FALL");
+});
+
+test("editing page canonicalizes malformed/duplicate queries and preserves unrelated parameters", async () => {
+  const { default: Page } = await import("../app/tier/impressions/page.tsx");
+  for (const query of [{ year: "2e3", season: "SUMMER" }, { year: "2024" }, { year: "2101", season: "FALL" }, { year: "2024", season: "banana" }]) {
+    const page = await Page({ searchParams: Promise.resolve({ ...query, keep: "1", resume: "token" }) });
+    assert.deepEqual(page.props.seasonKey, getCurrentAnimeSeason());
+    assert.equal(page.props.resumeToken, "token");
+  }
+  const duplicate = await Page({ searchParams: Promise.resolve({ year: ["2024", "2025"], season: "summer", keep: "1" }) });
+  assert.deepEqual(duplicate.props.seasonKey, { year: 2024, season: "SUMMER" });
+  const implicit = await Page({ searchParams: Promise.resolve({}) });
+  assert.deepEqual(implicit.props.seasonKey, getCurrentAnimeSeason());
+  const explicit = await Page({ searchParams: Promise.resolve({ year: "2024", season: "SUMMER" }) });
+  assert.deepEqual(explicit.props.seasonKey, { year: 2024, season: "SUMMER" });
+});
+
+test("published season and Japanese heading stay fixed after edits, deletion and JST year rollover", async (t) => {
+  const { default: Page } = await import("../app/share/impressions/[shareId]/page.tsx");
+  const { DisplayModeProvider } = await import("../components/display-mode/DisplayModeProvider.tsx");
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2026-12-31T14:59:59.999Z") });
+  await saveSeasonImpression("owner", input({ note: "公開時の一言", spoiler: "no_spoiler" }));
+  const shareId = (await createImpressionShare("owner", selection(1)))!;
+  const snapshot = await getImpressionShare(shareId);
+  const render = async () => renderToStaticMarkup(React.createElement(DisplayModeProvider, null, await Page({ params: Promise.resolve({ shareId }) })));
+  const before = await render();
+  assert.match(before, new RegExp(`${seasonHeadingJa(key)} 今期チェック`));
+  assert.doesNotMatch(before, /season-context-control|選択中の期|<select/);
+  await saveSeasonImpression("owner", input({ revision: 1, note: "PRIVATE_CHANGED" }));
+  await deleteSeasonImpression("owner", "anilist-1", { ...key, revision: 2 });
+  t.mock.timers.setTime(new Date("2026-12-31T15:00:00.000Z").getTime());
+  assert.deepEqual(getCurrentAnimeSeason(), { year: 2027, season: "WINTER" });
+  assert.deepEqual(await getImpressionShare(shareId), snapshot);
+  assert.equal(await render(), before);
 });

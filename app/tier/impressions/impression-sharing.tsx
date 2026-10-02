@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ImpressionSnapshotView } from "@/components/ImpressionSnapshotView";
 import { buildImpressionSnapshot, type ImpressionSeason, type SeasonImpression, type ImpressionSelection,
   type ImpressionShareHistory, type ImpressionShareInput, type ImpressionSnapshot } from "@/lib/season-impressions-model";
-import { SEASON_LABELS } from "@/lib/types";
+import { seasonHeadingJa } from "@/lib/season";
 import { impressionError, impressionRequest } from "./impressions-request";
 
 export function ImpressionSharing({ userId, seasonKey, records, reloadRecords }: {
@@ -111,7 +111,7 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords }:
     }}>最新の記録を読み直す</button></div>}
     {preview && <section className="impressions-preview" aria-label="公開内容のプレビュー">
       <h3>公開内容のプレビュー</h3>
-      <p>{preview.snapshot.year}年{SEASON_LABELS[preview.snapshot.season]} 今期チェック</p>
+      <p>{seasonHeadingJa(preview.snapshot)} 今期チェック</p>
       <ImpressionSnapshotView snapshot={preview.snapshot} />
       {!createdId && <button className="impressions-primary" type="button" disabled={pending} onClick={() => void publish()}>{pending ? "公開しています…" : "この内容で公開URLを作成"}</button>}
       {createdId && <div className="impressions-actions"><Link className="impressions-link" href={`/share/impressions/${createdId}`} prefetch={false}>作成した共有を開く</Link>
@@ -123,7 +123,7 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords }:
     {!shares.length && !historyError && <p>公開中の共有はありません。</p>}
     <ul className="impressions-history">{shares.map((share) => <li key={share.shareId}>
       <Link className="impressions-link" href={`/share/impressions/${share.shareId}`} prefetch={false}>
-        {share.year}年{SEASON_LABELS[share.season]}・{new Date(share.createdAt).toLocaleString("ja-JP")}の共有</Link>
+        {seasonHeadingJa(share)}・{new Date(share.createdAt).toLocaleString("ja-JP")}の共有</Link>
       <div className="impressions-actions"><button type="button" onClick={() => void copy(share.shareId)}>URLをコピー</button>
         <button type="button" disabled={pending} onClick={() => void stop(share.shareId)}>公開を停止</button></div>
     </li>)}</ul>

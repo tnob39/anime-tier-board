@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getImpressionShare } from "@/lib/season-impression-shares";
-import { SEASON_LABELS } from "@/lib/types";
+import { seasonHeadingJa } from "@/lib/season";
 import { ImpressionSnapshotView } from "@/components/ImpressionSnapshotView";
 import { DisplayModeToggle } from "@/components/display-mode/DisplayModeToggle";
 import "@/app/tier/impressions/impressions.css";
@@ -21,7 +21,7 @@ export default async function ImpressionSharePage({ params }: { params: Promise<
   const share = await getImpressionShare(shareId);
   if (!share) notFound();
   return <div className="impressions-page">
-    <h1>{share.year}年{SEASON_LABELS[share.season]} 今期チェック</h1>
+    <h1>{seasonHeadingJa(share)} 今期チェック</h1>
     <p>公開時点の確認記録・今の印象です。視聴完了を表すものではありません。</p>
     <p><time dateTime={share.createdAt}>{new Date(share.createdAt).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}</time> 公開</p>
     <DisplayModeToggle />
