@@ -128,9 +128,12 @@ export async function getShare(shareId: string): Promise<BoardShare | null> {
     return null;
   }
 
+  const board = JSON.parse(row.board_json);
+  if (board.kind === "season-impressions") return null;
+
   return {
     shareId: String(row.share_id),
-    board: JSON.parse(row.board_json) as SharedBoard,
+    board: board as SharedBoard,
     items: JSON.parse(row.items_json) as AnimeItem[],
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -300,6 +303,8 @@ export async function listComments(
 ): Promise<ShareComment[]> {
   await ensureShareSchema(client);
 
+  await assertShareInteractionsAllowed(shareId, client);
+
   const result = await client.execute({
     sql: `select comment_id, body, user_name, user_image, created_at, updated_at
           from share_comments
@@ -397,6 +402,7 @@ async function reportCommentOnce({
   client = getTursoClient()
 }: ReportCommentInput): Promise<CommentReportResult> {
   await ensureShareSchema(client);
+  await assertShareInteractionsAllowed(shareId, client);
 
   const tx = await client.transaction("write");
   try {
@@ -490,6 +496,7 @@ export async function moderateComment({
   client?: ShareDbClient;
 }): Promise<CommentModerationResult> {
   await ensureShareSchema(client);
+  await assertShareInteractionsAllowed(shareId, client);
 
   const tx = await client.transaction("write");
   try {
@@ -573,6 +580,7 @@ export function isReactionKind(value: string): value is ReactionKind {
 }
 
 async function assertShareExists(shareId: string) {
+  await assertShareInteractionsAllowed(shareId);
   const shareExists = await getTursoClient().execute({
     sql: "select 1 from board_shares where share_id = ? limit 1",
     args: [shareId]
@@ -580,6 +588,16 @@ async function assertShareExists(shareId: string) {
 
   if (!shareExists.rows.length) {
     throw new Error("Share not found.");
+  }
+}
+
+export const SHARE_INTERACTIONS_DISABLED = "今期チェックの共有ではコメント・リアクションを利用できません。";
+
+export async function assertShareInteractionsAllowed(shareId: string, client: ShareDbClient = getTursoClient()): Promise<void> {
+  await ensureShareSchema(client);
+  const result = await client.execute({ sql: "select board_json from board_shares where share_id = ?", args: [shareId] });
+  if (result.rows[0] && JSON.parse(String(result.rows[0].board_json)).kind === "season-impressions") {
+    throw new Error(SHARE_INTERACTIONS_DISABLED);
   }
 }
 

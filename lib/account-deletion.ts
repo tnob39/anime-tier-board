@@ -17,7 +17,8 @@ export const ACCOUNT_DELETION_TABLES = [
   "native_push_tokens",
   "native_sessions",
   "evangelist_cards",
-  "season_share"
+  "season_share",
+  "season_impressions"
 ] as const;
 
 export type AccountDeletionTable = (typeof ACCOUNT_DELETION_TABLES)[number];
@@ -180,7 +181,8 @@ async function runAccountDeletionStatements(
     "native_push_tokens",
     "native_sessions",
     "evangelist_cards",
-    "season_share"
+    "season_share",
+    "season_impressions"
   ];
 
   for (const table of simpleUserTables) {

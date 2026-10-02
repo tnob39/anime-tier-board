@@ -13,7 +13,7 @@ import {
   parseCommentWriteBody,
   readJsonWithByteLimit,
 } from "@/lib/api/write-request-guard";
-import { addComment, listComments, moderateComment } from "@/lib/shares";
+import { addComment, listComments, moderateComment, SHARE_INTERACTIONS_DISABLED } from "@/lib/shares";
 
 function isSafeShareToken(value: string): boolean {
   return /^[A-Za-z0-9_-]{1,64}$/.test(value);
@@ -35,66 +35,80 @@ export async function GET(
   { params }: { params: Promise<{ shareId: string }> }
 ) {
   const { shareId } = await params;
-  return NextResponse.json({ comments: await listComments(shareId) });
-}
-
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ shareId: string }> }
-) {
-  const session = await auth();
-  const userId = (session?.user as { id?: string } | undefined)?.id?.trim();
-  const user = session?.user;
-
-  if (!userId) {
-    return NextResponse.json({ error: "認証が必要です。" }, { status: 401 });
-  }
-
-  const originDenied = assertSameOriginBrowserWrite(request);
-  if (originDenied) return originDenied;
-
-  const idempotencyDenied = assertOptionalIdempotencyKey(request);
-  if (idempotencyDenied) return idempotencyDenied;
-
-  const limited = consumeWriteRateLimit(request, {
-    userId,
-    policy: "comment",
-  });
-  if (limited) return limited;
-
-  const { shareId } = await params;
-  const parsed = await readJsonWithByteLimit<unknown>(
-    request,
-    WRITE_BODY_MAX_BYTES.comment
-  );
-  if (!parsed.ok) return parsed.response;
-
-  const commentBody = parseCommentWriteBody(parsed.data);
-  if (!commentBody.ok) return commentBody.response;
-
-  const body = commentBody.body.trim();
-  if (!body || body.length > 1000) {
-    return NextResponse.json({ error: "コメントの内容が正しくありません。" }, { status: 400 });
-  }
-
   try {
-    const comment = await addComment({
-      shareId,
-      userId,
-      userName: user?.name,
-      userImage: user?.image,
-      body,
-    });
-
-    return NextResponse.json({ comment });
+    return NextResponse.json({ comments: await listComments(shareId) });
   } catch (error) {
-    const isMissingShare = error instanceof Error && error.message === "Share not found.";
-    return NextResponse.json(
-      { error: isMissingShare ? "共有が見つかりません。" : COMMENT_OPERATION_FAILED },
-      { status: isMissingShare ? 404 : 500 }
-    );
+    if (error instanceof Error && error.message === SHARE_INTERACTIONS_DISABLED) {
+      return NextResponse.json({ error: SHARE_INTERACTIONS_DISABLED }, { status: 403 });
+    }
+    throw error;
   }
 }
+
+export function createCommentsPostHandler(getSession?: () => Promise<{ user?: { id?: string; name?: string | null; image?: string | null } } | null>) {
+  return async function POST(
+    request: Request,
+    { params }: { params: Promise<{ shareId: string }> }
+  ) {
+    const session = getSession ? await getSession() : await auth();
+    const userId = (session?.user as { id?: string } | undefined)?.id?.trim();
+    const user = session?.user;
+
+    if (!userId) {
+      return NextResponse.json({ error: "認証が必要です。" }, { status: 401 });
+    }
+
+    const originDenied = assertSameOriginBrowserWrite(request);
+    if (originDenied) return originDenied;
+
+    const idempotencyDenied = assertOptionalIdempotencyKey(request);
+    if (idempotencyDenied) return idempotencyDenied;
+
+    const limited = await consumeWriteRateLimit(request, {
+      userId,
+      policy: "comment",
+    });
+    if (limited) return limited;
+
+    const { shareId } = await params;
+    const parsed = await readJsonWithByteLimit<unknown>(
+      request,
+      WRITE_BODY_MAX_BYTES.comment
+    );
+    if (!parsed.ok) return parsed.response;
+
+    const commentBody = parseCommentWriteBody(parsed.data);
+    if (!commentBody.ok) return commentBody.response;
+
+    const body = commentBody.body.trim();
+    if (!body || body.length > 1000) {
+      return NextResponse.json({ error: "コメントの内容が正しくありません。" }, { status: 400 });
+    }
+
+    try {
+      const comment = await addComment({
+        shareId,
+        userId,
+        userName: user?.name,
+        userImage: user?.image,
+        body,
+      });
+
+      return NextResponse.json({ comment });
+    } catch (error) {
+      if (error instanceof Error && error.message === SHARE_INTERACTIONS_DISABLED) {
+        return NextResponse.json({ error: SHARE_INTERACTIONS_DISABLED }, { status: 403 });
+      }
+      const isMissingShare = error instanceof Error && error.message === "Share not found.";
+      return NextResponse.json(
+        { error: isMissingShare ? "共有が見つかりません。" : COMMENT_OPERATION_FAILED },
+        { status: isMissingShare ? 404 : 500 }
+      );
+    }
+  };
+}
+
+export const POST = createCommentsPostHandler();
 
 export function createCommentsDeleteHandler(
   overrides: Partial<CommentsDeleteDependencies> = {}
@@ -130,7 +144,7 @@ export function createCommentsDeleteHandler(
     const originDenied = dependencies.assertSameOrigin(request);
     if (originDenied) return originDenied;
 
-    const limited = dependencies.consumeRateLimit(request, {
+    const limited = await dependencies.consumeRateLimit(request, {
       userId,
       policy: action === "hide" ? "commentModeration" : "commentDelete",
       requireIp: action === "hide",
@@ -160,7 +174,10 @@ export function createCommentsDeleteHandler(
       }
 
       return NextResponse.json({ ok: true });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === SHARE_INTERACTIONS_DISABLED) {
+        return NextResponse.json({ error: SHARE_INTERACTIONS_DISABLED }, { status: 403 });
+      }
       return NextResponse.json({ error: COMMENT_OPERATION_FAILED }, { status: 500 });
     }
   };

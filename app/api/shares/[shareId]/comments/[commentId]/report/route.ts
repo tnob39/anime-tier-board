@@ -11,7 +11,7 @@ import {
   parseCommentReportBody,
   readJsonWithByteLimit,
 } from "@/lib/api/write-request-guard";
-import { reportComment } from "@/lib/shares";
+import { reportComment, SHARE_INTERACTIONS_DISABLED } from "@/lib/shares";
 
 const SELF_REPORT_ERROR = "自分のコメントは報告できません。";
 
@@ -59,7 +59,7 @@ export function createReportPostHandler(
     const originDenied = dependencies.assertSameOrigin(request);
     if (originDenied) return originDenied;
 
-    const limited = dependencies.consumeRateLimit(request, {
+    const limited = await dependencies.consumeRateLimit(request, {
       userId,
       policy: "commentReport",
       requireIp: true,
@@ -101,7 +101,10 @@ export function createReportPostHandler(
         duplicate: result.outcome === "duplicate",
         hidden: result.hidden,
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.message === SHARE_INTERACTIONS_DISABLED) {
+        return NextResponse.json({ error: SHARE_INTERACTIONS_DISABLED }, { status: 403 });
+      }
       return NextResponse.json({ error: COMMENT_OPERATION_FAILED }, { status: 500 });
     }
   };
