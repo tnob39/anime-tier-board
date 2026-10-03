@@ -1,8 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import path from "node:path";
 
-// No global auth setup: the default suite signs synthetic JWTs and may access remote Turso.
-// This suite exercises real Next routes as a guest, without an OAuth/session substitute.
+// No global auth setup. Owner tests use a local JWT and file DB; OAuth and external services stay offline.
 export default defineConfig({
   testDir: ".",
   testMatch: "season-impressions.spec.ts",
@@ -25,11 +24,12 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       NEXT_TELEMETRY_DISABLED: "1",
+      NODE_OPTIONS: `--require=${path.resolve(__dirname, "impressions-offline.cjs")}`,
       AUTH_URL: "http://localhost:3179",
       AUTH_SECRET: "local-guest-router-tests-no-authentication-issued",
       AUTH_GOOGLE_ID: "",
       AUTH_GOOGLE_SECRET: "",
-      TURSO_DATABASE_URL: "file::memory:",
+      TURSO_DATABASE_URL: "file:./test-results/impressions-router.sqlite",
       TURSO_AUTH_TOKEN: "local-only"
     }
   }

@@ -1,13 +1,16 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { useDisplayMode } from "@/components/display-mode/DisplayModeProvider";
 import { IMPRESSION_RATING_LABELS, type ImpressionAnime, type ImpressionSnapshot } from "@/lib/season-impressions-model";
 
 export function ImpressionArtwork({ anime }: { anime: ImpressionAnime }) {
   const { hydrated, mode } = useDisplayMode();
-  if (!hydrated || mode === "simple" || !anime.imageUrl) return null;
-  return <Image className="impressions-artwork" src={`/api/image-proxy?url=${encodeURIComponent(anime.imageUrl)}`} alt="" width={64} height={90} unoptimized />;
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  if (!hydrated || mode === "simple" || !anime.imageUrl || failedUrl === anime.imageUrl) return null;
+  return <Image className="impressions-artwork" src={`/api/image-proxy?url=${encodeURIComponent(anime.imageUrl)}`} alt="" width={64} height={90} unoptimized
+    onError={() => setFailedUrl(anime.imageUrl)} />;
 }
 
 export function ImpressionSnapshotView({ snapshot }: { snapshot: ImpressionSnapshot }) {
