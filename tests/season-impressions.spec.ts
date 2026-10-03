@@ -1,8 +1,10 @@
 import { test, expect, type Route } from "@playwright/test";
+import { encode } from "next-auth/jwt";
+import { randomUUID } from "node:crypto";
 import { getCurrentAnimeSeason, seasonHeadingJa } from "../lib/season";
 
-// App Router, hydration, session endpoint and write routes are real. Only the external
-// anime catalog is a fixture. Authenticated flows require Hermes' preview/live auth.
+// App Router, hydration, JWT sessions, write/read routes and local DB are real.
+// Catalog/artwork are offline fixtures; no real OAuth credentials are used.
 test.use({ storageState: { cookies: [], origins: [] }, serviceWorkers: "block" });
 const anime = { id: "anilist-779", source: "anilist", title: "今期チェック検証作品", imageUrl: "" };
 const input = { year: 2026, season: "FALL", anime, revision: 0, rating: null, note: "非公開の入力", spoiler: "unspecified" };
@@ -131,3 +133,127 @@ test("late catalog responses cannot replace the selected season in the real rout
   await expect(page.getByText("2023年の古い応答")).toHaveCount(0);
   await expect(page.locator("[data-season-heading]")).toHaveText("選択中の期（2024年秋）");
 });
+
+for (const mode of ["simple", "visual"]) {
+  test(`owner ${mode}: real save, four-action publish, public immutable snapshot, confirmed revoke and safe 404`, async ({ context, page, baseURL, isMobile }) => {
+    const userId = `impressions-local-${randomUUID()}`;
+    const cookieName = "authjs.session-token";
+    const token = await encode({ secret: "local-guest-router-tests-no-authentication-issued", salt: cookieName,
+      token: { sub: userId, name: "Local fixture" } });
+    await context.addCookies([{ name: cookieName, value: token, url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+    const headers = { Origin: baseURL!, "X-Impression-Owner": userId };
+    expect((await (await context.request.get("/api/auth/session")).json()).user.id).toBe(userId);
+    const artwork = { ...anime, imageUrl: "https://s4.anilist.co/local-artwork.jpg", title: isMobile
+      ? "今期チェック検証作品・異世界に転生した私が小さな図書館で出会った仲間たちと失われた物語を探す旅に出たら、いつの間にか王国の未来を託されていました〜それでも毎朝おいしい朝ごはんを食べながら、みんなで笑って暮らせる日常を取り戻したい〜"
+      : anime.title };
+    const next = { ...artwork, id: "anilist-780", title: "次の未確認作品" };
+    await context.route("**/api/anime/seasonal**", (route) => route.fulfill({ json: {
+      year: 2026, season: "FALL", items: [artwork, next], source: "anilist", cached: true
+    } }));
+    let imageRequests = 0;
+    await context.route("**/api/image-proxy**", (route) => {
+      imageRequests++;
+      return route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="90"><rect width="64" height="90" fill="gray"/></svg>' });
+    });
+    await page.addInitScript((mode) => {
+      localStorage.setItem("numanie-display-mode", mode);
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (text: string) => { (window as unknown as { copiedUrl: string }).copiedUrl = text; } } });
+    }, mode);
+    const writes: string[] = [];
+    page.on("request", (request) => { if (["PUT", "POST", "DELETE"].includes(request.method()) && new URL(request.url()).pathname.startsWith("/api/")) writes.push(`${request.method()} ${new URL(request.url()).pathname}`); });
+    await page.goto("/tier/impressions?year=2026&season=FALL");
+    await expect(page.getByRole("button", { name: "今の0作品を共有" })).toBeDisabled();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.getByRole("button", { name: /今期チェック検証作品/ }).click();
+    const dialog = page.getByRole("dialog");
+    if (isMobile) {
+      await page.addStyleTag({ content: ".impressions-sheet { font-size: 200%; } .impressions-sheet :is(button, select, textarea) { font-size: inherit; }" });
+      await page.setViewportSize({ width: 375, height: 380 });
+      expect(await dialog.getByRole("heading").evaluate((element) =>
+        element.getBoundingClientRect().height > element.closest(".bottom-sheet")!.clientHeight)).toBe(true);
+    }
+    await expect(dialog).toHaveAccessibleName(artwork.title);
+    await expect(dialog.locator("img")).toHaveCount(mode === "visual" ? 1 : 0);
+    if (mode === "visual") {
+      await expect(dialog.locator("img")).toBeVisible();
+      await expect(dialog.locator("img")).toHaveJSProperty("complete", true);
+      expect(await dialog.locator("img").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    }
+    await dialog.getByLabel("好き", { exact: true }).check();
+    await expect(dialog.getByLabel("好き", { exact: true })).toBeFocused();
+    await expect(dialog.getByLabel("好き", { exact: true })).toBeInViewport({ ratio: 1 });
+    await dialog.getByLabel("一言（任意・140文字以内）").fill("公開しない保存済み感想");
+    await expect(dialog.getByLabel("一言（任意・140文字以内）")).toBeFocused();
+    await expect(dialog.getByLabel("一言（任意・140文字以内）")).toBeInViewport({ ratio: 1 });
+    expect(writes).toEqual([]);
+    const save = dialog.getByRole("button", { name: "保存して次へ" });
+    await save.focus();
+    await expect(save).toBeFocused();
+    await expect(save).toBeInViewport({ ratio: 1 });
+    expect(await save.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const sheet = element.closest(".bottom-sheet")!;
+      const bounds = sheet.getBoundingClientRect();
+      return bounds.top >= 0 && bounds.bottom <= innerHeight && sheet.scrollWidth <= sheet.clientWidth
+        && box.top >= bounds.top && box.bottom <= bounds.bottom && box.width >= 44 && box.height >= 44
+        && element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+    })).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await save.click();
+    await expect(dialog.getByRole("heading")).toHaveText("次の未確認作品");
+    await dialog.getByLabel("一言（任意・140文字以内）").fill("未保存の秘密");
+    await page.keyboard.press("Escape");
+    if (isMobile) await page.setViewportSize({ width: 375, height: 812 });
+    const savedResponse = await context.request.get("/api/season-impressions?year=2026&season=FALL", { headers });
+    const saved = (await savedResponse.json()).impressions;
+    expect(saved).toHaveLength(1); expect(saved[0].rating).toBe("liked");
+    await expect(page.getByText("未保存の入力は共有に含まれません。")).toBeVisible();
+    let interactions = 0;
+    const tap = async (name: string) => { interactions++; await page.getByRole("button", { name, exact: true }).click(); };
+    await tap("今の1作品を共有");
+    await tap("公開内容をプレビュー");
+    const preview = page.getByRole("region", { name: "公開内容のプレビュー" });
+    await expect(preview).not.toContainText(/公開しない保存済み感想|未保存の秘密|次の未確認作品/);
+    await page.goBack(); await expect(page.getByLabel("作品のみ", { exact: true })).toBeChecked();
+    await page.goForward(); await expect(preview).toBeVisible();
+    const previewContents = await preview.locator(".impressions-list").innerText();
+    await tap("この内容で公開URLを作成");
+    await expect(page.getByRole("button", { name: "URLをコピー", exact: true })).toBeFocused();
+    await tap("URLをコピー");
+    expect(interactions).toBe(4);
+    expect(writes).toEqual(["PUT /api/season-impressions/anilist-779", "POST /api/shares"]);
+    const publicPath = await page.getByRole("link", { name: "作成した共有を開く" }).getAttribute("href");
+    expect(await page.evaluate(() => (window as unknown as { copiedUrl: string }).copiedUrl)).toBe(`${baseURL}${publicPath}`);
+    expect(page.url()).toBe(`${baseURL}/tier/impressions?year=2026&season=FALL&share=result`);
+    const shareId = publicPath!.split("/").at(-1)!;
+    const snapshot = await (await context.request.get(`/api/shares/${shareId}`)).json();
+    expect(JSON.stringify(snapshot)).not.toMatch(/公開しない保存済み感想|未保存の秘密|revision|spoiler/);
+    const modified = await context.request.put("/api/season-impressions/anilist-779", { headers, data: { ...input, anime: artwork, revision: 1, note: "変更後の秘密" } });
+    expect(modified.status()).toBe(200);
+    const deleted = await context.request.delete("/api/season-impressions/anilist-779", { headers, data: { year: 2026, season: "FALL", revision: 2 } });
+    expect(deleted.status()).toBe(200);
+    expect(await (await context.request.get(`/api/shares/${shareId}`)).json()).toEqual(snapshot);
+    const publicResponse = page.waitForResponse((response) => new URL(response.url()).pathname === publicPath && response.request().method() === "GET");
+    await page.getByRole("link", { name: "作成した共有を開く" }).click();
+    await publicResponse;
+    await expect(page.getByRole("heading", { name: "2026年秋 今期チェック", exact: true })).toBeVisible();
+    expect(await page.locator(".impressions-list").innerText()).toBe(previewContents);
+    await expect(page.locator("textarea")).toHaveCount(0);
+    if (mode === "simple") { await expect(page.locator("img, picture")).toHaveCount(0); expect(imageRequests).toBe(0); }
+    else expect(imageRequests).toBeGreaterThan(0);
+    await page.goto("/tier/impressions?year=2026&season=FALL&share=manage");
+    await expect(page.getByRole("heading", { name: "共有の管理・履歴", exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("button", { name: "公開を停止", exact: true }).click();
+    expect(writes.filter((entry) => entry.startsWith("DELETE"))).toEqual([]);
+    await page.getByRole("button", { name: "公開停止を確定する" }).click();
+    await expect(page.getByText("公開中の共有はありません。", { exact: true })).toBeVisible();
+    expect((await context.request.get(`/api/shares/${shareId}`)).status()).toBe(404);
+    const revoked = await context.request.get(publicPath!);
+    // Next may stream a not-found boundary with HTTP 200; the route must render safe 404 content.
+    expect(await revoked.text()).not.toContain("公開しない保存済み感想");
+    await page.goto(publicPath!);
+    await expect(page.getByRole("heading", { name: "ページが見つかりませんでした" })).toBeVisible();
+    await expect(page.getByText(artwork.title, { exact: true })).toHaveCount(0);
+  });
+}

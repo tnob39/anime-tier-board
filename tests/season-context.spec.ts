@@ -91,6 +91,9 @@ async function rapidSelect(page: Page, changes: Array<[string, string]>) {
 }
 
 test.describe("ATB-780 season context", () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await context.route("**/*", (route) => new URL(route.request().url()).origin === new URL(baseURL!).origin ? route.continue() : route.abort());
+  });
   test.beforeEach(async ({ page }) => {
     await attachErrorCollector(page);
     await mockSeasonalApi(page);

@@ -48,6 +48,7 @@ export default defineConfig({
       AUTH_URL: ORIGIN,
       AUTH_SECRET: "season-context-e2e-dummy-secret-at-least-32-chars",
       NEXT_TELEMETRY_DISABLED: "1",
+      NODE_OPTIONS: `--require=${path.resolve(__dirname, "impressions-offline.cjs")}`,
       AUTH_GOOGLE_ID: "",
       AUTH_GOOGLE_SECRET: "",
       TURSO_DATABASE_URL: "file::memory:",

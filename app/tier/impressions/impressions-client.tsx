@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction, type RefObject } from "react";
 import { signIn, useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { DisplayModeToggle } from "@/components/display-mode/DisplayModeToggle";
 import { ImpressionArtwork } from "@/components/ImpressionSnapshotView";
@@ -64,10 +65,17 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
   const mounted = useRef(true);
   const busy = useRef(false);
   const editorRef = useRef<HTMLFormElement>(null);
+  const ratingRef = useRef<HTMLInputElement>(null);
+  const shareStep = useSearchParams().get("share");
+  const sharingActive = !!userId && ["select", "preview", "result", "manage"].includes(shareStep ?? "");
   const requestVersion = useRef(0);
   const recordsVersion = useRef(0);
   const editingInput = editing ? drafts[editing] : undefined;
   const saved = records.find((record) => record.anime.id === editing);
+
+  useEffect(() => {
+    if (editing) ratingRef.current?.focus();
+  }, [editing]);
 
   useLayoutEffect(() => {
     setPending(false);
@@ -148,7 +156,8 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
         sessionStorage.removeItem(IMPRESSION_DRAFT_KEY);
       }
       draftRef.current = inputs;
-      setDrafts(inputs); setEditing(active);
+      setDrafts(inputs);
+      setEditing(new URLSearchParams(window.location.search).has("share") ? null : active);
       if (Object.keys(inputs).length) setMessage("このアカウントの未保存の入力を復元しました。内容を確認して保存してください。");
       else if (resumeToken) setMessage("このアカウントで復元できる下書きはありません。元のアカウントでログインしてください。");
     } catch { setStorageError("下書きを読み込めませんでした。ブラウザの保存設定を確認してください。"); }
@@ -275,6 +284,9 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
     {loadError && <div role="alert"><p>{loadError}</p><button type="button" onClick={() => void load()} disabled={loading}>読み込みを再試行</button></div>}
     {warning && <p>{warning}</p>}
     {loading && <p role="status">作品と記録を読み込んでいます…</p>}
+    {userId && <ImpressionSharing userId={userId} seasonKey={seasonKey} records={records} reloadRecords={readRecords}
+      recordsReady={recordsReady && !authRequired} hasDrafts={Object.keys(drafts).length > 0} />}
+    <div hidden={sharingActive}>
     {unchecked.length > 0 && <button className="impressions-primary" type="button" disabled={!recordsReady} onClick={() => open(unchecked[0])}>続きから確認する</button>}
     {!loading && !items.length && <p>このクールの作品はまだ表示できません。別のクールを選ぶか再試行してください。</p>}
     <ul className="impressions-list">
@@ -290,24 +302,29 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
         </button></li>;
       })}
     </ul>
-    {userId && <ImpressionSharing key={`${seasonKey.year}:${seasonKey.season}`} userId={userId} seasonKey={seasonKey} records={records} reloadRecords={readRecords} />}
+    </div>
     <BottomSheet open={!!editingInput} onOpenChange={(openState) => { if (!openState && !busy.current) setEditing(null); }}
-      title={editingInput?.anime.title} description="確認のみでも保存できます。入力は「保存して次へ」で確定します。" className="impressions-sheet">
+      title={editingInput?.anime.title} initialFocusRef={ratingRef} className="impressions-sheet">
       {editingInput && <form ref={editorRef} className="impressions-editor" onSubmit={(event) => { event.preventDefault(); void save(); }}>
-        <fieldset disabled={pending}><legend>今の印象（任意）</legend>
-          <label><input type="radio" name="rating" checked={editingInput.rating === null} onChange={() => update({ rating: null })} />評価なし・確認のみ</label>
-          {IMPRESSION_RATINGS.map((rating) => <label key={rating}><input type="radio" name="rating" checked={editingInput.rating === rating} onChange={() => update({ rating })} />{IMPRESSION_RATING_LABELS[rating]}</label>)}
+        <div className="impressions-editor-context">
+          <ImpressionArtwork anime={editingInput.anime} />
+          <div><strong>{saved ? "✓ 確認済み・編集中" : "未確認・入力中"}</strong><p>未保存の入力です。「保存して次へ」で確定します。</p></div>
+        </div>
+        <fieldset className="impressions-rating" disabled={pending}><legend>今の印象（任意）</legend>
+          {IMPRESSION_RATINGS.map((rating, index) => <label key={rating} data-selected={editingInput.rating === rating}>
+            <input ref={index === 0 ? ratingRef : undefined} type="radio" name="rating" checked={editingInput.rating === rating} onChange={() => update({ rating })} />{IMPRESSION_RATING_LABELS[rating]}</label>)}
+          <label data-selected={editingInput.rating === null}><input type="radio" name="rating" checked={editingInput.rating === null} onChange={() => update({ rating: null })} />評価なし・確認のみ</label>
         </fieldset>
         <label htmlFor="impression-note">一言（任意・140文字以内）</label>
         <textarea id="impression-note" rows={3} value={editingInput.note ?? ""} disabled={pending}
           aria-describedby="impression-note-count" aria-invalid={impressionNoteLength(editingInput.note ?? "") > 140}
           onChange={(event) => update({ note: event.target.value || null })} />
         <span id="impression-note-count">{impressionNoteLength(editingInput.note ?? "")} / 140文字</span>
-        <label htmlFor="impression-spoiler">ネタバレ区分</label>
+        {editingInput.note && <><label htmlFor="impression-spoiler">ネタバレ区分</label>
         <select id="impression-spoiler" value={editingInput.spoiler} disabled={pending} onChange={(event) => update({ spoiler: event.target.value as ImpressionInput["spoiler"] })}>
           <option value="unspecified">未指定（本文は公開しない）</option><option value="no_spoiler">ネタバレなし</option><option value="has_spoiler">ネタバレあり（本文は公開しない）</option>
         </select>
-        <p>一言は非公開で保存します。共有時に選択した「ネタバレなし」の一言だけ公開できます。</p>
+        <p>一言は非公開で保存します。共有時に選択した「ネタバレなし」の一言だけ公開できます。</p></>}
         {error && <p role="alert">{error}</p>}
         {conflict && <div className="impressions-conflict">
           <button type="button" disabled={pending} onClick={async () => {
@@ -319,13 +336,15 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
             <button type="button" onClick={() => { update({ revision: saved?.revision ?? deletedRevisions.find((cursor) => cursor.animeId === editing)?.revision ?? 0 }); setConflict(false); setError(""); setConfirmDelete(false); }}>現在の入力で編集を続ける</button></>}
         </div>}
         <div className="impressions-actions">
-          <button type="submit" className="impressions-primary" disabled={pending || conflict || (!recordsReady && !authRequired) || impressionNoteLength(editingInput.note ?? "") > 140}>
-            {pending ? "処理中…" : !userId || authRequired ? "Googleでログインして保存へ" : error ? "再試行して保存" : "保存して次へ"}
-          </button>
           <button type="button" onClick={defer} disabled={pending}>あとで（保存しない）</button>
           {saved && !confirmDelete && <button type="button" disabled={pending || conflict} onClick={() => setConfirmDelete(true)}>確認記録を削除</button>}
           {saved && confirmDelete && <><p>この作品の確認記録を削除します。公開済みURLは停止されません。</p>
             <button type="button" disabled={pending || conflict} onClick={() => void remove()}>削除を確定する</button><button type="button" disabled={pending} onClick={() => setConfirmDelete(false)}>キャンセル</button></>}
+        </div>
+        <div className="impressions-actions impressions-save-actions">
+          <button type="submit" className="impressions-primary" disabled={pending || conflict || (!recordsReady && !authRequired) || impressionNoteLength(editingInput.note ?? "") > 140}>
+            {pending ? "処理中…" : !userId || authRequired ? "Googleでログインして保存へ" : error ? "再試行して保存" : "保存して次へ"}
+          </button>
         </div>
       </form>}
     </BottomSheet>
