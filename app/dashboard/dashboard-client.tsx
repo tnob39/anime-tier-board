@@ -10,6 +10,7 @@ import type { DashboardData, ViewingStatus } from "@/lib/statuses";
 import type { PublicSubscriptionDiagnosis } from "@/lib/subscription-stats";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { SubscriptionPicker } from "@/components/SubscriptionPicker";
+import { OwnerCommentInbox } from "./owner-comment-inbox";
 
 const statusLabels: Record<ViewingStatus, string> = {
   planned: "見たい",
@@ -159,6 +160,8 @@ export function DashboardClient({
         hasSubscriptions={hasSubscriptions}
         onEdit={() => setSubscriptionSheetOpen(true)}
       />
+
+      <OwnerCommentInbox />
 
       {isOwner ? (
         <div className="pref-analysis-accordion">

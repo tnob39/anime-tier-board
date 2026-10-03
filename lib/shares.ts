@@ -2,6 +2,14 @@ import { randomBytes } from "node:crypto";
 import { getTursoClient } from "@/lib/turso";
 import type { AnimeStatusRecord, DashboardData } from "@/lib/statuses";
 import type { AnimeItem, AnimeSeason } from "@/lib/types";
+import {
+  OWNER_COMMENT_INBOX_PAGE_SIZE,
+  OWNER_COMMENT_PREVIEW_LENGTH,
+  ownerCommentPreview,
+  type CommentableShareKind,
+  type OwnerCommentInboxCursor,
+  type OwnerCommentInboxPage
+} from "@/lib/owner-comment-inbox";
 
 export const REACTION_KINDS = ["like", "agree", "surprised", "want_to_watch"] as const;
 
@@ -324,6 +332,64 @@ export async function listComments(
       updatedAt: String(row.updated_at)
     }))
     .reverse();
+}
+
+export async function listOwnerCommentInbox(
+  userId: string,
+  cursor: OwnerCommentInboxCursor | null = null,
+  client: ShareDbClient = getTursoClient()
+): Promise<OwnerCommentInboxPage> {
+  await ensureShareSchema(client);
+
+  // The report threshold and owner moderation both set hidden_at atomically.
+  // Rank only visible comments so counts and the latest preview describe the same set.
+  const result = await client.execute({
+    sql: `with owned_shares as (
+            select share_id, created_at,
+              case when json_valid(board_json) then
+                case when json_type(board_json) = 'object' then
+                  coalesce(json_extract(board_json, '$.kind'), 'tier')
+                end
+              end as kind
+            from board_shares
+            where user_id = ?
+          ), ranked_comments as (
+            select s.share_id, s.kind, s.created_at as shared_at,
+              c.created_at as latest_comment_at,
+              substr(c.body, 1, ?) as preview,
+              count(*) over (partition by s.share_id) as comment_count,
+              row_number() over (
+                partition by s.share_id order by c.created_at desc, c.comment_id desc
+              ) as position
+            from owned_shares s
+            join share_comments c on c.share_id = s.share_id
+            where s.kind in ('tier', 'dashboard', 'watchlist') and c.hidden_at is null
+          )
+          select share_id, kind, shared_at, latest_comment_at, preview, comment_count
+          from ranked_comments
+          where position = 1
+            and (? is null or latest_comment_at < ? or (latest_comment_at = ? and share_id < ?))
+          order by latest_comment_at desc, share_id desc
+          limit ?`,
+    args: [userId, OWNER_COMMENT_PREVIEW_LENGTH + 1, cursor?.latestCommentAt ?? null,
+      cursor?.latestCommentAt ?? null, cursor?.latestCommentAt ?? null, cursor?.shareId ?? null,
+      OWNER_COMMENT_INBOX_PAGE_SIZE + 1]
+  });
+
+  const items = result.rows.slice(0, OWNER_COMMENT_INBOX_PAGE_SIZE).map((row) => ({
+    shareId: String(row.share_id),
+    kind: String(row.kind) as CommentableShareKind,
+    sharedAt: String(row.shared_at),
+    commentCount: Number(row.comment_count),
+    latestCommentAt: String(row.latest_comment_at),
+    preview: ownerCommentPreview(String(row.preview))
+  }));
+  const last = items.at(-1);
+  return {
+    items,
+    nextCursor: result.rows.length > OWNER_COMMENT_INBOX_PAGE_SIZE && last
+      ? `${last.latestCommentAt}|${last.shareId}` : null
+  };
 }
 
 export async function addComment({
