@@ -22,10 +22,9 @@ export default async function ImpressionSharePage({ params }: { params: Promise<
   if (!share) notFound();
   return <div className="impressions-page">
     <h1>{seasonHeadingJa(share)} 今期チェック</h1>
-    <p>公開時点の確認記録・今の印象です。視聴完了を表すものではありません。</p>
-    <p><time dateTime={share.createdAt}>{new Date(share.createdAt).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}</time> 公開</p>
+    <p>公開時点の今期カードです。</p>
     <DisplayModeToggle />
-    <ImpressionSnapshotView snapshot={share} />
+    <ImpressionSnapshotView snapshot={share} publishedAt={share.createdAt} />
     <Link className="impressions-link" href="/tier/impressions">自分の今期チェックをはじめる</Link>
   </div>;
 }

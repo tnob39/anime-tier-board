@@ -29,7 +29,7 @@ test("real App Router renders guest input and navigates seasons without an autom
   await expect(page.getByRole("heading", { name: "今期チェック", exact: true })).toBeVisible();
   await page.getByRole("button", { name: /今期チェック検証作品/ }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("一言（任意・140文字以内）").fill(input.note);
+  await dialog.getByLabel("いまの一言").fill(input.note);
   await expect(dialog.getByRole("button", { name: "Googleでログインして保存へ" })).toBeEnabled();
   expect(page.url()).not.toContain(encodeURIComponent(input.note));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -74,7 +74,7 @@ test("guest hydration never exposes legacy or account-owned drafts even with a r
   await expect(page.getByRole("button", { name: "元のアカウントで再ログイン" })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: /今期チェック検証作品/ }).click();
-  await expect(page.getByRole("dialog").getByLabel("一言（任意・140文字以内）")).toHaveValue("");
+  await expect(page.getByRole("dialog").getByLabel("いまの一言")).toHaveValue("");
   expect(await page.content()).not.toContain(input.note);
 });
 
@@ -134,6 +134,50 @@ test("late catalog responses cannot replace the selected season in the real rout
   await expect(page.locator("[data-season-heading]")).toHaveText("選択中の期（2024年秋）");
 });
 
+test("owner lost PUT response requires reconciliation and explicit continuation after closing the editor", async ({ context, page, baseURL }) => {
+  const userId = `impressions-local-${randomUUID()}`;
+  const cookieName = "authjs.session-token";
+  const token = await encode({ secret: "local-guest-router-tests-no-authentication-issued", salt: cookieName,
+    token: { sub: userId, name: "Local fixture" } });
+  await context.addCookies([{ name: cookieName, value: token, url: baseURL!, httpOnly: true, sameSite: "Lax" }]);
+  const writes: number[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PUT" && new URL(request.url()).pathname === `/api/season-impressions/${anime.id}`) writes.push(request.postDataJSON().revision);
+  });
+  await page.route(`**/api/season-impressions/${anime.id}`, async (route) => {
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    await route.abort("failed");
+  }, { times: 1 });
+  await page.goto("/tier/impressions?year=2026&season=FALL");
+  await page.getByRole("button", { name: /今期チェック検証作品/ }).click();
+  const dialog = page.getByRole("dialog");
+  const save = dialog.getByRole("button", { name: "保存する", exact: true });
+  await dialog.getByLabel("いまの一言").fill("応答が失われても入力を保持");
+  await save.click();
+  await expect(dialog.getByRole("alert")).toContainText("保存結果を確認できませんでした");
+  await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("button", { name: /今期チェック検証作品/ }).click();
+  await expect(save).toBeDisabled();
+  await expect(dialog.getByLabel("いまの一言")).toHaveValue("応答が失われても入力を保持");
+  expect(writes).toEqual([0]);
+  await dialog.getByRole("button", { name: "入力を保持して最新の記録を確認" }).click();
+  await expect(dialog.getByText(/最新の記録：.*応答が失われても入力を保持/)).toBeVisible();
+  await expect(save).toBeDisabled();
+  await dialog.getByRole("button", { name: "現在の入力で編集を続ける" }).click();
+  expect(writes).toEqual([0]);
+  await dialog.getByLabel("いまの一言").fill("最新の記録を確認して編集");
+  await save.click();
+  await expect(dialog).toHaveCount(0);
+  expect(writes).toEqual([0, 1]);
+  await expect(page.getByText("1作品を記録", { exact: true })).toBeVisible();
+  const response = await context.request.get("/api/season-impressions?year=2026&season=FALL", { headers: { "X-Impression-Owner": userId } });
+  expect(response.status()).toBe(200);
+  const records = (await response.json()).impressions;
+  expect(records).toHaveLength(1);
+  expect(records[0]).toMatchObject({ note: "最新の記録を確認して編集", revision: 2 });
+});
+
 for (const mode of ["simple", "visual"]) {
   test(`owner ${mode}: real save, four-action publish, public immutable snapshot, confirmed revoke and safe 404`, async ({ context, page, baseURL, isMobile }) => {
     const userId = `impressions-local-${randomUUID()}`;
@@ -146,7 +190,7 @@ for (const mode of ["simple", "visual"]) {
     const artwork = { ...anime, imageUrl: "https://s4.anilist.co/local-artwork.jpg", title: isMobile
       ? "今期チェック検証作品・異世界に転生した私が小さな図書館で出会った仲間たちと失われた物語を探す旅に出たら、いつの間にか王国の未来を託されていました〜それでも毎朝おいしい朝ごはんを食べながら、みんなで笑って暮らせる日常を取り戻したい〜"
       : anime.title };
-    const next = { ...artwork, id: "anilist-780", title: "次の未確認作品" };
+    const next = { ...artwork, id: "anilist-780", title: "次の未記録作品" };
     await context.route("**/api/anime/seasonal**", (route) => route.fulfill({ json: {
       year: 2026, season: "FALL", items: [artwork, next], source: "anilist", cached: true
     } }));
@@ -162,7 +206,9 @@ for (const mode of ["simple", "visual"]) {
     const writes: string[] = [];
     page.on("request", (request) => { if (["PUT", "POST", "DELETE"].includes(request.method()) && new URL(request.url()).pathname.startsWith("/api/")) writes.push(`${request.method()} ${new URL(request.url()).pathname}`); });
     await page.goto("/tier/impressions?year=2026&season=FALL");
+    await page.getByRole("button", { name: "自分の今期カードを見る" }).click();
     await expect(page.getByRole("button", { name: "今の0作品を共有" })).toBeDisabled();
+    await page.getByRole("button", { name: "次の作品に一言" }).click();
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.getByRole("button", { name: /今期チェック検証作品/ }).click();
     const dialog = page.getByRole("dialog");
@@ -179,14 +225,15 @@ for (const mode of ["simple", "visual"]) {
       await expect(dialog.locator("img")).toHaveJSProperty("complete", true);
       expect(await dialog.locator("img").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
     }
+    await dialog.getByText("評価を添える（任意）", { exact: true }).click();
     await dialog.getByLabel("好き", { exact: true }).check();
     await expect(dialog.getByLabel("好き", { exact: true })).toBeFocused();
     await expect(dialog.getByLabel("好き", { exact: true })).toBeInViewport({ ratio: 1 });
-    await dialog.getByLabel("一言（任意・140文字以内）").fill("公開しない保存済み感想");
-    await expect(dialog.getByLabel("一言（任意・140文字以内）")).toBeFocused();
-    await expect(dialog.getByLabel("一言（任意・140文字以内）")).toBeInViewport({ ratio: 1 });
+    await dialog.getByLabel("いまの一言").fill("公開しない保存済み感想");
+    await expect(dialog.getByLabel("いまの一言")).toBeFocused();
+    await expect(dialog.getByLabel("いまの一言")).toBeInViewport({ ratio: 1 });
     expect(writes).toEqual([]);
-    const save = dialog.getByRole("button", { name: "保存して次へ" });
+    const save = dialog.getByRole("button", { name: /^(保存する|確認だけ記録する)$/ });
     await save.focus();
     await expect(save).toBeFocused();
     await expect(save).toBeInViewport({ ratio: 1 });
@@ -200,21 +247,24 @@ for (const mode of ["simple", "visual"]) {
     })).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await save.click();
-    await expect(dialog.getByRole("heading")).toHaveText("次の未確認作品");
-    await dialog.getByLabel("一言（任意・140文字以内）").fill("未保存の秘密");
+    await expect(dialog).toHaveCount(0);
+    await page.getByRole("button", { name: "次の作品に一言", exact: true }).click();
+    await page.getByRole("button", { name: /次の未記録作品/ }).click();
+    await dialog.getByLabel("いまの一言").fill("未保存の秘密");
     await page.keyboard.press("Escape");
     if (isMobile) await page.setViewportSize({ width: 375, height: 812 });
     const savedResponse = await context.request.get("/api/season-impressions?year=2026&season=FALL", { headers });
     const saved = (await savedResponse.json()).impressions;
     expect(saved).toHaveLength(1); expect(saved[0].rating).toBe("liked");
+    await page.getByRole("button", { name: "自分の今期カードを見る" }).click();
     await expect(page.getByText("未保存の入力は共有に含まれません。")).toBeVisible();
     let interactions = 0;
     const tap = async (name: string) => { interactions++; await page.getByRole("button", { name, exact: true }).click(); };
     await tap("今の1作品を共有");
     await tap("公開内容をプレビュー");
     const preview = page.getByRole("region", { name: "公開内容のプレビュー" });
-    await expect(preview).not.toContainText(/公開しない保存済み感想|未保存の秘密|次の未確認作品/);
-    await page.goBack(); await expect(page.getByLabel("作品のみ", { exact: true })).toBeChecked();
+    await expect(preview).not.toContainText(/公開しない保存済み感想|未保存の秘密|次の未記録作品/);
+    await page.goBack(); await expect(page.getByLabel("評価も公開").first()).not.toBeChecked();
     await page.goForward(); await expect(preview).toBeVisible();
     const previewContents = await preview.locator(".impressions-list").innerText();
     await tap("この内容で公開URLを作成");

@@ -8,16 +8,20 @@ import { DisplayModeToggle } from "@/components/display-mode/DisplayModeToggle";
 import { ImpressionArtwork } from "@/components/ImpressionSnapshotView";
 import { SeasonContextControl } from "@/components/SeasonContextControl";
 import { useSeasonUrlState } from "@/components/useSeasonUrlState";
-import { seasonHeadingJa } from "@/lib/season";
 import { fetchSeasonalAnimeClient } from "@/lib/seasonal-anime-client-cache";
 import { IMPRESSION_DRAFT_KEY, readImpressionDraft, impressionReturnPath, ownerImpressionDraftKey, readOwnerImpressionDrafts,
   type ImpressionDraft, type OwnerImpressionDrafts } from "@/lib/season-impression-draft";
 import { IMPRESSION_RATINGS, IMPRESSION_RATING_LABELS, impressionNoteLength, readImpressionAnime,
   type ImpressionAnime, type ImpressionInput, type ImpressionSeason, type ImpressionSeasonState, type ImpressionRevisionCursor, type SeasonImpression } from "@/lib/season-impressions-model";
 import { ImpressionSharing } from "./impression-sharing";
+import { ImpressionSeasonCard } from "./impression-season-card";
+import { changeImpressionInput, deriveImpressionCandidates, impressionAiringLabel, impressionGrowthCopy,
+  searchImpressionCatalog, type ImpressionAiring, type ImpressionCandidate } from "@/lib/season-impressions-view";
+import { track } from "@/lib/analytics";
 import { impressionError, impressionRequest } from "./impressions-request";
 
 type Props = { seasonKey: ImpressionSeason; resumeToken: string | null };
+type Reconciliation = { message: string; readVersion: number | null };
 
 function errorStatus(error: unknown): number | undefined {
   return error instanceof Error ? (error as Error & { status?: number }).status : undefined;
@@ -31,7 +35,6 @@ export function ImpressionsClient(props: Props) {
   const userId = status === "authenticated" ? (session?.user as { id?: string } | undefined)?.id ?? null : null;
   return <div className="impressions-page">
     <h1>今期チェック</h1>
-    <p>作品を確認して、今の印象を残しましょう。確認は視聴完了を表すものではありません。</p>
     <SeasonContextControl value={ref} explicit={explicit} disabled={pending} onChange={(next) => {
       if (!canChangeSeason.current()) return false;
       setRef(next);
@@ -55,27 +58,53 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
   const draftRef = useRef<Record<string, ImpressionInput>>({});
   const [storageError, setStorageError] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
-  const [deferred, setDeferred] = useState<string[]>([]);
+  const [airing, setAiring] = useState<ImpressionAiring[]>([]);
+  const [draftsReady, setDraftsReady] = useState(!userId);
+  const restored = useRef(false);
+  const [candidates, setCandidates] = useState<ImpressionCandidate[] | null>(null);
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  const [view, setView] = useState<"entry" | "search" | "card">("entry");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "unchecked" | "saved">("all");
+  const [page, setPage] = useState(0);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [conflict, setConflict] = useState(false);
-  const [latestLoaded, setLatestLoaded] = useState(false);
+  const [reconciliations, setReconciliations] = useState<Record<string, Reconciliation>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const mounted = useRef(true);
   const busy = useRef(false);
   const editorRef = useRef<HTMLFormElement>(null);
-  const ratingRef = useRef<HTMLInputElement>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+  const viewHeading = useRef<HTMLHeadingElement>(null);
+  const focusView = useRef(false);
   const shareStep = useSearchParams().get("share");
   const sharingActive = !!userId && ["select", "preview", "result", "manage"].includes(shareStep ?? "");
   const requestVersion = useRef(0);
   const recordsVersion = useRef(0);
+  const readingRecords = useRef(false);
+  const writingRecords = useRef(false);
   const editingInput = editing ? drafts[editing] : undefined;
   const saved = records.find((record) => record.anime.id === editing);
+  const reconciliation = editing ? reconciliations[editing] : undefined;
+  const conflict = !!reconciliation;
+  const latestLoaded = reconciliation?.readVersion === recordsVersion.current && recordsReady;
 
   useEffect(() => {
-    if (editing) ratingRef.current?.focus();
+    if (editing) noteRef.current?.focus();
   }, [editing]);
+
+  useEffect(() => {
+    const updateOnline = () => setOffline(!navigator.onLine);
+    updateOnline();
+    window.addEventListener("online", updateOnline); window.addEventListener("offline", updateOnline);
+    return () => { window.removeEventListener("online", updateOnline); window.removeEventListener("offline", updateOnline); };
+  }, []);
+  useEffect(() => {
+    if (!editing && focusView.current) { viewHeading.current?.focus(); focusView.current = false; }
+  }, [view, editing, message]);
 
   useLayoutEffect(() => {
     setPending(false);
@@ -102,15 +131,31 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
 
   const readRecords = useCallback(async () => {
     if (!userId) return [];
+    if (writingRecords.current) throw new Error("記録を保存しています。完了後に最新の記録を確認してください。");
     const version = ++recordsVersion.current;
-    const result = await impressionRequest<ImpressionSeasonState>(`/api/season-impressions?year=${seasonKey.year}&season=${seasonKey.season}`, {
-      headers: { "X-Impression-Owner": encodeURIComponent(userId) }
-    });
-    if (mounted.current && version === recordsVersion.current) { setRecords(result.impressions); setDeletedRevisions(result.deletedRevisions); setRecordsReady(true); setAuthRequired(false); }
-    return result.impressions;
+    readingRecords.current = true;
+    setRecordsReady(false);
+    try {
+      const result = await impressionRequest<ImpressionSeasonState>(`/api/season-impressions?year=${seasonKey.year}&season=${seasonKey.season}`, {
+        headers: { "X-Impression-Owner": encodeURIComponent(userId) }
+      });
+      if (!mounted.current || version !== recordsVersion.current) throw new Error("記録の読み込みが更新されました。もう一度最新の記録を確認してください。");
+      setRecords(result.impressions); setDeletedRevisions(result.deletedRevisions); setRecordsReady(true); setAuthRequired(false);
+      return result.impressions;
+    } catch (failure) {
+      if (mounted.current && version === recordsVersion.current) {
+        setRecordsReady(false);
+        setLoadError("保存済みの記録を取得できませんでした。再試行してください。");
+        if (errorStatus(failure) === 401) setAuthRequired(true);
+      }
+      throw failure;
+    } finally {
+      if (version === recordsVersion.current) readingRecords.current = false;
+    }
   }, [userId, seasonKey.year, seasonKey.season]);
 
   const load = useCallback(async () => {
+    if (busy.current) return;
     const version = ++requestVersion.current;
     setLoading(true);
     setLoadError("");
@@ -119,6 +164,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
     const failures: string[] = [];
     if (results[0].status === "fulfilled") {
       setAnime(results[0].value.items.map(readImpressionAnime).filter((item): item is ImpressionAnime => item !== null));
+      setAiring(results[0].value.items.map(({ id, airing }) => ({ id, airing })));
       setWarning(results[0].value.warning ?? "");
     } else failures.push("作品一覧を取得できませんでした。保存済みの記録は引き続き編集できます。");
     if (results[1].status === "rejected") {
@@ -136,7 +182,8 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
   }, [load]);
 
   useEffect(() => {
-    if (!userId || !recordsReady) return;
+    if (!userId || !recordsReady || restored.current) return;
+    restored.current = true;
     try {
       const key = ownerImpressionDraftKey(userId, seasonKey);
       const own = readOwnerImpressionDrafts(sessionStorage.getItem(key), userId, seasonKey);
@@ -161,6 +208,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
       if (Object.keys(inputs).length) setMessage("このアカウントの未保存の入力を復元しました。内容を確認して保存してください。");
       else if (resumeToken) setMessage("このアカウントで復元できる下書きはありません。元のアカウントでログインしてください。");
     } catch { setStorageError("下書きを読み込めませんでした。ブラウザの保存設定を確認してください。"); }
+    finally { setDraftsReady(true); }
   }, [resumeToken, userId, recordsReady, seasonKey.year, seasonKey.season]);
 
   function keepDrafts(next: Record<string, ImpressionInput>, active: string | null) {
@@ -185,8 +233,18 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
     for (const draft of Object.values(drafts)) if (!byId.has(draft.anime.id)) byId.set(draft.anime.id, draft.anime);
     return [...byId.values()];
   }, [anime, records, drafts]);
-  const unchecked = useMemo(() => items.filter((item) => !records.some((record) => record.anime.id === item.id))
-    .sort((a, b) => (deferred.indexOf(a.id) + 1) - (deferred.indexOf(b.id) + 1)), [items, records, deferred]);
+  useEffect(() => {
+    if (loading || !recordsReady || !draftsReady || !items.length || candidates !== null) return;
+    setCandidates(deriveImpressionCandidates({ catalog: items, records, drafts: Object.values(draftRef.current), airing, now: Date.now() }));
+    track({ name: "impression_view", view: "entry", count: records.length });
+  }, [loading, recordsReady, draftsReady, candidates, items, records, airing]);
+  const visibleCandidates = (candidates ?? []).filter(({ anime }) => !dismissed.includes(anime.id));
+  const exploration = searchImpressionCatalog(items, records, query, filter, page);
+  const writable = !loading && recordsReady && !authRequired && !offline;
+  function changeView(next: typeof view) {
+    focusView.current = true; setView(next); setMessage(""); setSavedId(null);
+    track({ name: "impression_view", view: next, count: records.length });
+  }
 
   function open(item: ImpressionAnime) {
     const record = records.find((entry) => entry.anime.id === item.id);
@@ -194,11 +252,12 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
     keepDrafts(current[item.id] ? current : { ...current, [item.id]: record
       ? { year: record.year, season: record.season, anime: record.anime, revision: record.revision, rating: record.rating, note: record.note, spoiler: record.spoiler }
       : { ...seasonKey, anime: item, revision: deletedRevisions.find((cursor) => cursor.animeId === item.id)?.revision ?? 0, rating: null, note: null, spoiler: "unspecified" } }, item.id);
-    setEditing(item.id); setError(""); setConflict(false); setLatestLoaded(false); setConfirmDelete(false); setAuthRequired(false);
+    setEditing(item.id); setError(""); setConfirmDelete(false);
+    track({ name: "impression_edit", source: view });
   }
   function update(change: Partial<ImpressionInput>) {
     if (!editing || pending) return;
-    keepDrafts({ ...draftRef.current, [editing]: { ...draftRef.current[editing], ...change } }, editing);
+    keepDrafts({ ...draftRef.current, [editing]: changeImpressionInput(draftRef.current[editing], change) }, editing);
   }
   async function login() {
     if (!editingInput || busy.current) return;
@@ -220,9 +279,12 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
     } catch { /* A stale handoff can only restore input, never submit a write. */ }
   }
   async function save() {
-    if (!editingInput || busy.current) return;
+    if (!editingInput || busy.current || loading || readingRecords.current || offline || conflict || impressionNoteLength(editingInput.note ?? "") > 140) return;
     if (!userId || authRequired) { await login(); return; }
+    if (!recordsReady) return;
     busy.current = true; setPending(true); setError("");
+    recordsVersion.current += 1;
+    writingRecords.current = true;
     try {
       const result = await impressionRequest<{ impression: SeasonImpression }>(`/api/season-impressions/${encodeURIComponent(editingInput.anime.id)}`, {
         method: "PUT", headers: { "Content-Type": "application/json", "X-Impression-Owner": encodeURIComponent(userId) }, body: JSON.stringify({ ...editingInput, ...seasonKey })
@@ -232,19 +294,28 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
       const remaining = { ...draftRef.current }; delete remaining[editingInput.anime.id];
       keepDrafts(remaining, null);
       clearAuthDraft();
-      setMessage(`${editingInput.anime.title} の今の印象を保存しました。`);
-      const next = unchecked.find((item) => item.id !== editingInput.anime.id);
-      if (next) open(next); else setEditing(null);
+      setMessage(impressionGrowthCopy(saved, result.impression, records.length));
+      setDismissed((current) => [...current, editingInput.anime.id]);
+      setSavedId(result.impression.anime.id); setView("card"); focusView.current = true; setEditing(null);
+      track({ name: "impression_save", outcome: "success", operation: saved ? "edit" : "new" });
     } catch (failure) {
       if (!mounted.current) return;
       setError(impressionError(failure));
-      if (errorStatus(failure) === 409) { setConflict(true); setLatestLoaded(false); }
       if (errorStatus(failure) === 401) setAuthRequired(true);
-    } finally { busy.current = false; if (mounted.current) setPending(false); }
+      const ambiguous = !errorStatus(failure) || errorStatus(failure)! >= 500;
+      if (ambiguous || errorStatus(failure) === 409) {
+        setReconciliations((current) => ({ ...current, [editingInput.anime.id]: { readVersion: null,
+          message: ambiguous ? "保存結果を確認できませんでした。入力を保持しています。最新の記録を確認してください。" : impressionError(failure) } }));
+        setError("");
+      }
+      track({ name: "impression_save", outcome: ambiguous ? "unknown" : errorStatus(failure) === 409 ? "conflict" : "rejected", operation: saved ? "edit" : "new" });
+    } finally { writingRecords.current = false; busy.current = false; if (mounted.current) setPending(false); }
   }
   async function remove() {
-    if (!editingInput || !saved || !userId || authRequired || busy.current) return;
+    if (!editingInput || !saved || !userId || !writable || readingRecords.current || conflict || busy.current) return;
     busy.current = true; setPending(true); setError("");
+    recordsVersion.current += 1;
+    writingRecords.current = true;
     try {
       const result = await impressionRequest<{ cursor: ImpressionRevisionCursor }>(`/api/season-impressions/${encodeURIComponent(editingInput.anime.id)}`, {
         method: "DELETE", headers: { "Content-Type": "application/json", "X-Impression-Owner": encodeURIComponent(userId) },
@@ -255,95 +326,144 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
       setDeletedRevisions((current) => [...current.filter((cursor) => cursor.animeId !== result.cursor.animeId), result.cursor]);
       const remaining = { ...draftRef.current }; delete remaining[editingInput.anime.id];
       keepDrafts(remaining, null);
-      clearAuthDraft(); setEditing(null); setMessage("確認記録を削除しました。公開済みの共有は、公開履歴から停止できます。");
+      clearAuthDraft(); setEditing(null); setView("card"); setSavedId(null); focusView.current = true;
+      setMessage("記録を削除しました。公開済みの共有は、公開履歴から停止できます。");
+      track({ name: "impression_save", outcome: "success", operation: "delete" });
     } catch (failure) {
       if (!mounted.current) return;
       setError(impressionError(failure));
-      if (errorStatus(failure) === 409) { setConflict(true); setLatestLoaded(false); }
       if (errorStatus(failure) === 401) setAuthRequired(true);
-    } finally { busy.current = false; if (mounted.current) setPending(false); }
+      const ambiguous = !errorStatus(failure) || errorStatus(failure)! >= 500;
+      if (ambiguous || errorStatus(failure) === 409) {
+        setReconciliations((current) => ({ ...current, [editingInput.anime.id]: { readVersion: null,
+          message: ambiguous ? "削除結果を確認できませんでした。最新の記録を確認してください。" : impressionError(failure) } }));
+        setError("");
+      }
+    } finally { writingRecords.current = false; busy.current = false; if (mounted.current) setPending(false); }
   }
   function defer() {
     if (!editingInput || pending) return;
-    setDeferred((current) => [...current.filter((id) => id !== editing), editingInput.anime.id]);
-    const next = unchecked.find((item) => item.id !== editing);
-    if (next) open(next); else setEditing(null);
-    setMessage("保存せず、このセッションの後ろへ回しました。");
+    setDismissed((current) => [...current, editingInput.anime.id]);
+    setEditing(null); focusView.current = true;
+    setMessage("今回は書かずに戻りました。入力は未保存です。");
+    track({ name: "impression_skip" });
   }
 
   return <>
     <DisplayModeToggle />
+    {storageError && <p role="alert">{storageError}</p>}
+    <p role="status" aria-live="polite">{message}</p>
+    {offline && <p role="alert">オフラインです。入力は保持しています。接続後に「保存する」を押してください。</p>}
+    {loadError && <div role="alert"><p>{loadError}</p><button type="button" onClick={() => void load()} disabled={loading || pending}>読み込みを再試行</button></div>}
+    {warning && <p>{warning}</p>}
+    {loading && <p role="status">作品と記録を読み込んでいます…</p>}
+    {!sharingActive && <div>
+      <h2 ref={viewHeading} tabIndex={-1}>{view === "search" ? "作品を選ぶ" : view === "card" ? "自分の今期カード" : recordsReady ? records.length ? "今日は、どの作品が心に残りましたか。" : "まず、見た作品から一言。" : "保存済みの記録を確認しています。"}</h2>
+      {view === "entry" && <>
+        {!loading && recordsReady && items.length > 0 && items.every((item) => records.some((record) => record.anime.id === item.id)) && <p>すべての作品を記録済みです。今の一言を書き直すこともできます。</p>}
+        <ul className="impressions-list" aria-label="一言を書く候補">
+          {visibleCandidates.map(({ anime: item, reason, airingAt }) => <li key={item.id}>
+            <button type="button" className="impressions-card" disabled={!recordsReady || authRequired} onClick={() => open(item)}>
+              <ImpressionArtwork anime={item} /><span className="impressions-card-text"><strong>{item.title}</strong>
+                <span>{reason === "draft" ? "書きかけ" : records.some((record) => record.anime.id === item.id) ? "記録済み" : "未記録"}</span>
+                {airingAt && <span>{impressionAiringLabel(airingAt)}</span>}
+              </span>
+            </button>
+          </li>)}
+        </ul>
+        {!loading && recordsReady && candidates !== null && !visibleCandidates.length && items.length > 0 && <p>候補への記入はここまで。作品を探すか、自分の今期カードを眺めましょう。</p>}
+        <div className="impressions-actions"><button type="button" onClick={() => changeView("search")}>作品を探す</button>
+          <button type="button" onClick={() => changeView("card")}>自分の今期カードを見る</button></div>
+      </>}
+      {!loading && !items.length && <p>このクールの作品はまだ表示できません。別のクールを選ぶか再試行してください。</p>}
+      {view === "search" && <section aria-label="作品の検索・選択">
+        <label className="impressions-search">作品名で検索<input type="search" value={query} onChange={(event) => { setQuery(event.target.value); setPage(0); }} /></label>
+        <div className="impressions-actions" aria-label="記録の絞り込み">
+          {([['all', 'すべて'], ['unchecked', '未記録'], ['saved', '記録済み']] as const).map(([value, label]) =>
+            <button type="button" key={value} aria-pressed={filter === value} disabled={value !== "all" && !recordsReady} onClick={() => { setFilter(value); setPage(0); }}>{label}</button>)}
+        </div>
+        {!loading && !exploration.total && <p role="status">条件に合う作品がありません。検索語や絞り込みを変えてください。</p>}
+        <ul className="impressions-list" aria-label="検索結果">{exploration.items.map((item) => {
+          const record = records.find((entry) => entry.anime.id === item.id);
+          return <li key={item.id}><button type="button" className={`impressions-card${record ? " impressions-card--checked" : ""}`} disabled={!recordsReady || authRequired} onClick={() => open(item)}>
+            <ImpressionArtwork anime={item} /><span className="impressions-card-text"><strong>{item.title}</strong>
+              {record?.note && <span className="impressions-note">{record.note}</span>}
+              {record?.rating && <span>今の印象：{IMPRESSION_RATING_LABELS[record.rating]}</span>}
+              <span>{!recordsReady ? "記録を確認できません" : record ? "記録済み・編集" : "未記録"}</span>
+            </span></button></li>;
+        })}</ul>
+        <div className="impressions-actions">
+          {page > 0 && <button type="button" onClick={() => setPage(page - 1)}>前の10作品</button>}
+          {(page + 1) * 10 < exploration.total && <button type="button" onClick={() => setPage(page + 1)}>次の10作品</button>}
+          <button type="button" onClick={() => changeView("entry")}>候補に戻る</button>
+          <button type="button" onClick={() => changeView("card")}>自分の今期カードを見る</button>
+        </div>
+      </section>}
+      {view === "card" && <ImpressionSeasonCard seasonKey={seasonKey} records={records} ready={recordsReady && !authRequired} savedId={savedId} onEdit={open}>
+        <div className="impressions-actions"><button type="button" onClick={() => changeView("entry")}>次の作品に一言</button>
+          <button type="button" onClick={() => { setSavedId(null); setMessage("今日はここまで。今期カードは、またここで見返せます。"); }}>今日はここまで</button></div>
+      </ImpressionSeasonCard>}
+    </div>}
     {!userId && <p>閲覧・入力できます。記録の保存にはGoogleログインが必要です。</p>}
     {(!userId || authRequired) && <div><p>ログイン中に入力した下書きは、元のアカウントで再ログインすると復元できます。</p>
       <button type="button" disabled={pending} onClick={() => {
         void signIn("google", { redirectTo: `/tier/impressions?year=${seasonKey.year}&season=${seasonKey.season}` })
           .catch((failure) => setStorageError(impressionError(failure)));
       }}>元のアカウントで再ログイン</button></div>}
-    {storageError && <p role="alert">{storageError}</p>}
-    <p role="status" aria-live="polite">{message || `${seasonHeadingJa(seasonKey)}：${records.length}作品を確認済み`}</p>
-    {loadError && <div role="alert"><p>{loadError}</p><button type="button" onClick={() => void load()} disabled={loading}>読み込みを再試行</button></div>}
-    {warning && <p>{warning}</p>}
-    {loading && <p role="status">作品と記録を読み込んでいます…</p>}
     {userId && <ImpressionSharing userId={userId} seasonKey={seasonKey} records={records} reloadRecords={readRecords}
-      recordsReady={recordsReady && !authRequired} hasDrafts={Object.keys(drafts).length > 0} />}
-    <div hidden={sharingActive}>
-    {unchecked.length > 0 && <button className="impressions-primary" type="button" disabled={!recordsReady} onClick={() => open(unchecked[0])}>続きから確認する</button>}
-    {!loading && !items.length && <p>このクールの作品はまだ表示できません。別のクールを選ぶか再試行してください。</p>}
-    <ul className="impressions-list">
-      {[...unchecked, ...items.filter((item) => records.some((record) => record.anime.id === item.id))].map((item) => {
-        const record = records.find((entry) => entry.anime.id === item.id);
-        return <li key={item.id}><button type="button" className={`impressions-card${record ? " impressions-card--checked" : ""}`}
-          disabled={!recordsReady} onClick={() => open(item)}>
-          <ImpressionArtwork anime={item} />
-          <span className="impressions-card-text"><strong>{item.title}</strong>
-            <span>{record ? "✓ 確認済み・編集" : "未確認・入力"}</span>
-            {record?.rating && <span>今の印象：{IMPRESSION_RATING_LABELS[record.rating]}</span>}
-          </span>
-        </button></li>;
-      })}
-    </ul>
-    </div>
+      recordsReady={recordsReady && !loading && !pending && !authRequired} hasDrafts={Object.keys(drafts).length > 0} entryVisible={view === "card"} offline={offline} onReturn={() => changeView("card")} />}
     <BottomSheet open={!!editingInput} onOpenChange={(openState) => { if (!openState && !busy.current) setEditing(null); }}
-      title={editingInput?.anime.title} initialFocusRef={ratingRef} className="impressions-sheet">
-      {editingInput && <form ref={editorRef} className="impressions-editor" onSubmit={(event) => { event.preventDefault(); void save(); }}>
-        <div className="impressions-editor-context">
-          <ImpressionArtwork anime={editingInput.anime} />
-          <div><strong>{saved ? "✓ 確認済み・編集中" : "未確認・入力中"}</strong><p>未保存の入力です。「保存して次へ」で確定します。</p></div>
-        </div>
-        <fieldset className="impressions-rating" disabled={pending}><legend>今の印象（任意）</legend>
-          {IMPRESSION_RATINGS.map((rating, index) => <label key={rating} data-selected={editingInput.rating === rating}>
-            <input ref={index === 0 ? ratingRef : undefined} type="radio" name="rating" checked={editingInput.rating === rating} onChange={() => update({ rating })} />{IMPRESSION_RATING_LABELS[rating]}</label>)}
-          <label data-selected={editingInput.rating === null}><input type="radio" name="rating" checked={editingInput.rating === null} onChange={() => update({ rating: null })} />評価なし・確認のみ</label>
-        </fieldset>
-        <label htmlFor="impression-note">一言（任意・140文字以内）</label>
-        <textarea id="impression-note" rows={3} value={editingInput.note ?? ""} disabled={pending}
-          aria-describedby="impression-note-count" aria-invalid={impressionNoteLength(editingInput.note ?? "") > 140}
+      title={editingInput?.anime.title} initialFocusRef={noteRef} className="impressions-sheet">
+      {editingInput && <form ref={editorRef} className="impressions-editor" onSubmit={(event) => event.preventDefault()}>
+        <label htmlFor="impression-note">いまの一言</label>
+        <textarea ref={noteRef} id="impression-note" rows={3} value={editingInput.note ?? ""} disabled={pending}
+          placeholder="好きだった場面、気になったこと。ひとことだけでも。"
+          aria-describedby="impression-note-count impression-note-privacy" aria-invalid={impressionNoteLength(editingInput.note ?? "") > 140}
           onChange={(event) => update({ note: event.target.value || null })} />
-        <span id="impression-note-count">{impressionNoteLength(editingInput.note ?? "")} / 140文字</span>
-        {editingInput.note && <><label htmlFor="impression-spoiler">ネタバレ区分</label>
-        <select id="impression-spoiler" value={editingInput.spoiler} disabled={pending} onChange={(event) => update({ spoiler: event.target.value as ImpressionInput["spoiler"] })}>
-          <option value="unspecified">未指定（本文は公開しない）</option><option value="no_spoiler">ネタバレなし</option><option value="has_spoiler">ネタバレあり（本文は公開しない）</option>
-        </select>
-        <p>一言は非公開で保存します。共有時に選択した「ネタバレなし」の一言だけ公開できます。</p></>}
-        {error && <p role="alert">{error}</p>}
+        <span id="impression-note-count">{impressionNoteLength(editingInput.note ?? "")} / 140文字（任意）</span>
+        {impressionNoteLength(editingInput.note ?? "") > 140 && <p role="alert">140文字以内にしてください。入力は保持しています。</p>}
+        {editingInput.note && <label className="impressions-spoiler"><input type="checkbox" checked={editingInput.spoiler === "no_spoiler"} disabled={pending}
+          onChange={(event) => update({ spoiler: event.target.checked ? "no_spoiler" : "unspecified" })} />ネタバレなし（共有時に選べます）</label>}
+        <p id="impression-note-privacy">一言は非公開で保存します。共有時に選択した「ネタバレなし」の一言だけ公開できます。</p>
+        <details key={editing} className="impressions-rating-disclosure"><summary>評価を添える（任意）</summary>
+          <fieldset className="impressions-rating" disabled={pending}><legend>今の印象（任意）</legend>
+            {IMPRESSION_RATINGS.map((rating) => <label key={rating} data-selected={editingInput.rating === rating}>
+              <input type="radio" name="rating" checked={editingInput.rating === rating} onChange={() => update({ rating })} />{IMPRESSION_RATING_LABELS[rating]}</label>)}
+            <label data-selected={editingInput.rating === null}><input type="radio" name="rating" checked={editingInput.rating === null} onChange={() => update({ rating: null })} />評価なし</label>
+          </fieldset>
+        </details>
+        <div className="impressions-editor-context"><ImpressionArtwork anime={editingInput.anime} />
+          <p>{saved ? "記録済み・編集中" : "未記録・入力中"}。未保存の入力です。「保存する」で確定します。</p></div>
+        {(error || reconciliation) && <p role="alert">{error || reconciliation?.message}</p>}
         {conflict && <div className="impressions-conflict">
-          <button type="button" disabled={pending} onClick={async () => {
-            setPending(true);
-            try { await readRecords(); setLatestLoaded(true); } catch (failure) { setError(impressionError(failure)); }
-            finally { setPending(false); }
+          <button type="button" disabled={pending || offline} onClick={async () => {
+            if (busy.current) return; busy.current = true; setPending(true);
+            try {
+              await readRecords();
+              if (mounted.current) {
+                setReconciliations((current) => ({ ...current, [editingInput.anime.id]: { ...current[editingInput.anime.id], readVersion: recordsVersion.current } }));
+                setError("");
+              }
+            } catch (failure) { if (mounted.current) setError(impressionError(failure)); }
+            finally { busy.current = false; if (mounted.current) setPending(false); }
           }}>入力を保持して最新の記録を確認</button>
           {latestLoaded && <><p>最新の記録：{saved ? `${saved.rating ? IMPRESSION_RATING_LABELS[saved.rating] : "評価なし"}／${saved.note ?? "一言なし"}` : "保存された記録はありません"}</p>
-            <button type="button" onClick={() => { update({ revision: saved?.revision ?? deletedRevisions.find((cursor) => cursor.animeId === editing)?.revision ?? 0 }); setConflict(false); setError(""); setConfirmDelete(false); }}>現在の入力で編集を続ける</button></>}
+            <button type="button" disabled={pending || !writable} onClick={() => {
+              if (busy.current || readingRecords.current || !writable || !latestLoaded) return;
+              update({ revision: saved?.revision ?? deletedRevisions.find((cursor) => cursor.animeId === editing)?.revision ?? 0 });
+              setReconciliations((current) => { const next = { ...current }; delete next[editingInput.anime.id]; return next; });
+              setError(""); setConfirmDelete(false);
+            }}>現在の入力で編集を続ける</button></>}
         </div>}
         <div className="impressions-actions">
-          <button type="button" onClick={defer} disabled={pending}>あとで（保存しない）</button>
-          {saved && !confirmDelete && <button type="button" disabled={pending || conflict} onClick={() => setConfirmDelete(true)}>確認記録を削除</button>}
-          {saved && confirmDelete && <><p>この作品の確認記録を削除します。公開済みURLは停止されません。</p>
-            <button type="button" disabled={pending || conflict} onClick={() => void remove()}>削除を確定する</button><button type="button" disabled={pending} onClick={() => setConfirmDelete(false)}>キャンセル</button></>}
+          <button type="button" onClick={defer} disabled={pending}>今回は書かない</button>
+          {saved && !confirmDelete && <button type="button" disabled={pending || conflict || !writable} onClick={() => setConfirmDelete(true)}>記録を削除</button>}
+          {saved && confirmDelete && <><p>この作品の記録を削除します。公開済みURLは停止されません。</p>
+            <button type="button" disabled={pending || conflict || !writable} onClick={() => void remove()}>削除を確定する</button><button type="button" disabled={pending} onClick={() => setConfirmDelete(false)}>キャンセル</button></>}
         </div>
         <div className="impressions-actions impressions-save-actions">
-          <button type="submit" className="impressions-primary" disabled={pending || conflict || (!recordsReady && !authRequired) || impressionNoteLength(editingInput.note ?? "") > 140}>
-            {pending ? "処理中…" : !userId || authRequired ? "Googleでログインして保存へ" : error ? "再試行して保存" : "保存して次へ"}
+          <button type="button" onClick={() => void save()} className="impressions-primary" disabled={pending || loading || offline || conflict || (!recordsReady && !authRequired) || impressionNoteLength(editingInput.note ?? "") > 140}>
+            {pending ? "処理中…" : !userId || authRequired ? "Googleでログインして保存へ" : !saved && !editingInput.note && !editingInput.rating ? "確認だけ記録する" : "保存する"}
           </button>
         </div>
       </form>}

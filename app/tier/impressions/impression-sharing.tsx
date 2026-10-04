@@ -10,18 +10,19 @@ import { buildImpressionSnapshot, type ImpressionSeason, type SeasonImpression, 
 import { seasonHeadingJa } from "@/lib/season";
 import { resolveSeasonQuery } from "@/lib/season-url";
 import { impressionError, impressionRequest } from "./impressions-request";
+import { IMPRESSION_SHARE_INITIAL_LIMIT, sortImpressionRecords } from "@/lib/season-impressions-view";
+import { track } from "@/lib/analytics";
 
 type Step = "select" | "preview" | "result" | "manage";
 const steps: Step[] = ["select", "preview", "result", "manage"];
 function statusOf(error: unknown) { return error instanceof Error ? (error as Error & { status?: number }).status : undefined; }
 
-export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, recordsReady, hasDrafts }: {
+export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, recordsReady, hasDrafts, entryVisible, offline, onReturn }: {
   userId: string; seasonKey: ImpressionSeason; records: SeasonImpression[]; reloadRecords: () => Promise<SeasonImpression[]>;
-  recordsReady: boolean; hasDrafts: boolean;
+  recordsReady: boolean; hasDrafts: boolean; entryVisible: boolean; offline: boolean; onReturn: () => void;
 }) {
   const requestedStep = useSearchParams().get("share");
   const [selections, setSelections] = useState<Record<string, ImpressionSelection>>({});
-  const [includeRating, setIncludeRating] = useState(false);
   const [preview, setPreview] = useState<{ input: ImpressionShareInput; snapshot: ImpressionSnapshot } | null>(null);
   const [shares, setShares] = useState<ImpressionShareHistory[]>([]);
   const [error, setError] = useState("");
@@ -41,6 +42,7 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
   const receipt = useRef<HTMLButtonElement>(null);
   const entry = useRef<HTMLButtonElement>(null);
   const previousStep = useRef<Step | null>(null);
+  const initialized = useRef(false);
   const step = steps.includes(requestedStep as Step) ? requestedStep as Step : null;
   // URLs hold only steps and seasons. Private selections and receipts stay in this owner/season mount.
   const validStep = step === "preview" && !preview ? "select" : step === "result" && !createdId ? "manage" : step;
@@ -69,6 +71,13 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
     else if (previousStep.current) entry.current?.focus();
     previousStep.current = validStep;
   }, [validStep]);
+  useEffect(() => {
+    if (validStep === "select" && recordsReady && !initialized.current) {
+      initialized.current = true;
+      setSelections(Object.fromEntries(sortImpressionRecords(records).slice(0, IMPRESSION_SHARE_INITIAL_LIMIT).map((record) => [record.anime.id,
+        { animeId: record.anime.id, revision: record.revision, includeNote: false, includeRating: false }])));
+    }
+  }, [validStep, recordsReady, records]);
 
   function requireLogin() {
     setAuthRequired(true); setSelections({}); setPreview(null); setCreatedId(null); setShares([]);
@@ -91,32 +100,36 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
     return () => { historyVersion.current += 1; };
   }, [validStep, authRequired, loadHistory]);
 
-  function selectRecords(selected: SeasonImpression[], withRating = includeRating) {
+  function selectRecords(selected: SeasonImpression[]) {
+    initialized.current = true;
     setSelections(Object.fromEntries(selected.map((record) => [record.anime.id, {
-      animeId: record.anime.id, revision: record.revision, includeRating: withRating, includeNote: false
+      animeId: record.anime.id, revision: record.revision, includeRating: false, includeNote: false
     }])));
     setPreview(null); setCreatedId(null); setError(""); setMessage(""); setConflict(false);
   }
   function start() {
     if (busy.current || !recordsReady || unknownResult) return;
-    setIncludeRating(false); selectRecords(records, false); navigate("select");
+    selectRecords(sortImpressionRecords(records).slice(0, IMPRESSION_SHARE_INITIAL_LIMIT)); navigate("select");
+    track({ name: "impression_share", action: "select", count: Math.min(records.length, IMPRESSION_SHARE_INITIAL_LIMIT) });
   }
-  function change(record: SeasonImpression, field: "selected" | "includeNote", value: boolean) {
+  function change(record: SeasonImpression, field: "selected" | "includeNote" | "includeRating", value: boolean) {
     setPreview(null); setCreatedId(null); setError("");
     setSelections((current) => {
       const copy = { ...current };
       if (field === "selected" && !value) delete copy[record.anime.id];
       else copy[record.anime.id] = { ...(copy[record.anime.id] ?? { animeId: record.anime.id, revision: record.revision,
-        includeRating, includeNote: false }), ...(field === "includeNote" ? { includeNote: value } : {}) };
+        includeRating: false, includeNote: false }), ...(field !== "selected" ? { [field]: value } : {}) };
       return copy;
     });
   }
   function makePreview() {
+    if (!recordsReady) return;
     const input: ImpressionShareInput = { kind: "season-impressions", ...seasonKey, selections: Object.values(selections) };
     if (!input.selections.length) { setError("公開する作品を選んでください。"); return; }
     const snapshot = buildImpressionSnapshot(input, records);
     if (!snapshot) { setConflict(true); setError("記録が変更されています。最新の記録を確認してください。"); return; }
     setPreview({ input, snapshot }); setError(""); setCreatedId(null); navigate("preview");
+    track({ name: "impression_share", action: "preview", count: input.selections.length });
   }
   async function refreshSelection() {
     if (busy.current) return;
@@ -137,7 +150,7 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
     } finally { busy.current = false; if (mounted.current) setPending(false); }
   }
   async function publish() {
-    if (!preview || busy.current || createdId || unknownResult || conflict || authRequired) return;
+    if (!preview || busy.current || createdId || unknownResult || conflict || authRequired || !recordsReady || offline) return;
     busy.current = true; setPending(true); setError("");
     try {
       const result = await impressionRequest<{ shareId: string }>("/api/shares", {
@@ -147,6 +160,7 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
       if (typeof result.shareId !== "string" || !/^[a-zA-Z0-9_-]+$/.test(result.shareId)) throw new Error("unknown result");
       setCreatedId(result.shareId); setMessage("共有URLを作成しました。公開内容はこの時点で固定されています。");
       navigate("result");
+      track({ name: "impression_share", action: "published", count: preview.input.selections.length });
     } catch (failure) {
       if (!mounted.current) return;
       const status = statusOf(failure);
@@ -155,10 +169,11 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
       else if (status === 429) setError("共有の作成が混み合っています。しばらく待ってから、もう一度公開してください。");
       else if (status && status >= 400 && status < 500) setError(impressionError(failure));
       else { setUnknownResult(true); setError("公開結果を確認できませんでした。重複作成を避けるため、共有の管理・履歴で作成済みのURLを確認してください。"); }
+      track({ name: "impression_share", action: status && status < 500 ? "rejected" : "unknown", count: preview.input.selections.length });
     } finally { busy.current = false; if (mounted.current) setPending(false); }
   }
   async function stop(shareId: string) {
-    if (busy.current || confirmStop !== shareId) return;
+    if (busy.current || confirmStop !== shareId || offline) return;
     busy.current = true; setPending(true); setHistoryError("");
     try {
       await impressionRequest(`/api/shares/${shareId}`, { method: "DELETE", headers: { "X-Impression-Owner": encodeURIComponent(userId) } });
@@ -166,6 +181,7 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
       setShares((current) => current.filter((share) => share.shareId !== shareId)); setConfirmStop(null);
       if (createdId === shareId) { setCreatedId(null); setPreview(null); }
       setMessage("公開を停止しました。このURLからは取得できません。");
+      track({ name: "impression_share", action: "revoked", count: 1 });
     } catch (failure) {
       if (mounted.current) { setHistoryError(impressionError(failure)); if (statusOf(failure) === 401) requireLogin(); }
     } finally { busy.current = false; if (mounted.current) setPending(false); }
@@ -177,7 +193,7 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
     } catch { if (mounted.current) setMessage("コピーできませんでした。共有リンクを開いてURLをコピーしてください。"); }
   }
 
-  return <section className="impressions-sharing" aria-labelledby="impressions-sharing-title">
+  return <section className="impressions-sharing" aria-labelledby="impressions-sharing-title" hidden={!validStep && !entryVisible}>
     <h2 id="impressions-sharing-title" ref={heading} tabIndex={-1}>{validStep === "manage" ? "共有の管理・履歴" : "今の保存済み記録を共有"}</h2>
     <p>{seasonHeadingJa(seasonKey)}・保存済み {recordsReady ? records.length : "—"}作品</p>
     {hasDrafts && <p>未保存の入力は共有に含まれません。</p>}
@@ -188,8 +204,8 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
       {!validStep && <><div className="impressions-actions">
         <button ref={entry} type="button" className="impressions-primary" disabled={!recordsReady || !records.length || pending || unknownResult} onClick={start}>今の{records.length}作品を共有</button>
         <button type="button" onClick={() => navigate("manage")}>共有の管理・履歴</button>
-      </div>{!recordsReady ? <p>保存済みの記録を確認してから共有できます。</p> : !records.length && <p>まず1作品を「保存して次へ」で保存すると共有できます。</p>}</>}
-      {validStep && <button type="button" disabled={pending} onClick={() => navigate(null)}>今期チェックに戻る</button>}
+      </div>{!recordsReady ? <p>保存済みの記録を確認してから共有できます。</p> : !records.length && <p>まず1作品を保存すると共有できます。</p>}</>}
+      {validStep && <button type="button" disabled={pending} onClick={() => { onReturn(); navigate(null); }}>自分の今期カードに戻る</button>}
       {validStep && validStep !== "manage" && <p className="impressions-steps" aria-label="共有の手順">
         <span aria-current={validStep === "select" ? "step" : undefined}>1 選択</span><span aria-current={validStep === "preview" ? "step" : undefined}>2 プレビュー</span><span aria-current={validStep === "result" ? "step" : undefined}>3 URL受領</span>
       </p>}
@@ -197,19 +213,16 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
         {!recordsReady ? <p>保存済みの記録を確認しています。</p> : <>
           <div className="impressions-actions"><button type="button" disabled={pending || unknownResult} onClick={() => selectRecords(records)}>保存済みをすべて選ぶ</button>
             <button type="button" disabled={pending || unknownResult} onClick={() => selectRecords(records.filter((record) => record.rating === "liked"))}>「好き」の作品を選ぶ</button></div>
-          <fieldset className="impressions-content" disabled={pending || unknownResult}><legend>公開する内容</legend>
-            {[false, true].map((value) => <label key={String(value)}><input type="radio" name="share-content" checked={includeRating === value} onChange={() => {
-              setIncludeRating(value); setPreview(null); setSelections((current) => Object.fromEntries(Object.entries(current).map(([id, selection]) => [id, { ...selection, includeRating: value }])));
-            }} />{value ? "作品と評価" : "作品のみ"}</label>)}
-          </fieldset>
+          <p>最近記録した最大6作品を選んでいます。最初は作品情報のみ。一言・評価は作品ごとに追加できます。</p>
           <p>一言は非公開です。「ネタバレなし」の一言だけ、作品ごとに追加できます。</p>
-          <div className="impressions-share-options">{records.map((record) => {
+          <div className="impressions-share-options">{sortImpressionRecords(records).map((record) => {
             const selection = selections[record.anime.id];
             const canPublishNote = record.spoiler === "no_spoiler" && !!record.note;
             return <fieldset key={record.anime.id} disabled={pending || unknownResult}>
               <legend>{record.anime.title}</legend>
               <label className="impressions-select-row"><input type="checkbox" checked={!!selection} onChange={(event) => change(record, "selected", event.target.checked)} />この作品を公開<span>{record.anime.title}</span></label>
               <label><input type="checkbox" disabled={!selection || !canPublishNote} checked={canPublishNote && (selection?.includeNote ?? false)} onChange={(event) => change(record, "includeNote", event.target.checked)} />一言も公開</label>
+              <label><input type="checkbox" disabled={!selection || !record.rating} checked={selection?.includeRating ?? false} onChange={(event) => change(record, "includeRating", event.target.checked)} />評価も公開</label>
               {!canPublishNote && <p>一言は非公開（未入力・未指定・ネタバレあり）</p>}
             </fieldset>;
           })}</div>
@@ -218,13 +231,13 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
         </>}
       </>}
       {validStep === "preview" && preview && <section className="impressions-preview" aria-label="公開内容のプレビュー">
-        <h3>公開内容のプレビュー</h3><p>{seasonHeadingJa(preview.snapshot)} 今期チェック</p>
+        <h3>公開内容のプレビュー</h3>
         <ImpressionSnapshotView snapshot={preview.snapshot} />
         <p>URLを知っている人が見られます。</p>
         <p>公開後に記録を編集・削除しても、この共有の内容は変わりません。</p>
         <p>公開はあとから停止できます。コメント・リアクションはありません。</p>
         <div className="impressions-actions"><button type="button" disabled={pending} onClick={() => navigate("select")}>選択に戻る</button>
-          {createdId ? <button type="button" onClick={() => navigate("result")}>作成済みのURLを確認</button> : <button className="impressions-primary" type="button" disabled={pending || conflict || unknownResult} onClick={() => void publish()}>{pending ? "公開しています…" : "この内容で公開URLを作成"}</button>}</div>
+          {createdId ? <button type="button" onClick={() => navigate("result")}>作成済みのURLを確認</button> : <button className="impressions-primary" type="button" disabled={pending || conflict || unknownResult || !recordsReady || offline} onClick={() => void publish()}>{pending ? "公開しています…" : "この内容で公開URLを作成"}</button>}</div>
       </section>}
       {validStep === "result" && createdId && <div className="impressions-receipt">
         <p>共有URLを作成しました。</p>
@@ -248,9 +261,9 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
             <div className="impressions-actions"><button type="button" onClick={() => void copy(share.shareId)}>URLをコピー</button>
               <button type="button" disabled={pending} onClick={() => setConfirmStop(share.shareId)}>公開を停止</button></div>
             {confirmStop === share.shareId && <div role="group" aria-label="公開停止の確認"><p>この共有の公開を停止しますか？URLから見られなくなります。</p>
-              <button type="button" disabled={pending} onClick={() => void stop(share.shareId)}>公開停止を確定する</button><button type="button" disabled={pending} onClick={() => setConfirmStop(null)}>キャンセル</button></div>}
+              <button type="button" disabled={pending || offline} onClick={() => void stop(share.shareId)}>公開停止を確定する</button><button type="button" disabled={pending} onClick={() => setConfirmStop(null)}>キャンセル</button></div>}
           </li>)}</ul>
-          {unknownResult && <button type="button" disabled={pending || !recordsReady} onClick={() => { setUnknownResult(false); setError(""); selectRecords(records); navigate("select"); }}>履歴を確認して選び直す</button>}
+          {unknownResult && <button type="button" disabled={pending || !recordsReady} onClick={() => { setUnknownResult(false); setError(""); selectRecords(sortImpressionRecords(records).slice(0, IMPRESSION_SHARE_INITIAL_LIMIT)); navigate("select"); }}>履歴を確認して選び直す</button>}
         </>}
       </>}
       <p role="status">{message}</p>

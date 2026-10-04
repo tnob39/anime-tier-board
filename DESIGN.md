@@ -246,3 +246,15 @@ Forms:
 5. Tighten dashboard visual hierarchy and state messaging (dashboard remains **outside** Bottom Nav; entry via mypage).
 6. Audit accessibility for keyboard movement, focus management, contrast, **visible** labels, and live announcements.
 7. Keep Visual / Simple as same-function display modes; never reintroduce simple/pro IA splits.
+
+## 今期チェック / Personal Season Card (#785)
+
+These rules apply only to `/tier/impressions` and `/share/impressions/*`.
+
+- Start with 「まず、見た作品から一言。」 or 「今日は、どの作品が心に残りましたか。」 and at most three session-fixed candidates. Keep full-catalog search in a separate selection view, ten results per page. Use 「未記録」 / 「記録済み」, never viewing-completion labels.
+- Put 「いまの一言」 first and focus it. Keep rating collapsed under 「評価を添える（任意）」. Saving and publishing always require explicit actions. Note edits reset the separate no-spoiler confirmation.
+- After a successful save, show the saved personal card and growth copy. Offer 「次の作品に一言」 / 「今日はここまで」 without opening another editor or replenishing candidates. Show recorded count only; no total denominator, streak, badge, sound or confetti.
+- The personal card is 「YYYY年X、いまのわたし」. Put saved text before optional rating. Sharing begins here with the most recently updated six works selected, item information only. Opt into note and rating separately for each work.
+- Preview and public cards use the same renderer: season/publication date, title, opted-in note, optional rating. Do not render 「✓確認済み」 or 「評価なし」. Impression shares have no comments or reactions; the general shared-board social rules above do not apply.
+- Use white surfaces, thin neutral borders, 8px corners and 16px mobile side padding. Text and all actions must remain reachable at 375×812 and 375×380 with 200% text. Tap targets are at least 44px. Simple has no image DOM, image request or empty image slot; Visual uses small recognition artwork and removes failed images entirely.
+- Airing labels use only supplied recent-episode timestamps within the previous 48 hours, formatted in JST as 「放送情報：10/3 00:30（参考）」. Never infer broadcast times or claim 「新着」 / 「今日放送」 / 「配信開始」. This data belongs only to client candidate derivation.
