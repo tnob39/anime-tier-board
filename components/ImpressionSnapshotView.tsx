@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { useDisplayMode } from "@/components/display-mode/DisplayModeProvider";
 import { IMPRESSION_RATING_LABELS, type ImpressionAnime, type ImpressionSnapshot } from "@/lib/season-impressions-model";
+import { seasonHeadingJa } from "@/lib/season";
 
 export function ImpressionArtwork({ anime }: { anime: ImpressionAnime }) {
   const { hydrated, mode } = useDisplayMode();
@@ -13,16 +14,18 @@ export function ImpressionArtwork({ anime }: { anime: ImpressionAnime }) {
     onError={() => setFailedUrl(anime.imageUrl)} />;
 }
 
-export function ImpressionSnapshotView({ snapshot }: { snapshot: ImpressionSnapshot }) {
-  return <ul className="impressions-list">
+export function ImpressionSnapshotView({ snapshot, publishedAt }: { snapshot: ImpressionSnapshot; publishedAt?: string }) {
+  return <section className="impressions-public-card" aria-label="共有カード">
+    <p>{seasonHeadingJa(snapshot)}、いまのわたし</p>
+    <p>{publishedAt ? <><time dateTime={publishedAt}>{new Date(publishedAt).toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })}</time> 公開</> : "公開日：公開時に記録されます"}</p>
+    <ul className="impressions-list">
     {snapshot.items.map((item) => <li className="impressions-card impressions-card--checked" key={item.anime.id}>
       <ImpressionArtwork anime={item.anime} />
       <div className="impressions-card-text">
         <h3>{item.anime.title}</h3>
-        <span>✓ 確認済み</span>
-        {item.rating !== undefined && <p>今の印象：{item.rating === null ? "評価なし" : IMPRESSION_RATING_LABELS[item.rating]}</p>}
         {item.note !== undefined && <p className="impressions-note">{item.note}</p>}
+        {item.rating && <p>今の印象：{IMPRESSION_RATING_LABELS[item.rating]}</p>}
       </div>
     </li>)}
-  </ul>;
+  </ul></section>;
 }

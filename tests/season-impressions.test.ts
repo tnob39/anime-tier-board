@@ -425,7 +425,8 @@ test("dedicated public page HTML/metadata contains only snapshot fields and revo
   const tree = await Page({ params: Promise.resolve({ shareId }) });
   const html = renderToStaticMarkup(React.createElement(DisplayModeProvider, null, tree));
   assert.match(html, /日本語の作品/);
-  assert.match(html, /確認済み/);
+  assert.doesNotMatch(html, /確認済み|評価なし/);
+  assert.match(html, /2026年秋、いまのわたし/);
   assert.doesNotMatch(html, /PRIVATE_SPOILER_HTML|<textarea|reaction|comments|<img/);
   assert.doesNotMatch(JSON.stringify(metadata), /PRIVATE_SPOILER_HTML|日本語の作品/);
   assert.equal((metadata.robots as { index: boolean }).index, false);
