@@ -659,6 +659,91 @@ test("Visual/Simple parity, 200% text, keyboard-sized viewport and season switch
   } finally { await h.close(); }
 });
 
+test("size hierarchy is deterministic across entry, search, editor, personal card and share flow", async () => {
+  const longTitle = "とても長い日本語タイトルでも作品名を主役として折り返しながら読みやすさを保つ今期チェック検証作品";
+  const item = anime("anilist-1", longTitle);
+  const h = await harness({ mode: "visual", items: [item, candidates[1]], initialRecords: [record(item, {
+    note: "カード本文は補足情報より大きく読みやすく表示する", rating: "liked", spoiler: "no_spoiler"
+  })] });
+  const { page } = h;
+  try {
+    const px = async (locator, property) => Number.parseFloat(await locator.evaluate((element, property) => getComputedStyle(element)[property], property));
+    const bounded = async () => assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    const assertControl = async (locator, expectedHeight = 44) => {
+      const box = await locator.boundingBox();
+      assert.ok(box.width >= 44 && box.height >= expectedHeight && box.height < 60, JSON.stringify(box));
+    };
+
+    assert.equal(await px(page.locator(".impressions-page"), "fontSize"), 16);
+    const candidate = page.getByRole("button", { name: new RegExp(longTitle) });
+    let box = await candidate.boundingBox();
+    assert.ok(box.height >= 104 && box.height < 120, JSON.stringify(box));
+    assert.equal(await px(candidate.locator("strong"), "fontSize"), 16);
+    assert.equal(await px(candidate.locator(".impressions-card-text > :last-child"), "fontSize"), 12);
+    for (const action of await page.locator(".impressions-entry-actions button").all()) {
+      const actionBox = await action.boundingBox();
+      assert.ok(actionBox.height >= 48 && actionBox.height < 60, JSON.stringify(actionBox));
+      assert.ok(actionBox.width >= 300, JSON.stringify(actionBox));
+    }
+    await bounded();
+
+    await page.getByRole("button", { name: "作品を探す", exact: true }).click();
+    await assertControl(page.getByLabel("作品名で検索"));
+    for (const button of await page.getByRole("group", { name: "記録の絞り込み" }).getByRole("button").all()) await assertControl(button);
+    await page.getByRole("button", { name: new RegExp(longTitle) }).click();
+    const dialog = page.getByRole("dialog");
+    assert.equal(await px(dialog.locator(".impressions-editor"), "fontSize"), 16);
+    await assertControl(dialog.getByRole("button", { name: "保存する", exact: true }), 48);
+    await assertControl(dialog.getByRole("button", { name: "今回は書かない", exact: true }));
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "自分の今期カードを見る" }).click();
+    box = await page.getByRole("button", { name: new RegExp(longTitle) }).boundingBox();
+    assert.ok(box.height >= 104 && box.height < 160, JSON.stringify(box));
+    const share = page.getByRole("button", { name: "今の1作品を共有" });
+    await assertControl(share, 48);
+    await share.click();
+    await assertControl(page.getByRole("button", { name: "公開内容をプレビュー" }), 48);
+    await page.getByLabel("一言も公開").check();
+    await page.getByLabel("評価も公開").check();
+    await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
+    const publicCard = page.getByRole("region", { name: "共有カード" });
+    assert.equal(await px(publicCard, "fontSize"), 16);
+    assert.equal(await px(publicCard.locator("h3"), "fontSize"), 16);
+    assert.ok(await px(publicCard.locator(".impressions-note"), "fontSize") >= 14);
+    assert.equal(await px(publicCard.locator(".impressions-meta").last(), "fontSize"), 12);
+    await assertControl(page.getByRole("button", { name: "この内容で公開URLを作成" }), 48);
+    await bounded();
+
+    await page.addStyleTag({ content: ".impressions-page { font-size: 200%; }" });
+    await bounded();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await bounded();
+    const desktopCard = await publicCard.locator(".impressions-card").boundingBox();
+    assert.ok(desktopCard.height >= 108 && desktopCard.width < 600, JSON.stringify(desktopCard));
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.evaluate(() => {
+      const nav = document.createElement("nav");
+      nav.className = "mobile-bottom-nav";
+      nav.dataset.sizeProbe = "five-items";
+      for (const label of ["ホーム", "今期チェック", "さがす", "マイリスト", "マイページ"]) {
+        const link = document.createElement("a");
+        link.className = `mobile-bottom-nav-link${label === "今期チェック" ? " mobile-bottom-nav-tier" : ""}`;
+        link.innerHTML = `<span class="mobile-nav-icon-wrap">□</span><span${label === "今期チェック" ? ' class="mobile-nav-tier-label"' : ""}>${label}</span>`;
+        nav.append(link);
+      }
+      document.body.append(nav);
+    });
+    const labels = page.locator('[data-size-probe="five-items"] .mobile-bottom-nav-link > span:last-child');
+    assert.equal(await labels.count(), 5);
+    for (const label of await labels.all()) {
+      assert.ok(await label.evaluate((element) => element.scrollWidth <= element.clientWidth), await label.textContent());
+    }
+    await bounded();
+  } finally { await h.close(); }
+});
+
 test("season controls cancel cleanly and save/delete/share all use the canonical selection", async () => {
   const h = await harness();
   const { page, state } = h;
