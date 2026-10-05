@@ -1,5 +1,6 @@
 import type { AnimeAiringInfo } from "@/lib/types";
-import type { ImpressionAnime, ImpressionInput, SeasonImpression } from "@/lib/season-impressions-model";
+import type { ImpressionAnime, ImpressionInput, ImpressionSeason, SeasonImpression } from "@/lib/season-impressions-model";
+import { getJstDateParts, jstStartUtc, nextSeason, seasonStartUtc } from "@/lib/season";
 
 export const IMPRESSION_CANDIDATE_LIMIT = 3;
 export const IMPRESSION_PAGE_SIZE = 10;
@@ -8,13 +9,75 @@ const RECENT_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 export type ImpressionCandidate = { anime: ImpressionAnime; reason: "draft" | "airing" | "saved" | "unchecked"; airingAt?: string };
 export type ImpressionAiring = { id: string; airing?: AnimeAiringInfo | null };
+export type ImpressionDayCandidate = { anime: ImpressionAnime; airingAt: string };
+
+function strictTimestamp(value: string): number {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-](\d{2}):(\d{2}))$/.exec(value);
+  if (!match) return NaN;
+  const [, year, month, day, hour, minute, second, zone, offsetHour, offsetMinute] = match;
+  const numbers = [year, month, day, hour, minute, second, offsetHour ?? "0", offsetMinute ?? "0"].map(Number);
+  const [y, m, d, h, min, sec, oh, om] = numbers;
+  if (m < 1 || m > 12 || d < 1 || d > new Date(Date.UTC(y, m, 0)).getUTCDate()
+    || h > 23 || min > 59 || sec > 59 || oh > 23 || om > 59) return NaN;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+export function jstDateKey(value: string | number | Date): string | null {
+  if (typeof value === "string" && !Number.isFinite(strictTimestamp(value))) return null;
+  if (typeof value === "number" && !Number.isFinite(value)) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  const { year, month, day } = getJstDateParts(date);
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export function shiftDateKey(dateKey: string, days: number): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !Number.isInteger(days)) return null;
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = jstStartUtc(year, month, day);
+  if (jstDateKey(date) !== dateKey) return null;
+  return jstDateKey(new Date(date.getTime() + days * 86_400_000));
+}
+
+export function impressionWeek(dateKey: string): string[] {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = jstStartUtc(year, month, day);
+  if (jstDateKey(date) !== dateKey) return [];
+  const jstWeekday = new Date(date.getTime() + 9 * 60 * 60 * 1000).getUTCDay();
+  const monday = shiftDateKey(dateKey, -((jstWeekday + 6) % 7))!;
+  return Array.from({ length: 7 }, (_, index) => shiftDateKey(monday, index)!);
+}
+
+export function clampDateToSeason(dateKey: string | null, season: ImpressionSeason, now = new Date()): string {
+  const start = jstDateKey(seasonStartUtc(season))!;
+  const end = shiftDateKey(jstDateKey(seasonStartUtc(nextSeason(season)))!, -1)!;
+  const fallback = jstDateKey(now)!;
+  const candidate = dateKey && shiftDateKey(dateKey, 0) ? dateKey : fallback;
+  return candidate < start ? start : candidate > end ? end : candidate;
+}
+
+/** Assign only supplied episode instants; never infer a recurring schedule. */
+export function impressionCandidatesForDate(catalog: readonly ImpressionAnime[], airing: readonly ImpressionAiring[], dateKey: string): ImpressionDayCandidate[] {
+  if (!shiftDateKey(dateKey, 0)) return [];
+  const animeById = new Map(catalog.map((anime) => [anime.id, anime]));
+  const result = new Map<string, ImpressionDayCandidate>();
+  for (const item of airing) {
+    if (typeof item.id !== "string" || !/^(?:anilist|jikan)-[1-9]\d*$/.test(item.id)) continue;
+    const anime = animeById.get(item.id);
+    if (!anime) continue;
+    const episodes = [...(Array.isArray(item.airing?.recentEpisodes) ? item.airing.recentEpisodes : []), ...(item.airing?.nextEpisode ? [item.airing.nextEpisode] : [])];
+    const values = episodes.filter((episode) => episode && Number.isSafeInteger(episode.episode) && episode.episode > 0
+      && typeof episode.airingAt === "string" && timestamp(episode.airingAt) < Number.POSITIVE_INFINITY
+      && jstDateKey(episode.airingAt) === dateKey).map((episode) => episode.airingAt).sort((a, b) => timestamp(a) - timestamp(b));
+    const current = result.get(anime.id);
+    if (values[0] && (!current || timestamp(values[0]) < timestamp(current.airingAt))) result.set(anime.id, { anime, airingAt: values[0] });
+  }
+  return [...result.values()].sort((a, b) => timestamp(a.airingAt) - timestamp(b.airingAt) || byId(a.anime, b.anime));
+}
 
 function timestamp(value: string): number {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);
-  if (!match) return NaN;
-  const [, year, month, day] = match.map(Number);
-  if (month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) return NaN;
-  return Date.parse(value);
+  return strictTimestamp(value);
 }
 const byId = (a: { id: string }, b: { id: string }) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 
@@ -52,8 +115,7 @@ export function deriveImpressionCandidates({ catalog, records, drafts, airing = 
 }
 
 export function impressionAiringLabel(value: string): string {
-  const parts = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value));
-  return `放送情報：${parts}（参考）`;
+  return new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value));
 }
 
 export function searchImpressionCatalog(items: readonly ImpressionAnime[], records: readonly SeasonImpression[], query: string,

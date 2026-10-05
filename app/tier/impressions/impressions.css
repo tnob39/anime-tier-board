@@ -1,6 +1,6 @@
 .impressions-page { max-width: 920px; margin: 0 auto; padding: 16px 16px calc(112px + env(safe-area-inset-bottom, 0px)); color: var(--ink); font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
-.impressions-page h1 { margin-block: 8px 12px; font-size: 26px; line-height: 1.25; letter-spacing: -0.02em; }
-.impressions-page h2 { margin-block: 24px 12px; font-size: 21px; line-height: 1.35; letter-spacing: -0.01em; }
+.impressions-page h1 { margin: 0; font-size: 26px; line-height: 1.25; letter-spacing: -0.02em; }
+.impressions-page h2 { margin-block: 18px 8px; font-size: 19px; line-height: 1.35; letter-spacing: -0.01em; }
 .impressions-page h3 { font-size: 16px; line-height: 1.4; }
 .impressions-page p, .impressions-editor p { line-height: 1.7; }
 .impressions-page button, .impressions-page input:not([type="checkbox"]), .impressions-page select,
@@ -17,7 +17,25 @@
 .impressions-season { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-block: 16px; }
 .impressions-season-field { display: grid; gap: 4px; font-size: 14px; }
 .impressions-season input { width: 7em; min-width: 0; }
+.impressions-header { margin: 14px 0 8px; }
+.impressions-header p { margin: 2px 0 0; color: var(--ink-secondary); font-size: 13px; }
+.impressions-settings { margin-bottom: 8px; color: var(--ink-secondary); font-size: 13px; }
+.impressions-settings > summary { min-height: 44px; display: flex; align-items: center; width: fit-content; cursor: pointer; }
+.impressions-settings-content { padding: 8px 0 12px; border-top: 1px solid var(--line); }
+.impressions-settings .season-context-status { margin: 0; font-weight: 700; }
+.impressions-settings .season-context-note { display: none; }
+.impressions-settings .display-mode-toggle { margin-top: 8px; }
 .impressions-page .display-mode-toggle__btn[aria-pressed="true"] { border-color: var(--ink); background: var(--surface-muted); font-weight: 700; }
+.impressions-date-nav { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px; align-items: stretch; margin-inline: -4px; }
+.impressions-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; min-width: 0; }
+.impressions-page .impressions-date-nav button { min-width: 0; padding: 4px 1px; border-color: transparent; font-size: 11px; }
+.impressions-week button { display: grid; place-content: center; gap: 1px; }
+.impressions-week button strong { font-size: 11px; white-space: nowrap; }
+.impressions-week button[aria-current="date"] { border-color: var(--focus); background: var(--surface-muted); color: var(--focus); }
+.impressions-reference { margin: 4px 0 6px; color: var(--ink-secondary); font-size: 11px; }
+.impressions-time { color: var(--ink); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.impressions-empty { padding: 10px 0; border-block: 1px solid var(--line); }
+.impressions-empty p { margin-top: 0; }
 .impressions-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; list-style: none; padding: 0; margin-block: 16px; }
 .impressions-list > li { min-width: 0; }
 .impressions-page .impressions-card, .impressions-public-card .impressions-card { display: flex; gap: 12px; align-items: center; width: 100%; min-width: 0; min-height: 104px; padding: 8px 12px; text-align: left; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
@@ -91,6 +109,8 @@
 }
 @media (max-width: 480px) {
   .impressions-entry-actions > button { flex-basis: 100%; min-height: 48px; }
+  .impressions-page { padding-top: 8px; }
+  .impressions-page .impressions-card { min-height: 88px; }
 }
 @media (min-width: 768px) {
   .impressions-page { padding: 24px 24px 64px; }
