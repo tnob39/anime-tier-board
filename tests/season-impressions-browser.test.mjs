@@ -30,8 +30,12 @@ before(async () => {
 });
 after(async () => { await browser?.close(); });
 
-const anime = (id, title) => ({ id, source: "anilist", title, imageUrl: "https://s4.anilist.co/cover.jpg" });
-const candidates = [anime("anilist-1", "日本語アニメ一"), anime("anilist-2", "日本語アニメ二")];
+const airingFixture = {
+  recentEpisodes: [{ episode: 1, airingAt: "2026-10-05T00:30:00+09:00" }],
+  nextEpisode: { episode: 2, airingAt: "2026-10-12T00:30:00+09:00" }
+};
+const anime = (id, title, airing = null) => ({ id, source: "anilist", title, imageUrl: "https://s4.anilist.co/cover.jpg", ...(airing ? { airing } : {}) });
+const candidates = [anime("anilist-1", "日本語アニメ一", airingFixture), anime("anilist-2", "日本語アニメ二", airingFixture)];
 function record(item = candidates[0], extra = {}) {
   return { year: 2026, season: "FALL", anime: item, revision: 1, note: null, rating: null, spoiler: "unspecified", checkedAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z", ...extra };
 }
@@ -93,7 +97,7 @@ async function harness({ guest = false, mode = "simple", initialRecords = [], wi
     return route.abort();
   });
   // Every URL is fulfilled/aborted in-process; there is no HTTP server or outbound request.
-  await page.goto("https://impressions.test/test?year=2026&season=FALL");
+  await page.goto("https://impressions.test/test?year=2026&season=FALL&date=2026-10-05");
   await page.evaluate(({ guest, mode }) => {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (text) => { window.copiedUrl = text; } } });
     localStorage.setItem("numanie-display-mode", mode);
@@ -104,7 +108,7 @@ async function harness({ guest = false, mode = "simple", initialRecords = [], wi
   await page.addStyleTag({ content: styles });
   await page.addScriptTag({ content: bundle });
   await expect(page.getByRole("heading", { name: "今期チェック", exact: true })).toBeVisible();
-  if (privateStatus === 200 && ((catalogStatus === 200 && items.length) || initialRecords.length)) await expect(page.getByRole("list", { name: "一言を書く候補" }).getByRole("button").first()).toBeEnabled();
+  if (privateStatus === 200 && catalogStatus === 200 && items.some((item) => item.airing)) await expect(page.getByRole("list", { name: "一言を書く候補" }).getByRole("button").first()).toBeEnabled();
   else await expect(page.getByText("作品と記録を読み込んでいます…", { exact: true })).toHaveCount(0);
   return { page, state, errors, close: async () => { assert.deepEqual(errors, []); await context.close(); } };
 }
@@ -128,7 +132,7 @@ test("375px Simple: retry retains draft/card, save alone activates, reopen/edit/
     await dialog.getByRole("button", { name: /^(保存する|確認だけ記録する)$/ }).click();
     await expect(dialog.getByRole("alert")).toContainText("保存結果を確認できませんでした");
     await expect(dialog.getByLabel("いまの一言")).toHaveValue("保持する😀感想");
-    await expect(page.getByRole("button", { name: /日本語アニメ一.*未記録/ })).toHaveClass("impressions-card");
+    await expect(page.getByRole("button", { name: /日本語アニメ一.*書きかけ/ })).toHaveClass("impressions-card");
     state.failSave = false;
     await dialog.getByRole("button", { name: "入力を保持して最新の記録を確認" }).click();
     await dialog.getByRole("button", { name: "現在の入力で編集を続ける" }).click();
@@ -184,6 +188,7 @@ for (const operation of ["save", "delete"]) {
     const h = await harness({ initialRecords: [original], catalogStatus: 503 });
     const { page, state } = h;
     try {
+      await viewCard(page);
       const held = [];
       await page.route("**/api/season-impressions?year=2026&season=FALL", (route) => { held.push(route); });
       // Two queued retries can overlap before React commits the disabled button.
@@ -212,16 +217,17 @@ for (const operation of ["save", "delete"]) {
       await Promise.all([held[0].fulfill({ json: { impressions: [original], deletedRevisions: [] } }), finished]);
       await expect(page.getByText(`${operation === "save" ? 1 : 0}作品を記録`, { exact: true })).toBeVisible();
       await expect(page.getByText("OLDER_RECORD", { exact: true })).toHaveCount(0);
-      if (operation === "save") await page.getByRole("button", { name: /日本語アニメ一.*SUCCESSFUL_SAVE/ }).click();
-      else {
-        await page.getByRole("button", { name: "次の作品に一言", exact: true }).click();
-        await page.getByRole("button", { name: /日本語アニメ一/ }).click();
+      if (operation === "save") {
+        await page.getByRole("button", { name: /日本語アニメ一.*SUCCESSFUL_SAVE/ }).click();
+        await expect(dialog.getByLabel("いまの一言")).toHaveValue("SUCCESSFUL_SAVE");
+        await dialog.getByLabel("いまの一言").fill("NEXT_EXPLICIT_SAVE");
+        await dialog.getByRole("button", { name: "保存する", exact: true }).click();
+        await expect(dialog).toHaveCount(0);
+        assert.equal(state.writes[1].body.revision, 2, "saved revision survives the late GET");
+      } else {
+        await expect(page.getByText("0作品を記録", { exact: true })).toBeVisible();
+        assert.equal(state.writes.length, 1, "late GET must not recreate or resend a deleted record");
       }
-      await expect(dialog.getByLabel("いまの一言")).toHaveValue(operation === "save" ? "SUCCESSFUL_SAVE" : "");
-      await dialog.getByLabel("いまの一言").fill("NEXT_EXPLICIT_SAVE");
-      await dialog.getByRole("button", { name: "保存する", exact: true }).click();
-      await expect(dialog).toHaveCount(0);
-      assert.equal(state.writes[1].body.revision, 2, "saved revision or deletion tombstone survives the late GET");
     } finally { await h.close(); }
   });
 }
@@ -231,6 +237,7 @@ test("reload blocks an open editor's save/delete handlers until both records and
   const h = await harness({ initialRecords: [original], catalogStatus: 503 });
   const { page, state } = h;
   try {
+    await viewCard(page);
     await page.getByRole("button", { name: /日本語アニメ一/ }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("いまの一言").fill("保持する入力");
@@ -634,6 +641,7 @@ test("Visual/Simple parity, 200% text, keyboard-sized viewport and season switch
     await expect(page.locator("img")).toHaveCount(2);
     assert.ok(state.images > 0);
     await page.screenshot({ path: path.join(output, "mobile-visual.png"), fullPage: true });
+    await page.getByText("期と表示を変更", { exact: true }).click();
     await page.getByRole("button", { name: "Simple", exact: true }).click();
     await expect(page.locator("img")).toHaveCount(0);
     const count = state.images;
@@ -661,7 +669,7 @@ test("Visual/Simple parity, 200% text, keyboard-sized viewport and season switch
 
 test("size hierarchy is deterministic across entry, search, editor, personal card and share flow", async () => {
   const longTitle = "とても長い日本語タイトルでも作品名を主役として折り返しながら読みやすさを保つ今期チェック検証作品";
-  const item = anime("anilist-1", longTitle);
+  const item = anime("anilist-1", longTitle, airingFixture);
   const h = await harness({ mode: "visual", items: [item, candidates[1]], initialRecords: [record(item, {
     note: "カード本文は補足情報より大きく読みやすく表示する", rating: "liked", spoiler: "no_spoiler"
   })] });
@@ -679,7 +687,7 @@ test("size hierarchy is deterministic across entry, search, editor, personal car
     let box = await candidate.boundingBox();
     assert.ok(box.height >= 104 && box.height < 120, JSON.stringify(box));
     assert.equal(await px(candidate.locator("strong"), "fontSize"), 16);
-    assert.equal(await px(candidate.locator(".impressions-card-text > :last-child"), "fontSize"), 12);
+    assert.equal(await px(candidate.locator(".impressions-card-text > :last-child"), "fontSize"), 15);
     for (const action of await page.locator(".impressions-entry-actions button").all()) {
       const actionBox = await action.boundingBox();
       assert.ok(actionBox.height >= 48 && actionBox.height < 60, JSON.stringify(actionBox));
@@ -751,14 +759,16 @@ test("season controls cancel cleanly and save/delete/share all use the canonical
     await page.getByRole("button", { name: /日本語アニメ一/ }).click();
     await page.getByRole("dialog").getByLabel("いまの一言").fill("秋の下書き");
     await page.keyboard.press("Escape");
+    await page.getByText("期と表示を変更", { exact: true }).click();
     page.once("dialog", (dialog) => dialog.dismiss());
     await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2025");
     await expect(page.getByRole("combobox", { name: "年", exact: true })).toHaveValue("2026");
-    await expect(page).toHaveURL(/year=2026&season=FALL$/);
+    await expect(page).toHaveURL(/year=2026&season=FALL&date=2026-10-05$/);
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2025");
     await page.getByRole("combobox", { name: "クール", exact: true }).selectOption("SUMMER");
     await expect(page.locator("[data-season-heading]")).toHaveText("選択中の期（2025年夏）");
+    await page.getByRole("button", { name: "作品を探す", exact: true }).click();
     await page.getByRole("button", { name: /日本語アニメ一/ }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByLabel("いまの一言")).toHaveValue("");
@@ -788,13 +798,15 @@ test("late owner records and save responses cannot cross a season change or a re
   const h = await harness();
   const { page } = h;
   try {
+    await page.getByText("期と表示を変更", { exact: true }).click();
     let heldRead;
     await page.route("**/api/season-impressions?year=2025&season=FALL", (route) => { heldRead = route; }, { times: 1 });
     await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2025");
     await expect.poll(() => !!heldRead).toBe(true);
     await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2024");
-    await expect(page.getByRole("button", { name: /日本語アニメ一/ })).toBeEnabled();
+    await expect(page.locator("[data-season-heading]")).toHaveText("選択中の期（2024年秋）");
     await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2025");
+    await page.getByRole("button", { name: "作品を探す", exact: true }).click();
     await expect(page.getByRole("button", { name: /日本語アニメ一/ })).toBeEnabled();
     const readFinished = page.waitForEvent("requestfinished", (request) => request === heldRead.request());
     await heldRead.fulfill({ json: { impressions: [record(anime("anilist-99", "OLD_PRIVATE_RECORD"), { year: 2025 })], deletedRevisions: [] } });
@@ -813,6 +825,7 @@ test("late owner records and save responses cannot cross a season change or a re
     const writeFinished = page.waitForEvent("requestfinished", (request) => request === heldWrite.request());
     await heldWrite.fulfill({ json: { impression: record(candidates[0], { year: 2025, note: "OLD_SAVE" }) } });
     await writeFinished;
+    await page.getByRole("button", { name: "作品を探す", exact: true }).click();
     await page.getByRole("button", { name: /日本語アニメ一/ }).click();
     await expect(dialog.getByLabel("いまの一言")).toHaveValue("");
     await expect(page.getByRole("button", { name: /日本語アニメ一.*未記録/ })).toBeVisible();
@@ -824,7 +837,7 @@ test("note first, explicit save grows only after success; close/skip never save 
   const h = await harness();
   const { page, state } = h;
   try {
-    await expect(page.getByRole("heading", { name: "まず、見た作品から一言。" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /今日・.*の作品/ })).toBeVisible();
     await page.getByRole("button", { name: /日本語アニメ一/ }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByLabel("いまの一言")).toBeFocused();
@@ -857,6 +870,28 @@ test("note first, explicit save grows only after success; close/skip never save 
     await page.getByRole("button", { name: "次の作品に一言", exact: true }).click();
     await expect(page.getByRole("list", { name: "一言を書く候補" }).getByRole("button")).toHaveCount(0);
     await expect(dialog).toHaveCount(0);
+  } finally { await h.close(); }
+});
+
+test("weekday navigation updates date history, crosses weeks and preserves URL fragments", async () => {
+  const h = await harness();
+  const { page } = h;
+  try {
+    const days = page.getByRole("navigation", { name: "放送日を選ぶ" }).locator(".impressions-week button");
+    await expect(days).toHaveCount(7);
+    await expect(page).toHaveURL(/date=2026-10-05$/);
+    await page.evaluate(() => history.replaceState(history.state, "", `${location.pathname}${location.search}#context`));
+    await page.getByRole("button", { name: "翌日", exact: true }).click();
+    await expect(page).toHaveURL(/date=2026-10-06#context$/);
+    await page.getByRole("button", { name: "翌日", exact: true }).click();
+    await expect(page).toHaveURL(/date=2026-10-07#context$/);
+    await page.goBack();
+    await expect(page.getByRole("button", { name: /火 10\/6/ })).toHaveAttribute("aria-current", "date");
+    await page.goBack();
+    await expect(page.getByRole("button", { name: /今日 10\/5/ })).toHaveAttribute("aria-current", "date");
+    await page.getByRole("button", { name: "前日", exact: true }).click();
+    await expect(page).toHaveURL(/date=2026-10-04#context$/);
+    await expect(page.getByRole("button", { name: /日 10\/4/ })).toHaveAttribute("aria-current", "date");
   } finally { await h.close(); }
 });
 
@@ -943,7 +978,7 @@ test("quick sharing takes four interactions through copy, excludes drafts, and p
     assert.equal(await page.evaluate(() => window.copiedUrl), "https://impressions.test/share/impressions/public-1");
     assert.equal(state.writes.length, 1);
     assert.deepEqual(state.writes[0].body.selections, [{ animeId: "anilist-1", revision: 1, includeRating: false, includeNote: false }]);
-    assert.match(page.url(), /year=2026&season=FALL&share=result$/);
+    assert.match(page.url(), /year=2026&season=FALL&date=2026-10-05&share=result$/);
     assert.doesNotMatch(page.url(), /anilist|public-1|PRIVATE|DRAFT/);
     await page.goBack();
     await expect(page.getByRole("button", { name: "作成済みのURLを確認" })).toBeVisible();
@@ -1115,7 +1150,7 @@ test("375px Visual editor with 200% text, reduced motion and keyboard viewport k
 for (const mode of ["visual", "simple"]) {
   test(`375px ${mode}: long Japanese title at 200% text and keyboard viewport keeps the entire editor reachable`, async () => {
     const title = "日本語アニメ一・異世界に転生した私が小さな図書館で出会った仲間たちと失われた物語を探す旅に出たら、いつの間にか王国の未来を託されていました〜それでも毎朝おいしい朝ごはんを食べながら、みんなで笑って暮らせる日常を取り戻したい〜";
-    const h = await harness({ mode, items: [anime("anilist-1", title), candidates[1]] });
+    const h = await harness({ mode, items: [anime("anilist-1", title, airingFixture), candidates[1]] });
     const { page, state } = h;
     try {
       await page.emulateMedia({ reducedMotion: "reduce" });
@@ -1271,7 +1306,7 @@ test("late publish response cannot leak a receipt into another owner or season; 
     await expect(page.getByRole("button", { name: "URLをコピー", exact: true })).toHaveCount(0);
     assert.ok(!(await page.content()).includes("private-old-owner-receipt"));
     await page.evaluate(() => history.pushState(null, "", "?year=2025&season=SUMMER&share=preview"));
-    await expect(page).toHaveURL(/year=2025&season=SUMMER&share=select$/);
+    await expect(page).toHaveURL(/year=2025&season=SUMMER&share=select&date=2025-09-30$/);
     await expect(page.getByRole("region", { name: "公開内容のプレビュー" })).toHaveCount(0);
     await page.evaluate(() => history.pushState(null, "", "?year=2025&season=SUMMER&share=result"));
     await expect(page).toHaveURL(/year=2025&season=SUMMER&share=manage$/);
@@ -1279,13 +1314,13 @@ test("late publish response cannot leak a receipt into another owner or season; 
   } finally { await h.close(); }
 });
 
-test("94 titles: at most three stable entry candidates, ten per search page, all catalog searchable, no refill after save/skip", async () => {
-  const items = Array.from({ length: 94 }, (_, index) => anime(`anilist-${index + 1}`, `検証作品${String(index + 1).padStart(2, "0")}`));
+test("94 same-day titles remain available by weekday and ten per search page", async () => {
+  const items = Array.from({ length: 94 }, (_, index) => anime(`anilist-${index + 1}`, `検証作品${String(index + 1).padStart(2, "0")}`, airingFixture));
   const h = await harness({ items });
   const { page, state } = h;
   try {
     const list = page.getByRole("list", { name: "一言を書く候補" });
-    await expect(list.getByRole("button")).toHaveCount(3);
+    await expect(list.getByRole("button")).toHaveCount(94);
     const initial = await list.getByRole("button").allTextContents();
     await page.getByRole("button", { name: "作品を探す", exact: true }).click();
     const results = page.getByRole("list", { name: "検索結果" });
@@ -1311,7 +1346,7 @@ test("94 titles: at most three stable entry candidates, ten per search page, all
     await expect(page.getByText("1作品を記録", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "次の作品に一言", exact: true }).click();
     assert.deepEqual(await list.getByRole("button").allTextContents(), initial.slice(1));
-    for (let remaining = 2; remaining > 0; remaining--) {
+    for (const remaining of [93, 92]) {
       await list.getByRole("button").first().click();
       await dialog.getByRole("button", { name: "今回は書かない" }).click();
       await expect(dialog).toHaveCount(0);
@@ -1438,6 +1473,7 @@ test("empty catalog, catalog failure recovery, private-record failure and loadin
   const catalog = await harness({ catalogStatus: 503, initialRecords: [record(candidates[0], { note: "保存した本文" })] });
   try {
     await expect(catalog.page.getByRole("alert")).toContainText("作品一覧を取得できませんでした");
+    await viewCard(catalog.page);
     await catalog.page.getByRole("button", { name: /日本語アニメ一/ }).click();
     await expect(catalog.page.getByRole("dialog").getByLabel("いまの一言")).toHaveValue("保存した本文");
     await expect(catalog.page.getByRole("dialog").getByRole("button", { name: "保存する", exact: true })).toBeEnabled();
@@ -1445,6 +1481,7 @@ test("empty catalog, catalog failure recovery, private-record failure and loadin
     catalog.state.catalogStatus = 200;
     await catalog.page.getByRole("button", { name: "読み込みを再試行" }).click();
     await expect(catalog.page.getByRole("alert")).toHaveCount(0);
+    await catalog.page.getByRole("button", { name: "次の作品に一言", exact: true }).click();
     await catalog.page.getByRole("button", { name: "作品を探す" }).click();
     await expect(catalog.page.getByRole("list", { name: "検索結果" }).getByRole("button")).toHaveCount(2);
     assert.equal(catalog.state.writes.length, 0);

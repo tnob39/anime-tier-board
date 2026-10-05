@@ -6,7 +6,9 @@ import { getCurrentAnimeSeason, seasonHeadingJa } from "../lib/season";
 // App Router, hydration, JWT sessions, write/read routes and local DB are real.
 // Catalog/artwork are offline fixtures; no real OAuth credentials are used.
 test.use({ storageState: { cookies: [], origins: [] }, serviceWorkers: "block" });
-const anime = { id: "anilist-779", source: "anilist", title: "今期チェック検証作品", imageUrl: "" };
+const anime = { id: "anilist-779", source: "anilist", title: "今期チェック検証作品", imageUrl: "", airing: {
+  recentEpisodes: [{ episode: 1, airingAt: "2026-10-05T00:30:00+09:00" }], nextEpisode: { episode: 2, airingAt: "2026-10-12T00:30:00+09:00" }
+} };
 const input = { year: 2026, season: "FALL", anime, revision: 0, rating: null, note: "非公開の入力", spoiler: "unspecified" };
 
 test.beforeEach(async ({ context, baseURL }) => {
@@ -34,10 +36,12 @@ test("real App Router renders guest input and navigates seasons without an autom
   expect(page.url()).not.toContain(encodeURIComponent(input.note));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.keyboard.press("Escape");
+  await page.getByText("期と表示を変更", { exact: true }).click();
   page.once("dialog", (confirmation) => confirmation.accept());
   await page.getByLabel("年", { exact: true }).selectOption("2025");
   await page.getByLabel("クール", { exact: true }).selectOption("SUMMER");
   await expect(page).toHaveURL(/year=2025&season=SUMMER/);
+  await page.getByRole("button", { name: "作品を探す", exact: true }).click();
   await expect(page.getByRole("button", { name: /今期チェック検証作品/ })).toBeEnabled();
   expect(writes).toEqual([]);
 });
@@ -86,7 +90,7 @@ test("canonical query, explicit current labels, rollover and history agree with 
   });
   const current = getCurrentAnimeSeason();
   await page.goto("/tier/impressions?year=2e3&season=FALL&keep=1#context");
-  await expect(page).toHaveURL(/\/tier\/impressions\?keep=1#context$/);
+  await expect(page).toHaveURL(new RegExp(`/tier/impressions\\?keep=1&date=${current.year}-`));
   const heading = page.locator("[data-season-heading]");
   await expect(heading).toHaveText(`今期（${seasonHeadingJa(current)}）`);
   await expect(page.getByRole("button", { name: /今期チェック検証作品/ })).toBeEnabled();
@@ -97,16 +101,20 @@ test("canonical query, explicit current labels, rollover and history agree with 
   await expect(heading).toHaveText(`今期（${seasonHeadingJa(current)}）`);
   await page.goForward();
   await expect(heading).toHaveText(`選択中の期（${seasonHeadingJa(current)}）`);
-  await page.goto("/tier/impressions?year=2024&season=fall&keep=1#context");
-  await expect(page).toHaveURL(/year=2024&season=FALL&keep=1#context$/);
+  await page.goto("/tier/impressions?year=2024&season=fall&keep=1&date=2024-10-05#context");
+  await expect(page).toHaveURL(/year=2024&season=FALL&keep=1&date=2024-10-05#context$/);
+  await page.getByText("期と表示を変更", { exact: true }).click();
   await page.getByRole("button", { name: /次の期/ }).click();
-  await expect(page).toHaveURL(/year=2025&season=WINTER&keep=1#context$/);
+  await expect(page).toHaveURL(/year=2025&season=WINTER&keep=1&date=2025-01-01#context$/);
   await expect(heading).toHaveText("選択中の期（2025年冬）");
+  await page.getByRole("button", { name: "作品を探す", exact: true }).click();
   await expect(page.getByRole("button", { name: /今期チェック検証作品/ })).toBeEnabled();
   expect(requested).toContain("?year=2025&season=WINTER");
   await page.goBack();
+  await expect(page).toHaveURL(/year=2024&season=FALL&keep=1&date=2024-10-05#context$/);
   await expect(heading).toHaveText("選択中の期（2024年秋）");
   await page.goForward();
+  await expect(page).toHaveURL(/year=2025&season=WINTER&keep=1&date=2025-01-01#context$/);
   await expect(heading).toHaveText("選択中の期（2025年冬）");
   const area = page.getByRole("navigation", { name: "Tierの表示切り替え" });
   await expect(page.locator(".tier-area-nav")).toHaveCount(1);
@@ -137,7 +145,9 @@ test("late catalog responses cannot replace the selected season in the real rout
   });
   await page.goto("/tier/impressions?year=2023&season=FALL");
   await expect.poll(() => !!held).toBe(true);
+  await page.getByText("期と表示を変更", { exact: true }).click();
   await page.getByRole("combobox", { name: "年", exact: true }).selectOption("2024");
+  await page.getByRole("button", { name: "作品を探す", exact: true }).click();
   await expect(page.getByRole("button", { name: /2024年の作品/ })).toBeEnabled();
   const finished = page.waitForEvent("requestfinished", (request) => request === held!.request());
   await held!.fulfill({ json: { year: 2023, season: "FALL", items: [{ ...anime, title: "2023年の古い応答" }], source: "anilist" } });
@@ -288,7 +298,7 @@ for (const mode of ["simple", "visual"]) {
     expect(writes).toEqual(["PUT /api/season-impressions/anilist-779", "POST /api/shares"]);
     const publicPath = await page.getByRole("link", { name: "作成した共有を開く" }).getAttribute("href");
     expect(await page.evaluate(() => (window as unknown as { copiedUrl: string }).copiedUrl)).toBe(`${baseURL}${publicPath}`);
-    expect(page.url()).toBe(`${baseURL}/tier/impressions?year=2026&season=FALL&share=result`);
+    expect(page.url()).toBe(`${baseURL}/tier/impressions?year=2026&season=FALL&date=2026-10-05&share=result`);
     const shareId = publicPath!.split("/").at(-1)!;
     const snapshot = await (await context.request.get(`/api/shares/${shareId}`)).json();
     expect(JSON.stringify(snapshot)).not.toMatch(/公開しない保存済み感想|未保存の秘密|revision|spoiler/);

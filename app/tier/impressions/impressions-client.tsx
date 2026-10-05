@@ -15,8 +15,8 @@ import { IMPRESSION_RATINGS, IMPRESSION_RATING_LABELS, impressionNoteLength, rea
   type ImpressionAnime, type ImpressionInput, type ImpressionSeason, type ImpressionSeasonState, type ImpressionRevisionCursor, type SeasonImpression } from "@/lib/season-impressions-model";
 import { ImpressionSharing } from "./impression-sharing";
 import { ImpressionSeasonCard } from "./impression-season-card";
-import { changeImpressionInput, deriveImpressionCandidates, impressionAiringLabel, impressionGrowthCopy,
-  searchImpressionCatalog, type ImpressionAiring, type ImpressionCandidate } from "@/lib/season-impressions-view";
+import { changeImpressionInput, clampDateToSeason, impressionCandidatesForDate, impressionAiringLabel, impressionGrowthCopy,
+  impressionWeek, jstDateKey, searchImpressionCatalog, shiftDateKey, type ImpressionAiring } from "@/lib/season-impressions-view";
 import { track } from "@/lib/analytics";
 import { impressionError, impressionRequest } from "./impressions-request";
 
@@ -27,18 +27,23 @@ function errorStatus(error: unknown): number | undefined {
   return error instanceof Error ? (error as Error & { status?: number }).status : undefined;
 }
 export function ImpressionsClient(props: Props) {
-  const { ref, explicit, setRef } = useSeasonUrlState(props.seasonKey);
+  const { ref, explicit } = useSeasonUrlState(props.seasonKey);
   const [pending, setPending] = useState(false);
   const canChangeSeason = useRef(() => true);
   const { data: session, status } = useSession();
   if (status === "loading") return <div className="impressions-page" role="status">今期チェックを準備しています…</div>;
   const userId = status === "authenticated" ? (session?.user as { id?: string } | undefined)?.id ?? null : null;
   return <div className="impressions-page">
-    <h1>今期チェック</h1>
-    <SeasonContextControl value={ref} explicit={explicit} disabled={pending} onChange={(next) => {
+    <header className="impressions-header"><h1>今期チェック</h1><p>{ref.year}年{({ WINTER: "冬", SPRING: "春", SUMMER: "夏", FALL: "秋" } as const)[ref.season]}の作品に、いまの一言を残す</p></header>
+    <details className="impressions-settings"><summary>期と表示を変更</summary><div className="impressions-settings-content"><SeasonContextControl value={ref} explicit={explicit} disabled={pending} onChange={(next) => {
       if (!canChangeSeason.current()) return false;
-      setRef(next);
-    }} />
+      const params = new URLSearchParams(window.location.search);
+      params.set("year", String(next.year));
+      params.set("season", next.season);
+      params.set("date", clampDateToSeason(params.get("date"), next));
+      history.pushState(null, "", `${location.pathname}?${params}${location.hash}`);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }} /><DisplayModeToggle /></div></details>
     <ImpressionsWorkspace key={`${userId ? `owner:${userId}` : "guest"}:${ref.year}:${ref.season}`}
       {...props} seasonKey={ref} userId={userId} pending={pending} setPending={setPending} canChangeSeason={canChangeSeason} />
   </div>;
@@ -61,7 +66,7 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
   const [airing, setAiring] = useState<ImpressionAiring[]>([]);
   const [draftsReady, setDraftsReady] = useState(!userId);
   const restored = useRef(false);
-  const [candidates, setCandidates] = useState<ImpressionCandidate[] | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => clampDateToSeason(typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("date"), seasonKey));
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [view, setView] = useState<"entry" | "search" | "card">("entry");
   const [query, setQuery] = useState("");
@@ -91,6 +96,20 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
   const reconciliation = editing ? reconciliations[editing] : undefined;
   const conflict = !!reconciliation;
   const latestLoaded = reconciliation?.readVersion === recordsVersion.current && recordsReady;
+  const seasonStart = clampDateToSeason("1970-01-01", seasonKey);
+  const seasonEnd = clampDateToSeason("9999-12-31", seasonKey);
+
+  useEffect(() => {
+    const sync = () => {
+      const params = new URLSearchParams(window.location.search);
+      const date = clampDateToSeason(params.get("date"), seasonKey);
+      setSelectedDate(date);
+      if (params.get("date") !== date) { params.set("date", date); history.replaceState(history.state, "", `${location.pathname}?${params}${location.hash}`); }
+    };
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, [seasonKey.year, seasonKey.season]);
 
   useEffect(() => {
     if (editing) noteRef.current?.focus();
@@ -233,17 +252,20 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
     for (const draft of Object.values(drafts)) if (!byId.has(draft.anime.id)) byId.set(draft.anime.id, draft.anime);
     return [...byId.values()];
   }, [anime, records, drafts]);
-  useEffect(() => {
-    if (loading || !recordsReady || !draftsReady || !items.length || candidates !== null) return;
-    setCandidates(deriveImpressionCandidates({ catalog: items, records, drafts: Object.values(draftRef.current), airing, now: Date.now() }));
-    track({ name: "impression_view", view: "entry", count: records.length });
-  }, [loading, recordsReady, draftsReady, candidates, items, records, airing]);
-  const visibleCandidates = (candidates ?? []).filter(({ anime }) => !dismissed.includes(anime.id));
+  const candidates = useMemo(() => impressionCandidatesForDate(items, airing, selectedDate), [items, airing, selectedDate]);
+  const visibleCandidates = candidates.filter(({ anime }) => !dismissed.includes(anime.id));
   const exploration = searchImpressionCatalog(items, records, query, filter, page);
   const writable = !loading && recordsReady && !authRequired && !offline;
   function changeView(next: typeof view) {
     focusView.current = true; setView(next); setMessage(""); setSavedId(null);
     track({ name: "impression_view", view: next, count: records.length });
+  }
+  function selectDate(next: string) {
+    const clamped = clampDateToSeason(next, seasonKey);
+    const params = new URLSearchParams(window.location.search);
+    params.set("date", clamped);
+    history.pushState(history.state, "", `${location.pathname}?${params}${location.hash}`);
+    setSelectedDate(clamped);
   }
 
   function open(item: ImpressionAnime) {
@@ -350,7 +372,6 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
   }
 
   return <>
-    <DisplayModeToggle />
     {storageError && <p role="alert">{storageError}</p>}
     <p role="status" aria-live="polite">{message}</p>
     {offline && <p role="alert">オフラインです。入力は保持しています。接続後に「保存する」を押してください。</p>}
@@ -358,20 +379,26 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
     {warning && <p>{warning}</p>}
     {loading && <p role="status">作品と記録を読み込んでいます…</p>}
     {!sharingActive && <div>
-      <h2 ref={viewHeading} tabIndex={-1}>{view === "search" ? "作品を選ぶ" : view === "card" ? "自分の今期カード" : recordsReady ? records.length ? "今日は、どの作品が心に残りましたか。" : "まず、見た作品から一言。" : "保存済みの記録を確認しています。"}</h2>
+      <h2 ref={viewHeading} tabIndex={-1}>{view === "search" ? "すべての作品から探す" : view === "card" ? "自分の今期カード" : `${selectedDate === jstDateKey(new Date()) ? "今日・" : ""}${new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "long", day: "numeric", weekday: "short" }).format(new Date(`${selectedDate}T12:00:00+09:00`))}の作品`}</h2>
       {view === "entry" && <>
+        <nav className="impressions-date-nav" aria-label="放送日を選ぶ">
+          <button type="button" aria-label="前日" disabled={selectedDate === seasonStart} onClick={() => selectDate(shiftDateKey(selectedDate, -1)!)}>‹</button>
+          <div className="impressions-week">{impressionWeek(selectedDate).map((date) => { const day = new Date(`${date}T12:00:00+09:00`); const today = date === jstDateKey(new Date()); const outside = date < seasonStart || date > seasonEnd; return <button type="button" key={date} disabled={outside} aria-current={date === selectedDate ? "date" : undefined} onClick={() => selectDate(date)}><span>{today ? "今日" : new Intl.DateTimeFormat("ja-JP", { weekday: "short", timeZone: "Asia/Tokyo" }).format(day)}</span><strong>{new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", timeZone: "Asia/Tokyo" }).format(day)}</strong></button>; })}</div>
+          <button type="button" aria-label="翌日" disabled={selectedDate === seasonEnd} onClick={() => selectDate(shiftDateKey(selectedDate, 1)!)}>›</button>
+        </nav>
+        <p className="impressions-reference">放送時刻は取得済みの実時刻（参考）です。</p>
         {!loading && recordsReady && items.length > 0 && items.every((item) => records.some((record) => record.anime.id === item.id)) && <p>すべての作品を記録済みです。今の一言を書き直すこともできます。</p>}
         <ul className="impressions-list" aria-label="一言を書く候補">
-          {visibleCandidates.map(({ anime: item, reason, airingAt }) => <li key={item.id}>
+          {visibleCandidates.map(({ anime: item, airingAt }) => <li key={item.id}>
             <button type="button" className="impressions-card" disabled={!recordsReady || authRequired} onClick={() => open(item)}>
               <ImpressionArtwork anime={item} /><span className="impressions-card-text"><strong>{item.title}</strong>
-                <span className="impressions-meta">{reason === "draft" ? "書きかけ" : records.some((record) => record.anime.id === item.id) ? "記録済み" : "未記録"}</span>
-                {airingAt && <span className="impressions-meta">{impressionAiringLabel(airingAt)}</span>}
+                <span className="impressions-meta">{drafts[item.id] ? "書きかけ" : records.some((record) => record.anime.id === item.id) ? "記録済み" : "未記録"}</span>
+                <span className="impressions-time">{impressionAiringLabel(airingAt)}</span>
               </span>
             </button>
           </li>)}
         </ul>
-        {!loading && recordsReady && candidates !== null && !visibleCandidates.length && items.length > 0 && <p>候補への記入はここまで。作品を探すか、自分の今期カードを眺めましょう。</p>}
+        {!loading && recordsReady && !visibleCandidates.length && items.length > 0 && <div className="impressions-empty"><p>この日に時刻が確認できる作品はありません。</p><div className="impressions-actions"><button type="button" disabled={selectedDate === seasonStart} onClick={() => selectDate(shiftDateKey(selectedDate, -1)!)}>前日の作品</button><button type="button" disabled={selectedDate === seasonEnd} onClick={() => selectDate(shiftDateKey(selectedDate, 1)!)}>翌日の作品</button></div></div>}
         <div className="impressions-actions impressions-entry-actions"><button type="button" onClick={() => changeView("search")}>作品を探す</button>
           <button type="button" onClick={() => changeView("card")}>自分の今期カードを見る</button></div>
       </>}
