@@ -20,8 +20,8 @@ export function ImpressionSeasonCard({ seasonKey, records, ready, savedId, onEdi
           <ImpressionArtwork anime={record.anime} />
           <span className="impressions-card-text"><strong>{record.anime.title}</strong>
             {record.note && <span className="impressions-note">{record.note}</span>}
-            {record.rating && <span>今の印象：{IMPRESSION_RATING_LABELS[record.rating]}</span>}
-            <span>記録済み・編集</span>
+            {record.rating && <span className="impressions-meta">今の印象：{IMPRESSION_RATING_LABELS[record.rating]}</span>}
+            <span className="impressions-meta">記録済み・編集</span>
           </span>
         </button>
       </li>)}

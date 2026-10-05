@@ -78,7 +78,7 @@ test("guest hydration never exposes legacy or account-owned drafts even with a r
   expect(await page.content()).not.toContain(input.note);
 });
 
-test("canonical query, explicit current labels, rollover and history agree with catalog requests", async ({ page }) => {
+test("canonical query, explicit current labels, rollover and history agree with catalog requests", async ({ page, isMobile }) => {
   const requested: string[] = [];
   page.on("request", (request) => {
     const url = new URL(request.url());
@@ -111,6 +111,20 @@ test("canonical query, explicit current labels, rollover and history agree with 
   const area = page.getByRole("navigation", { name: "Tierの表示切り替え" });
   await expect(page.locator(".tier-area-nav")).toHaveCount(1);
   await expect(area.getByRole("link", { name: "Tier表", exact: true })).toHaveAttribute("href", "/tier?year=2025&season=WINTER");
+  for (const tab of await area.getByRole("link").all()) {
+    const box = await tab.boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(Number.parseFloat(await tab.evaluate((element) => getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(15);
+  }
+  if (isMobile) {
+    const bottomNav = page.getByRole("navigation", { name: "主要ページ" });
+    const impressionTab = bottomNav.getByRole("link", { name: "Tier 今期チェック" });
+    const box = await impressionTab.boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(52);
+    expect(Number.parseFloat(await impressionTab.evaluate((element) => getComputedStyle(element).fontSize))).toBeGreaterThan(10);
+    await expect(impressionTab.locator(".mobile-nav-tier-label")).toHaveText("今期チェック");
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("late catalog responses cannot replace the selected season in the real router", async ({ page }) => {

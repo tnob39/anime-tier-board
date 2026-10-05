@@ -365,14 +365,14 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
           {visibleCandidates.map(({ anime: item, reason, airingAt }) => <li key={item.id}>
             <button type="button" className="impressions-card" disabled={!recordsReady || authRequired} onClick={() => open(item)}>
               <ImpressionArtwork anime={item} /><span className="impressions-card-text"><strong>{item.title}</strong>
-                <span>{reason === "draft" ? "書きかけ" : records.some((record) => record.anime.id === item.id) ? "記録済み" : "未記録"}</span>
-                {airingAt && <span>{impressionAiringLabel(airingAt)}</span>}
+                <span className="impressions-meta">{reason === "draft" ? "書きかけ" : records.some((record) => record.anime.id === item.id) ? "記録済み" : "未記録"}</span>
+                {airingAt && <span className="impressions-meta">{impressionAiringLabel(airingAt)}</span>}
               </span>
             </button>
           </li>)}
         </ul>
         {!loading && recordsReady && candidates !== null && !visibleCandidates.length && items.length > 0 && <p>候補への記入はここまで。作品を探すか、自分の今期カードを眺めましょう。</p>}
-        <div className="impressions-actions"><button type="button" onClick={() => changeView("search")}>作品を探す</button>
+        <div className="impressions-actions impressions-entry-actions"><button type="button" onClick={() => changeView("search")}>作品を探す</button>
           <button type="button" onClick={() => changeView("card")}>自分の今期カードを見る</button></div>
       </>}
       {!loading && !items.length && <p>このクールの作品はまだ表示できません。別のクールを選ぶか再試行してください。</p>}
@@ -388,8 +388,8 @@ function ImpressionsWorkspace({ seasonKey, resumeToken, userId, pending, setPend
           return <li key={item.id}><button type="button" className={`impressions-card${record ? " impressions-card--checked" : ""}`} disabled={!recordsReady || authRequired} onClick={() => open(item)}>
             <ImpressionArtwork anime={item} /><span className="impressions-card-text"><strong>{item.title}</strong>
               {record?.note && <span className="impressions-note">{record.note}</span>}
-              {record?.rating && <span>今の印象：{IMPRESSION_RATING_LABELS[record.rating]}</span>}
-              <span>{!recordsReady ? "記録を確認できません" : record ? "記録済み・編集" : "未記録"}</span>
+              {record?.rating && <span className="impressions-meta">今の印象：{IMPRESSION_RATING_LABELS[record.rating]}</span>}
+              <span className="impressions-meta">{!recordsReady ? "記録を確認できません" : record ? "記録済み・編集" : "未記録"}</span>
             </span></button></li>;
         })}</ul>
         <div className="impressions-actions">
