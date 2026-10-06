@@ -1,9 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ImpressionArtwork } from "@/components/ImpressionSnapshotView";
+import { ImpressionCardContent } from "@/components/ImpressionSnapshotView";
 import { seasonHeadingJa } from "@/lib/season";
-import { IMPRESSION_RATING_LABELS, type ImpressionAnime, type ImpressionSeason, type SeasonImpression } from "@/lib/season-impressions-model";
+import { type ImpressionAnime, type ImpressionSeason, type SeasonImpression } from "@/lib/season-impressions-model";
 import { sortImpressionRecords } from "@/lib/season-impressions-view";
 
 export function ImpressionSeasonCard({ seasonKey, records, ready, savedId, onEdit, children }: {
@@ -17,12 +17,7 @@ export function ImpressionSeasonCard({ seasonKey, records, ready, savedId, onEdi
     <ul className="impressions-list">
       {sortImpressionRecords(records).map((record) => <li key={record.anime.id} data-just-saved={record.anime.id === savedId || undefined}>
         <button type="button" className="impressions-card impressions-card--checked" disabled={!ready} onClick={() => onEdit(record.anime)}>
-          <ImpressionArtwork anime={record.anime} />
-          <span className="impressions-card-text"><strong>{record.anime.title}</strong>
-            {record.note && <span className="impressions-note">{record.note}</span>}
-            {record.rating && <span className="impressions-meta">今の印象：{IMPRESSION_RATING_LABELS[record.rating]}</span>}
-            <span className="impressions-meta">記録済み・編集</span>
-          </span>
+          <ImpressionCardContent anime={record.anime} note={record.note} rating={record.rating} status="記録済み・編集" />
         </button>
       </li>)}
     </ul>
