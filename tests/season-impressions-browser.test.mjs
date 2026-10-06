@@ -606,9 +606,21 @@ test("explicit share preview omits private/spoiler notes; URL creation and owner
   const { page, state } = h;
   try {
     await viewCard(page);
+    const personalCard = page.getByRole("button", { name: /日本語アニメ一/ });
+    await expect(personalCard).toHaveClass(/impressions-card--checked/);
+    await expect(personalCard.locator(".impressions-card-text > strong")).toHaveText("日本語アニメ一");
     await page.getByRole("button", { name: "今の2作品を共有" }).click();
     const one = page.getByRole("group", { name: "日本語アニメ一", exact: true });
     const two = page.getByRole("group", { name: "日本語アニメ二", exact: true });
+    await expect(one.locator(".impressions-share-owner-card")).toContainText("公開する一言");
+    await expect(one.locator(".impressions-share-owner-card")).toContainText("今の印象：好き");
+    await expect(two.locator(".impressions-share-owner-card")).toContainText("PRIVATE_SPOILER");
+    await expect(one.getByLabel("一言も公開")).not.toBeChecked();
+    await expect(one.getByLabel("評価も公開")).not.toBeChecked();
+    await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
+    let preview = page.getByRole("region", { name: "公開内容のプレビュー" });
+    await expect(preview).not.toContainText(/公開する一言|PRIVATE_SPOILER|今の印象：好き/);
+    await page.getByRole("button", { name: "選択に戻る" }).click();
     await one.getByLabel("この作品を公開").check();
     await one.getByLabel("評価も公開").check();
     if (await two.getByLabel("評価も公開").isEnabled()) await two.getByLabel("評価も公開").check();
@@ -616,9 +628,14 @@ test("explicit share preview omits private/spoiler notes; URL creation and owner
     await two.getByLabel("この作品を公開").check();
     await expect(two.getByLabel("一言も公開")).toBeDisabled();
     await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
-    const preview = page.getByRole("region", { name: "公開内容のプレビュー" });
+    preview = page.getByRole("region", { name: "公開内容のプレビュー" });
     await expect(preview).toContainText("公開する一言");
     await expect(preview).not.toContainText("PRIVATE_SPOILER");
+    const publicCard = preview.locator(".impressions-public-card .impressions-card").first();
+    await expect(publicCard).toHaveClass(/impressions-card--checked/);
+    await expect(publicCard.locator(".impressions-card-text > strong")).toHaveText("日本語アニメ一");
+    await expect(publicCard.locator(".impressions-note")).toHaveText("公開する一言");
+    await expect(publicCard.locator(".impressions-meta")).toHaveText("今の印象：好き");
     assert.equal(state.writes.length, 0);
     await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
     await expect(page.getByRole("link", { name: "作成した共有を開く" })).toHaveAttribute("href", "/share/impressions/public-1");
@@ -717,7 +734,7 @@ test("size hierarchy is deterministic across entry, search, editor, personal car
     await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
     const publicCard = page.getByRole("region", { name: "共有カード" });
     assert.equal(await px(publicCard, "fontSize"), 16);
-    assert.equal(await px(publicCard.locator("h3"), "fontSize"), 16);
+    assert.equal(await px(publicCard.locator("strong"), "fontSize"), 16);
     assert.ok(await px(publicCard.locator(".impressions-note"), "fontSize") >= 14);
     assert.equal(await px(publicCard.locator(".impressions-meta").last(), "fontSize"), 12);
     await assertControl(page.getByRole("button", { name: "この内容で公開URLを作成" }), 48);
@@ -837,7 +854,7 @@ test("note first, explicit save grows only after success; close/skip never save 
   const h = await harness();
   const { page, state } = h;
   try {
-    await expect(page.getByRole("heading", { name: /今日・.*の作品/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /10月5日\(月\)の作品/ })).toBeVisible();
     await page.getByRole("button", { name: /日本語アニメ一/ }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByLabel("いまの一言")).toBeFocused();
@@ -886,9 +903,9 @@ test("weekday navigation updates date history, crosses weeks and preserves URL f
     await page.getByRole("button", { name: "翌日", exact: true }).click();
     await expect(page).toHaveURL(/date=2026-10-07#context$/);
     await page.goBack();
-    await expect(page.getByRole("button", { name: /火 10\/6/ })).toHaveAttribute("aria-current", "date");
+    await expect(page.getByRole("button", { name: /(?:火|今日) 10\/6/ })).toHaveAttribute("aria-current", "date");
     await page.goBack();
-    await expect(page.getByRole("button", { name: /今日 10\/5/ })).toHaveAttribute("aria-current", "date");
+    await expect(page.getByRole("button", { name: /(?:月|今日) 10\/5/ })).toHaveAttribute("aria-current", "date");
     await page.getByRole("button", { name: "前日", exact: true }).click();
     await expect(page).toHaveURL(/date=2026-10-04#context$/);
     await expect(page.getByRole("button", { name: /日 10\/4/ })).toHaveAttribute("aria-current", "date");

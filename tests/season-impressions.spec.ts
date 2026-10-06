@@ -229,7 +229,7 @@ for (const mode of ["simple", "visual"]) {
     }, mode);
     const writes: string[] = [];
     page.on("request", (request) => { if (["PUT", "POST", "DELETE"].includes(request.method()) && new URL(request.url()).pathname.startsWith("/api/")) writes.push(`${request.method()} ${new URL(request.url()).pathname}`); });
-    await page.goto("/tier/impressions?year=2026&season=FALL");
+    await page.goto("/tier/impressions?year=2026&season=FALL&date=2026-10-05");
     await page.getByRole("button", { name: "自分の今期カードを見る" }).click();
     await expect(page.getByRole("button", { name: "今の0作品を共有" })).toBeDisabled();
     await page.getByRole("button", { name: "次の作品に一言" }).click();
@@ -251,9 +251,11 @@ for (const mode of ["simple", "visual"]) {
     }
     await dialog.getByText("評価を添える（任意）", { exact: true }).click();
     await dialog.getByLabel("好き", { exact: true }).check();
-    await expect(dialog.getByLabel("好き", { exact: true })).toBeFocused();
     await expect(dialog.getByLabel("好き", { exact: true })).toBeInViewport({ ratio: 1 });
     await dialog.getByLabel("いまの一言").fill("公開しない保存済み感想");
+    await dialog.getByLabel("ネタバレなし（共有時に選べます）", { exact: true }).check();
+    await expect(dialog.getByLabel("ネタバレなし（共有時に選べます）", { exact: true })).toBeFocused();
+    await dialog.getByLabel("いまの一言").focus();
     await expect(dialog.getByLabel("いまの一言")).toBeFocused();
     await expect(dialog.getByLabel("いまの一言")).toBeInViewport({ ratio: 1 });
     expect(writes).toEqual([]);
@@ -285,11 +287,21 @@ for (const mode of ["simple", "visual"]) {
     let interactions = 0;
     const tap = async (name: string) => { interactions++; await page.getByRole("button", { name, exact: true }).click(); };
     await tap("今の1作品を共有");
+    const shareOption = page.getByRole("group", { name: artwork.title, exact: true });
+    await expect(shareOption.locator(".impressions-share-owner-card")).toContainText("公開しない保存済み感想");
+    await expect(shareOption.locator(".impressions-share-owner-card")).toContainText("今の印象：好き");
+    await expect(shareOption.getByLabel("一言も公開")).not.toBeChecked();
+    await expect(shareOption.getByLabel("評価も公開")).not.toBeChecked();
     await tap("公開内容をプレビュー");
     const preview = page.getByRole("region", { name: "公開内容のプレビュー" });
     await expect(preview).not.toContainText(/公開しない保存済み感想|未保存の秘密|次の未記録作品/);
-    await page.goBack(); await expect(page.getByLabel("評価も公開").first()).not.toBeChecked();
-    await page.goForward(); await expect(preview).toBeVisible();
+    await page.getByRole("button", { name: "選択に戻る" }).click();
+    await shareOption.getByLabel("一言も公開").check();
+    await shareOption.getByLabel("評価も公開").check();
+    await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
+    await expect(preview).toContainText("公開しない保存済み感想");
+    await expect(preview).toContainText("今の印象：好き");
+    await expect(preview.locator(".impressions-card .impressions-card-text > strong")).toHaveText(artwork.title);
     const previewContents = await preview.locator(".impressions-list").innerText();
     await tap("この内容で公開URLを作成");
     await expect(page.getByRole("button", { name: "URLをコピー", exact: true })).toBeFocused();
@@ -301,7 +313,8 @@ for (const mode of ["simple", "visual"]) {
     expect(page.url()).toBe(`${baseURL}/tier/impressions?year=2026&season=FALL&date=2026-10-05&share=result`);
     const shareId = publicPath!.split("/").at(-1)!;
     const snapshot = await (await context.request.get(`/api/shares/${shareId}`)).json();
-    expect(JSON.stringify(snapshot)).not.toMatch(/公開しない保存済み感想|未保存の秘密|revision|spoiler/);
+    expect(JSON.stringify(snapshot)).toMatch(/公開しない保存済み感想|liked/);
+    expect(JSON.stringify(snapshot)).not.toMatch(/未保存の秘密|revision|spoiler/);
     const modified = await context.request.put("/api/season-impressions/anilist-779", { headers, data: { ...input, anime: artwork, revision: 1, note: "変更後の秘密" } });
     expect(modified.status()).toBe(200);
     const deleted = await context.request.delete("/api/season-impressions/anilist-779", { headers, data: { year: 2026, season: "FALL", revision: 2 } });
@@ -312,6 +325,9 @@ for (const mode of ["simple", "visual"]) {
     await publicResponse;
     await expect(page.getByRole("heading", { name: "2026年秋 今期チェック", exact: true })).toBeVisible();
     expect(await page.locator(".impressions-list").innerText()).toBe(previewContents);
+    await expect(page.locator(".impressions-public-card .impressions-card .impressions-card-text > strong")).toHaveText(artwork.title);
+    await expect(page.locator(".impressions-public-card .impressions-note")).toHaveText("公開しない保存済み感想");
+    await expect(page.locator(".impressions-public-card .impressions-meta").last()).toHaveText("今の印象：好き");
     await expect(page.locator("textarea")).toHaveCount(0);
     if (mode === "simple") { await expect(page.locator("img, picture")).toHaveCount(0); expect(imageRequests).toBe(0); }
     else expect(imageRequests).toBeGreaterThan(0);

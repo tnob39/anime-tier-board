@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { ImpressionSnapshotView } from "@/components/ImpressionSnapshotView";
+import { ImpressionCardContent, ImpressionSnapshotView } from "@/components/ImpressionSnapshotView";
 import { buildImpressionSnapshot, type ImpressionSeason, type SeasonImpression, type ImpressionSelection,
   type ImpressionShareHistory, type ImpressionShareInput, type ImpressionSnapshot } from "@/lib/season-impressions-model";
 import { seasonHeadingJa } from "@/lib/season";
@@ -220,6 +220,9 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
             const canPublishNote = record.spoiler === "no_spoiler" && !!record.note;
             return <fieldset key={record.anime.id} disabled={pending || unknownResult}>
               <legend>{record.anime.title}</legend>
+              <div className="impressions-card impressions-card--checked impressions-share-owner-card">
+                <ImpressionCardContent anime={record.anime} note={record.note} rating={record.rating} />
+              </div>
               <label className="impressions-select-row"><input type="checkbox" checked={!!selection} onChange={(event) => change(record, "selected", event.target.checked)} />この作品を公開<span>{record.anime.title}</span></label>
               <label><input type="checkbox" disabled={!selection || !canPublishNote} checked={canPublishNote && (selection?.includeNote ?? false)} onChange={(event) => change(record, "includeNote", event.target.checked)} />一言も公開</label>
               <label><input type="checkbox" disabled={!selection || !record.rating} checked={selection?.includeRating ?? false} onChange={(event) => change(record, "includeRating", event.target.checked)} />評価も公開</label>
