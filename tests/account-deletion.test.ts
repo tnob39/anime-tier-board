@@ -135,6 +135,15 @@ async function createAllKnownTables(client: AccountDeletionClient): Promise<void
     created_at text not null,
     updated_at text not null
   )`);
+  await client.execute(`create table canonical_share_mappings (
+    owner_id text not null,
+    kind text not null,
+    season_year integer not null,
+    season text not null,
+    share_id text not null unique,
+    created_at text not null,
+    primary key (owner_id, kind, season_year, season)
+  )`);
   await client.execute(`create table share_comments (
     comment_id text primary key,
     share_id text not null,
@@ -223,6 +232,12 @@ async function seedUserData(
           values (?, ?, '{}', '[]', ?, ?)`,
     args: [`share-${suffix}`, userId, now, now]
   });
+  await client.execute({
+    sql: `insert into canonical_share_mappings
+          (owner_id, kind, season_year, season, share_id, created_at)
+          values (?, 'season-impressions', 2026, ?, ?, ?)`,
+    args: [userId, suffix === "a" ? "FALL" : "SUMMER", `share-${suffix}`, now]
+  });
 }
 
 test("deleteUserAccountData removes known owned rows and is idempotent", async () => {
@@ -290,6 +305,10 @@ test("deleteUserAccountData removes known owned rows and is idempotent", async (
       await countRows(client, "select count(*) as n from board_shares where user_id = ?", ["user-a"]),
       0
     );
+    assert.equal(
+      await countRows(client, "select count(*) as n from canonical_share_mappings where owner_id = ?", ["user-a"]),
+      0
+    );
 
     // Other user intact
     assert.equal(
@@ -300,6 +319,10 @@ test("deleteUserAccountData removes known owned rows and is idempotent", async (
     );
     assert.equal(
       await countRows(client, "select count(*) as n from board_shares where user_id = ?", ["user-b"]),
+      1
+    );
+    assert.equal(
+      await countRows(client, "select count(*) as n from canonical_share_mappings where owner_id = ?", ["user-b"]),
       1
     );
   } finally {

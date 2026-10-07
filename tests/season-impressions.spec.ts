@@ -303,12 +303,12 @@ for (const mode of ["simple", "visual"]) {
     await expect(preview).toContainText("今の印象：好き");
     await expect(preview.locator(".impressions-card .impressions-card-text > strong")).toHaveText(artwork.title);
     const previewContents = await preview.locator(".impressions-list").innerText();
-    await tap("この内容で公開URLを作成");
+    await tap("この内容で共有URLを作成・更新");
     await expect(page.getByRole("button", { name: "URLをコピー", exact: true })).toBeFocused();
     await tap("URLをコピー");
     expect(interactions).toBe(4);
     expect(writes).toEqual(["PUT /api/season-impressions/anilist-779", "POST /api/shares"]);
-    const publicPath = await page.getByRole("link", { name: "作成した共有を開く" }).getAttribute("href");
+    const publicPath = await page.getByRole("link", { name: "公開中の共有を開く" }).getAttribute("href");
     expect(await page.evaluate(() => (window as unknown as { copiedUrl: string }).copiedUrl)).toBe(`${baseURL}${publicPath}`);
     expect(page.url()).toBe(`${baseURL}/tier/impressions?year=2026&season=FALL&date=2026-10-05&share=result`);
     const shareId = publicPath!.split("/").at(-1)!;
@@ -321,7 +321,7 @@ for (const mode of ["simple", "visual"]) {
     expect(deleted.status()).toBe(200);
     expect(await (await context.request.get(`/api/shares/${shareId}`)).json()).toEqual(snapshot);
     const publicResponse = page.waitForResponse((response) => new URL(response.url()).pathname === publicPath && response.request().method() === "GET");
-    await page.getByRole("link", { name: "作成した共有を開く" }).click();
+    await page.getByRole("link", { name: "公開中の共有を開く" }).click();
     await publicResponse;
     await expect(page.getByRole("heading", { name: "2026年秋 今期チェック", exact: true })).toBeVisible();
     expect(await page.locator(".impressions-list").innerText()).toBe(previewContents);

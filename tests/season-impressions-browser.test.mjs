@@ -85,12 +85,15 @@ async function harness({ guest = false, mode = "simple", initialRecords = [], wi
       state.deletedRevisions = [...state.deletedRevisions.filter((entry) => entry.animeId !== animeId), cursor];
       return fulfill({ ok: true, cursor });
     }
-    if (url.pathname === "/api/shares" && method === "GET") return state.failHistory ? fulfill({ error: "履歴の取得に失敗しました。" }, 503) : fulfill({ shares: state.shares });
+    if (url.pathname === "/api/shares" && method === "GET") return state.failHistory ? fulfill({ error: "履歴の取得に失敗しました。" }, 503) : fulfill({ shares: state.shares.map((share) => ({
+      ...share, updatedAt: share.updatedAt ?? share.createdAt, canonical: share.canonical ?? true
+    })) });
     if (url.pathname === "/api/shares" && method === "POST") {
       if (state.publishStatus !== 200) return fulfill({ error: "公開に失敗しました。" }, state.publishStatus);
       const body = request.postDataJSON();
-      state.shares.push({ shareId: "public-1", createdAt: "2026-10-02T00:00:00Z", year: body.year, season: body.season });
-      return fulfill({ shareId: "public-1" });
+      const existing = state.shares.find((share) => share.year === body.year && share.season === body.season);
+      if (!existing) state.shares.push({ shareId: "public-1", createdAt: "2026-10-02T00:00:00Z", updatedAt: "2026-10-02T00:00:00Z", canonical: true, year: body.year, season: body.season });
+      return fulfill({ shareId: existing?.shareId ?? "public-1", operation: existing ? "updated" : "created", updatedAt: existing?.updatedAt ?? "2026-10-02T00:00:00Z" });
     }
     if (url.pathname.startsWith("/api/shares/") && method === "DELETE") { state.shares = []; return fulfill({ ok: true }); }
     errors.push(`Unexpected request ${method} ${url.pathname}`);
@@ -637,8 +640,8 @@ test("explicit share preview omits private/spoiler notes; URL creation and owner
     await expect(publicCard.locator(".impressions-note")).toHaveText("公開する一言");
     await expect(publicCard.locator(".impressions-meta")).toHaveText("今の印象：好き");
     assert.equal(state.writes.length, 0);
-    await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
-    await expect(page.getByRole("link", { name: "作成した共有を開く" })).toHaveAttribute("href", "/share/impressions/public-1");
+    await page.getByRole("button", { name: "この内容で共有URLを作成・更新" }).click();
+    await expect(page.getByRole("link", { name: "公開中の共有を開く" })).toHaveAttribute("href", "/share/impressions/public-1");
     assert.equal(state.writes[0].body.kind, "season-impressions");
     assert.doesNotMatch(JSON.stringify(state.writes[0].body), /PRIVATE_SPOILER|公開する一言/);
     if (!new URL(page.url()).searchParams.has("share")) await viewCard(page);
@@ -737,7 +740,7 @@ test("size hierarchy is deterministic across entry, search, editor, personal car
     assert.equal(await px(publicCard.locator("strong"), "fontSize"), 16);
     assert.ok(await px(publicCard.locator(".impressions-note"), "fontSize") >= 14);
     assert.equal(await px(publicCard.locator(".impressions-meta").last(), "fontSize"), 12);
-    await assertControl(page.getByRole("button", { name: "この内容で公開URLを作成" }), 48);
+    await assertControl(page.getByRole("button", { name: "この内容で共有URLを作成・更新" }), 48);
     await bounded();
 
     await page.addStyleTag({ content: ".impressions-page { font-size: 200%; }" });
@@ -796,8 +799,8 @@ test("season controls cancel cleanly and save/delete/share all use the canonical
     await page.getByRole("button", { name: "今の1作品を共有" }).click();
     await page.getByRole("group", { name: "日本語アニメ一", exact: true }).getByLabel("この作品を公開").check();
     await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
-    await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
-    await expect(page.getByRole("link", { name: "作成した共有を開く" })).toBeVisible();
+    await page.getByRole("button", { name: "この内容で共有URLを作成・更新" }).click();
+    await expect(page.getByRole("link", { name: "公開中の共有を開く" })).toBeVisible();
     await page.getByRole("button", { name: "自分の今期カードに戻る" }).click();
     await page.getByRole("button", { name: /日本語アニメ一/ }).click();
     await dialog.getByRole("button", { name: "記録を削除", exact: true }).click();
@@ -982,13 +985,13 @@ test("quick sharing takes four interactions through copy, excludes drafts, and p
     await tap("公開内容をプレビュー");
     const preview = page.getByRole("region", { name: "公開内容のプレビュー" });
     await expect(preview).not.toContainText(/SAVED_PRIVATE|UNSAVED_DRAFT|日本語アニメ二|今の印象/);
-    for (const notice of ["URLを知っている人が見られます。", "公開後に記録を編集・削除しても、この共有の内容は変わりません。", "公開はあとから停止できます。コメント・リアクションはありません。"]) await expect(preview.getByText(notice, { exact: true })).toBeVisible();
+    for (const notice of ["URLを知っている人が見られます。", "初回はURLを作成し、同じ期の公開中URLがある場合はそのURLの内容を更新します。", "記録の編集・削除だけでは公開内容は変わりません。更新はこの画面の明示操作だけで行います。", "公開はあとから停止できます。コメント・リアクションはありません。"]) await expect(preview.getByText(notice, { exact: true })).toBeVisible();
     await page.goBack();
     await expect(page.getByLabel("一言も公開")).not.toBeChecked();
     await page.goForward();
     await expect(preview).toBeVisible();
     assert.equal(state.writes.length, 0);
-    await tap("この内容で公開URLを作成");
+    await tap("この内容で共有URLを作成・更新");
     await expect(page.getByRole("button", { name: "URLをコピー", exact: true })).toBeFocused();
     await tap("URLをコピー");
     assert.equal(interactions, 4);
@@ -998,14 +1001,14 @@ test("quick sharing takes four interactions through copy, excludes drafts, and p
     assert.match(page.url(), /year=2026&season=FALL&date=2026-10-05&share=result$/);
     assert.doesNotMatch(page.url(), /anilist|public-1|PRIVATE|DRAFT/);
     await page.goBack();
-    await expect(page.getByRole("button", { name: "作成済みのURLを確認" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "公開中のURLを確認" })).toBeVisible();
     await page.goForward();
     await expect(page.getByRole("button", { name: "URLをコピー", exact: true })).toBeFocused();
     assert.equal(state.writes.length, 1);
   } finally { await h.close(); }
 });
 
-test("409 preserves unaffected selection and note permission, removes deletions, resets changed notes and requires fresh preview", async () => {
+test("409 preserves selected works, removes deletions, resets all consent and requires fresh preview", async () => {
   const third = anime("anilist-3", "削除作品");
   const h = await harness({ initialRecords: [record(candidates[0], { rating: "liked", note: "UNCHANGED", spoiler: "no_spoiler" }), record(candidates[1], { rating: "neutral", note: "CHANGED", spoiler: "no_spoiler" }), record(third)] });
   const { page, state } = h;
@@ -1020,21 +1023,22 @@ test("409 preserves unaffected selection and note permission, removes deletions,
     await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
     state.publishStatus = 409;
     state.records = [state.records[0], { ...state.records[1], revision: 2, note: "NEW_PRIVATE" }];
-    await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
-    await expect(page.getByRole("button", { name: "この内容で公開URLを作成" })).toBeDisabled();
+    await page.getByRole("button", { name: "この内容で共有URLを作成・更新" }).click();
+    await expect(page.getByRole("button", { name: "この内容で共有URLを作成・更新" })).toBeDisabled();
     await page.getByRole("button", { name: "最新の記録を確認して選択を見直す" }).click();
-    await expect(one.getByLabel("一言も公開")).toBeChecked();
+    await expect(one.getByLabel("一言も公開")).not.toBeChecked();
+    await expect(one.getByLabel("評価も公開")).not.toBeChecked();
     await expect(two.getByLabel("一言も公開")).not.toBeChecked();
     await expect(two.getByLabel("この作品を公開")).toBeChecked();
     await expect(page.getByRole("group", { name: "削除作品", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "この内容で公開URLを作成" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "この内容で共有URLを作成・更新" })).toHaveCount(0);
     assert.equal(state.writes.length, 1);
     state.publishStatus = 200;
     await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
     await expect(page.getByRole("region", { name: "公開内容のプレビュー" })).not.toContainText("NEW_PRIVATE");
-    await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
+    await page.getByRole("button", { name: "この内容で共有URLを作成・更新" }).click();
     await expect(page.getByRole("button", { name: "URLをコピー", exact: true })).toBeVisible();
-    assert.deepEqual(state.writes[1].body.selections, [{ animeId: "anilist-1", revision: 1, includeRating: true, includeNote: true }, { animeId: "anilist-2", revision: 2, includeRating: true, includeNote: false }]);
+    assert.deepEqual(state.writes[1].body.selections, [{ animeId: "anilist-1", revision: 1, includeRating: false, includeNote: false }, { animeId: "anilist-2", revision: 2, includeRating: false, includeNote: false }]);
   } finally { await h.close(); }
 });
 
@@ -1059,13 +1063,13 @@ test("manager loading, error, empty and success are distinct; unknown POST is ne
     await page.getByRole("button", { name: "今の1作品を共有" }).click();
     await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
     state.publishStatus = 503;
-    await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
+    await page.getByRole("button", { name: "この内容で共有URLを作成・更新" }).click();
     await expect(page.getByRole("alert")).toContainText("公開結果を確認できませんでした");
-    await expect(page.getByRole("button", { name: "この内容で公開URLを作成" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "この内容で共有URLを作成・更新" })).toBeDisabled();
     assert.equal(state.writes.length, 1);
     state.shares = [{ year: 2026, season: "FALL", shareId: "already-created", createdAt: "2026-10-01T00:00:00Z" }];
     await page.getByRole("button", { name: "共有の管理・履歴で確認" }).click();
-    await expect(page.getByRole("link", { name: /の共有$/ })).toHaveAttribute("href", "/share/impressions/already-created");
+    await expect(page.getByRole("link", { name: /更新$/ })).toHaveAttribute("href", "/share/impressions/already-created");
     await page.getByRole("button", { name: "URLをコピー", exact: true }).click();
     assert.equal(await page.evaluate(() => window.copiedUrl), "https://impressions.test/share/impressions/already-created");
     assert.equal(state.writes.length, 1);
@@ -1082,7 +1086,7 @@ for (const status of [401, 429]) {
       await page.getByLabel("一言も公開").check();
       await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
       state.publishStatus = status;
-      await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
+      await page.getByRole("button", { name: "この内容で共有URLを作成・更新" }).click();
       await expect(page.getByRole("alert")).toContainText(status === 401 ? "元のアカウント" : "しばらく待って");
       assert.equal(state.writes.length, 1);
       if (status === 401) {
@@ -1093,7 +1097,7 @@ for (const status of [401, 429]) {
         await expect(page.getByText("OWNER_ONLY", { exact: true })).toHaveCount(0);
         await expect(page.getByRole("checkbox", { name: /この作品を公開/ })).toHaveCount(0);
         assert.equal(state.writes.length, 1);
-      } else await expect(page.getByRole("button", { name: "この内容で公開URLを作成" })).toBeEnabled();
+      } else await expect(page.getByRole("button", { name: "この内容で共有URLを作成・更新" })).toBeEnabled();
     } finally { await h.close(); }
   });
 }
@@ -1291,10 +1295,10 @@ test("transport loss after one explicit POST locks publishing and navigates only
     await viewCard(page);
     await page.getByRole("button", { name: "今の1作品を共有" }).click();
     await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
-    await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
+    await page.getByRole("button", { name: "この内容で共有URLを作成・更新" }).click();
     await expect(page.getByRole("alert")).toContainText("公開結果を確認できませんでした");
     await page.goBack(); await page.goForward();
-    await expect(page.getByRole("button", { name: "この内容で公開URLを作成" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "この内容で共有URLを作成・更新" })).toBeDisabled();
     assert.equal(posts, 1);
     await page.getByRole("button", { name: "共有の管理・履歴で確認" }).click();
     await expect(page.getByText("公開中の共有はありません。", { exact: true })).toBeVisible();
@@ -1311,7 +1315,7 @@ test("late publish response cannot leak a receipt into another owner or season; 
     await page.getByRole("button", { name: "公開内容をプレビュー" }).click();
     let held;
     const posted = new Promise((resolve) => page.route("**/api/shares", (route) => { held = route; resolve(); }, { times: 1 }));
-    await page.getByRole("button", { name: "この内容で公開URLを作成" }).click();
+    await page.getByRole("button", { name: "この内容で共有URLを作成・更新" }).click();
     await posted;
     await expect(page.getByRole("button", { name: "公開しています…" })).toBeDisabled();
     state.records = [];

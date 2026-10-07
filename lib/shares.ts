@@ -719,6 +719,37 @@ async function initializeShareSchema(client: ShareDbClient): Promise<void> {
       created_at text not null,
       updated_at text not null
     )`);
+    await ensureColumn(client, "board_shares", "user_id", "text");
+    await client.execute(`create table if not exists canonical_share_mappings (
+      owner_id text not null,
+      kind text not null,
+      season_year integer not null,
+      season text not null,
+      share_id text not null unique,
+      created_at text not null,
+      primary key (owner_id, kind, season_year, season)
+    )`);
+    await client.execute(`insert or ignore into canonical_share_mappings
+      (owner_id, kind, season_year, season, share_id, created_at)
+      select b.user_id, 'season-impressions',
+        cast(json_extract(b.board_json, '$.year') as integer),
+        json_extract(b.board_json, '$.season'), b.share_id, b.created_at
+      from board_shares b
+      where b.user_id is not null
+        and json_valid(b.board_json)
+        and json_extract(b.board_json, '$.kind') = 'season-impressions'
+        and json_extract(b.board_json, '$.season') in ('WINTER', 'SPRING', 'SUMMER', 'FALL')
+        and not exists (
+          select 1 from board_shares newer
+          where newer.user_id = b.user_id
+            and json_valid(newer.board_json)
+            and json_extract(newer.board_json, '$.kind') = 'season-impressions'
+            and json_extract(newer.board_json, '$.year') = json_extract(b.board_json, '$.year')
+            and json_extract(newer.board_json, '$.season') = json_extract(b.board_json, '$.season')
+            and (newer.updated_at > b.updated_at
+              or (newer.updated_at = b.updated_at and newer.created_at > b.created_at)
+              or (newer.updated_at = b.updated_at and newer.created_at = b.created_at and newer.share_id > b.share_id))
+        )`);
     await client.execute(`create table if not exists share_reactions (
       share_id text not null,
       reaction_key text not null,
@@ -753,7 +784,6 @@ async function initializeShareSchema(client: ShareDbClient): Promise<void> {
       foreign key (share_id, comment_id)
         references share_comments(share_id, comment_id)
     )`);
-    await ensureColumn(client, "board_shares", "user_id", "text");
     await ensureColumn(client, "share_reactions", "user_id", "text");
     await client.execute(`delete from share_reactions
         where user_id is not null

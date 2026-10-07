@@ -8,6 +8,7 @@ export const ACCOUNT_DELETION_TABLES = [
   "share_comments",
   "share_comment_reports",
   "share_reactions",
+  "canonical_share_mappings",
   "board_shares",
   "user_anime_statuses",
   "tier_boards",
@@ -162,6 +163,13 @@ async function runAccountDeletionStatements(
       sql: `delete from share_reactions
             where user_id = ? or reaction_key = ?`,
       args: [userId, userId]
+    });
+  }
+
+  if (has("canonical_share_mappings")) {
+    await run({
+      sql: "delete from canonical_share_mappings where owner_id = ?",
+      args: [userId]
     });
   }
 

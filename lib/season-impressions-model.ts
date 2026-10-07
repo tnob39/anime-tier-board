@@ -19,11 +19,16 @@ export type SeasonImpression = ImpressionInput & { checkedAt: string; updatedAt:
 export type ImpressionRevisionCursor = { animeId: string; revision: number };
 export type ImpressionSeasonState = { impressions: SeasonImpression[]; deletedRevisions: ImpressionRevisionCursor[] };
 export type ImpressionSelection = { animeId: string; revision: number; includeRating: boolean; includeNote: boolean };
-export type ImpressionShareInput = ImpressionSeason & { kind: "season-impressions"; selections: ImpressionSelection[] };
+export type ImpressionShareInput = ImpressionSeason & {
+  kind: "season-impressions";
+  selections: ImpressionSelection[];
+  targetShareId?: string | null;
+  expectedUpdatedAt?: string | null;
+};
 export type PublicImpression = { anime: ImpressionAnime; rating?: ImpressionRating | null; note?: string };
 export type ImpressionSnapshot = ImpressionSeason & { kind: "season-impressions"; version: 1; items: PublicImpression[] };
-export type ImpressionShare = ImpressionSnapshot & { shareId: string; createdAt: string };
-export type ImpressionShareHistory = { shareId: string; createdAt: string; year: number; season: AnimeSeason };
+export type ImpressionShare = ImpressionSnapshot & { shareId: string; createdAt: string; updatedAt: string };
+export type ImpressionShareHistory = { shareId: string; createdAt: string; updatedAt: string; year: number; season: AnimeSeason; canonical: boolean };
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -85,8 +90,13 @@ export function parseImpressionDelete(value: unknown): (ImpressionSeason & { rev
 }
 export function parseImpressionShare(value: unknown): ImpressionShareInput | null {
   const key = parseImpressionSeason(value);
-  if (!isRecord(value) || !hasOnly(value, ["kind", "year", "season", "selections"]) || value.kind !== "season-impressions"
+  if (!isRecord(value) || !hasOnly(value, ["kind", "year", "season", "selections", "targetShareId", "expectedUpdatedAt"]) || value.kind !== "season-impressions"
     || !key || !Array.isArray(value.selections) || !value.selections.length || value.selections.length > 300) return null;
+  const targetShareId = value.targetShareId;
+  const expectedUpdatedAt = value.expectedUpdatedAt;
+  if (targetShareId !== undefined && targetShareId !== null && (typeof targetShareId !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(targetShareId))) return null;
+  if (expectedUpdatedAt !== undefined && expectedUpdatedAt !== null && (typeof expectedUpdatedAt !== "string" || !Number.isFinite(Date.parse(expectedUpdatedAt)))) return null;
+  if ((targetShareId == null) !== (expectedUpdatedAt == null)) return null;
   const ids = new Set<string>();
   const selections: ImpressionSelection[] = [];
   for (const item of value.selections) {
@@ -96,7 +106,9 @@ export function parseImpressionShare(value: unknown): ImpressionShareInput | nul
     ids.add(item.animeId);
     selections.push({ animeId: item.animeId, revision: item.revision, includeRating: item.includeRating, includeNote: item.includeNote });
   }
-  return { kind: "season-impressions", ...key, selections };
+  return { kind: "season-impressions", ...key, selections,
+    ...(targetShareId !== undefined ? { targetShareId: targetShareId as string | null } : {}),
+    ...(expectedUpdatedAt !== undefined ? { expectedUpdatedAt: expectedUpdatedAt as string | null } : {}) };
 }
 
 /** Used by both preview and creation. Missing/changed records invalidate the entire preview. */
