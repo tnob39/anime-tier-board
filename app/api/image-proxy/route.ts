@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { AppError } from "@/lib/errors/app-error";
+import sharp from "sharp";
 
 export const dynamic = "force-dynamic";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_IMAGE_WIDTHS = new Set([48, 82, 96, 164, 192, 256, 384]);
 
 export const GET = withApiRoute("image-proxy.GET", async (request: Request) => {
   const requestUrl = new URL(request.url);
   const rawUrl = requestUrl.searchParams.get("url");
+  const rawWidth = requestUrl.searchParams.get("w");
+  const width = rawWidth === null ? null : Number(rawWidth);
 
   if (!rawUrl) {
     throw new AppError({
@@ -17,6 +21,10 @@ export const GET = withApiRoute("image-proxy.GET", async (request: Request) => {
       code: "VALIDATION",
       expose: true,
     });
+  }
+
+  if (width !== null && (!Number.isSafeInteger(width) || !ALLOWED_IMAGE_WIDTHS.has(width))) {
+    throw new AppError({ message: "画像幅が不正です。", status: 400, code: "VALIDATION", expose: true });
   }
 
   let imageUrl: URL;
@@ -110,10 +118,19 @@ export const GET = withApiRoute("image-proxy.GET", async (request: Request) => {
     });
   }
 
-  return new NextResponse(imageBuffer, {
+  const output = width === null
+    ? Buffer.from(imageBuffer)
+    : await sharp(Buffer.from(imageBuffer))
+        .rotate()
+        .resize({ width, withoutEnlargement: true })
+        .webp({ quality: 78 })
+        .toBuffer();
+
+  return new NextResponse(output, {
     headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "public, max-age=86400, s-maxage=86400",
+      "Content-Type": width === null ? contentType : "image/webp",
+      "Content-Length": String(output.byteLength),
+      "Cache-Control": "public, max-age=604800, s-maxage=604800, stale-while-revalidate=2592000",
     },
   });
 });
