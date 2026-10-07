@@ -3,7 +3,7 @@ import { assertOptionalIdempotencyKey, consumeWriteRateLimit, WRITE_BODY_MAX_BYT
 import { assertSameOriginBrowserWrite, jsonWriteError, readJsonWithByteLimit, readBodyBytesWithLimit } from "@/lib/api/write-request-guard";
 import { withApiRoute } from "@/lib/api/with-api-route";
 import { createShare, getShare, type SharedBoard } from "@/lib/shares";
-import { createImpressionShare, getImpressionShare, listImpressionShares, stopImpressionShare } from "@/lib/season-impression-shares";
+import { publishImpressionShare, getImpressionShare, listImpressionShares, stopImpressionShare } from "@/lib/season-impression-shares";
 import { isRecord, parseImpressionShare } from "@/lib/season-impressions-model";
 import { SEASONS, type AnimeItem } from "@/lib/types";
 import { assertImpressionOwner, IMPRESSION_PRIVATE_HEADERS } from "@/lib/api/season-impressions-handlers";
@@ -14,7 +14,7 @@ export function createShareHandlers(overrides: Partial<{
   session: () => Promise<ShareSession>;
   createBoard: typeof createShare;
   getBoard: typeof getShare;
-  create: typeof createImpressionShare;
+  create: typeof publishImpressionShare;
   get: typeof getImpressionShare;
   list: typeof listImpressionShares;
   stop: typeof stopImpressionShare;
@@ -23,7 +23,7 @@ export function createShareHandlers(overrides: Partial<{
   readJson: typeof readJsonWithByteLimit;
 }> = {}) {
   const deps = { session: auth as () => Promise<ShareSession>, createBoard: createShare, getBoard: getShare,
-    create: createImpressionShare, get: getImpressionShare, list: listImpressionShares, stop: stopImpressionShare,
+    create: publishImpressionShare, get: getImpressionShare, list: listImpressionShares, stop: stopImpressionShare,
     assertSameOrigin: assertSameOriginBrowserWrite, rateLimit: consumeWriteRateLimit, readJson: readJsonWithByteLimit, ...overrides };
   const POST = withApiRoute("shares.POST", async (request) => {
     const userId = (await deps.session())?.user?.id;
@@ -38,9 +38,9 @@ export function createShareHandlers(overrides: Partial<{
     if (payload.kind === "season-impressions") {
       const input = parseImpressionShare(payload);
       if (!input) return jsonWriteError("共有する作品・項目の指定が不正です。", 400);
-      const shareId = await deps.create(userId, input);
-      if (!shareId) return jsonWriteError("記録が変更されています。最新の記録からプレビューを作り直してください。", 409);
-      return Response.json({ shareId }, { headers: IMPRESSION_PRIVATE_HEADERS });
+      const published = await deps.create(userId, input);
+      if (!published) return jsonWriteError("記録が変更されています。最新の記録からプレビューを作り直してください。", 409);
+      return Response.json(published, { headers: IMPRESSION_PRIVATE_HEADERS });
     }
     if (payload.kind !== undefined || !isSharedBoard(payload.board) || !Array.isArray(payload.items) || payload.items.length > 300) {
       return jsonWriteError("Invalid share payload", 400);

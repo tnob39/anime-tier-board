@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { getTursoClient, resetTursoClientForTests } from "../lib/turso.ts";
 import { listSeasonImpressions, readImpressionSeasonState, saveSeasonImpression, deleteSeasonImpression } from "../lib/season-impressions.ts";
 import { buildImpressionSnapshot, parseImpressionInput, impressionNoteLength, type ImpressionInput, type ImpressionShareInput } from "../lib/season-impressions-model.ts";
-import { createImpressionShare, getImpressionShare, listImpressionShares, stopImpressionShare } from "../lib/season-impression-shares.ts";
+import { createImpressionShare, publishImpressionShare, getImpressionShare, listImpressionShares, stopImpressionShare } from "../lib/season-impression-shares.ts";
 import { createShare, createWatchlistShare, createDashboardShare, getShare, getWatchlistShare, getDashboardShare, addComment, setReaction, listComments, SHARE_INTERACTIONS_DISABLED } from "../lib/shares.ts";
 import { createImpressionHandlers } from "../lib/api/season-impressions-handlers.ts";
 import { createShareHandlers } from "../lib/api/impression-share-handlers.ts";
@@ -35,7 +35,8 @@ const request = (route: string, method = "GET", body?: unknown, headers: Headers
 const handlers = (userId = "owner") => createImpressionHandlers({ identity: async () => ({ userId, source: "session" }) });
 const shares = (userId = "owner") => createShareHandlers({ session: async () => ({ user: { id: userId } }) });
 function selection(revision: number, extras = {}): ImpressionShareInput {
-  return { kind: "season-impressions", ...key, selections: [{ animeId: "anilist-1", revision, includeRating: true, includeNote: true, ...extras }] };
+  return { kind: "season-impressions", ...key, targetShareId: null, expectedUpdatedAt: null,
+    selections: [{ animeId: "anilist-1", revision, includeRating: true, includeNote: true, ...extras }] };
 }
 let directory: string;
 let previousUrl: string | undefined;
@@ -215,7 +216,7 @@ test("all new admission paths await asynchronous allow/deny/failure before consu
         save: async () => { writes++; return { ...input(), revision: 1, checkedAt: "now", updatedAt: "now" }; },
         remove: async () => { writes++; return { animeId: "anilist-1", revision: 2 }; } });
       const shareApi = createShareHandlers({ session: async () => ({ user: { id: "owner" } }), rateLimit: () => gate,
-        create: async () => { writes++; return "created"; }, createBoard: async () => { writes++; return "board"; }, stop: async () => { writes++; return true; } });
+        create: async () => { writes++; return { shareId: "created", operation: "created", updatedAt: "now" }; }, createBoard: async () => { writes++; return "board"; }, stop: async () => { writes++; return true; } });
       const body = path === "put" ? input() : path === "delete" ? { ...key, revision: 1 } : path === "board"
         ? { board: { version: 1, season: key.season, seasonYear: key.year, tiers: [], updatedAt: "now" }, items: [] } : selection(1);
       const req = request("/x", path === "put" ? "PUT" : path === "delete" || path === "stop" ? "DELETE" : "POST", body);
@@ -238,14 +239,18 @@ test("all new admission paths await asynchronous allow/deny/failure before consu
 });
 
 test("snapshot privacy matrix: only explicitly selected no_spoiler notes exist in public/storage payloads", async () => {
+  let target: { shareId: string; updatedAt: string } | null = null;
   for (const spoiler of ["unspecified", "has_spoiler", "no_spoiler"] as const) {
     for (const includeNote of [false, true]) {
       const existing = (await listSeasonImpressions("owner", key))[0];
       const saved = await saveSeasonImpression("owner", input({ revision: existing?.revision ?? 0, spoiler, note: "PRIVATE_OR_SELECTED", rating: "liked" }));
       const selected = selection(saved!.revision, { includeNote, includeRating: false });
       const preview = buildImpressionSnapshot(selected, [saved!]);
-      const shareId = await createImpressionShare("owner", selected);
-      assert.ok(shareId);
+      const published = await publishImpressionShare("owner", { ...selected,
+        targetShareId: target?.shareId ?? null, expectedUpdatedAt: target?.updatedAt ?? null });
+      assert.ok(published);
+      const shareId = published.shareId;
+      target = { shareId, updatedAt: published.updatedAt };
       const share = await getImpressionShare(shareId);
       assert.deepEqual(share?.items, preview?.items);
       const expected = includeNote && spoiler === "no_spoiler";
@@ -278,7 +283,7 @@ test("anime snapshots project allowed display fields and never merge IDs/titles"
   assert.doesNotMatch(JSON.stringify(await getImpressionShare(id!)), /HIDDEN|episodes|profile/);
 });
 
-test("shares are immutable; stale/missing/non-owned selections fail atomically with 409", async () => {
+test("publishing again atomically updates the same owner/season URL while stale and non-owned selections fail", async () => {
   await saveSeasonImpression("owner", input({ note: "published", spoiler: "no_spoiler" }));
   const created = await shares().POST(request("/api/shares", "POST", selection(1)));
   assert.equal(created.status, 200);
@@ -291,8 +296,62 @@ test("shares are immutable; stale/missing/non-owned selections fail atomically w
   mixed.selections.push({ animeId: "jikan-9", revision: 1, includeNote: false, includeRating: false });
   assert.equal((await shares().POST(request("/api/shares", "POST", mixed))).status, 409);
   assert.equal((await listImpressionShares("owner")).length, 1);
+  const beforeUpdate = (await getImpressionShare(shareId))!;
+  const updated = await publishImpressionShare("owner", { ...selection(2, { includeNote: false }), targetShareId: shareId, expectedUpdatedAt: beforeUpdate.updatedAt });
+  assert.equal(updated?.shareId, shareId);
+  assert.equal(updated?.operation, "updated");
+  assert.equal((await getImpressionShare(shareId))!.items[0].note, undefined);
+  assert.equal((await listImpressionShares("owner")).length, 1);
+  const summer = await saveSeasonImpression("owner", input({ season: "SUMMER" }));
+  const summerPublished = await publishImpressionShare("owner", { ...selection(summer!.revision), season: "SUMMER" });
+  assert.notEqual(summerPublished?.shareId, shareId);
+  assert.equal((await publishImpressionShare("other", selection(2)))?.shareId, undefined);
   await deleteSeasonImpression("owner", "anilist-1", { ...key, revision: 2 });
-  assert.equal((await getImpressionShare(shareId))!.items[0].note, "published");
+  assert.equal((await getImpressionShare(shareId))!.items[0].note, undefined);
+});
+
+test("canonical mapping serializes first publish, rejects stale tabs and never resurrects a revoked URL", async () => {
+  await saveSeasonImpression("owner", input({ note: "first", spoiler: "no_spoiler" }));
+  const firstAttempts = await Promise.all([
+    publishImpressionShare("owner", selection(1)),
+    publishImpressionShare("owner", selection(1))
+  ]);
+  assert.equal(new Set(firstAttempts.map((result) => result?.shareId)).size, 1);
+  assert.equal(firstAttempts.filter((result) => result?.operation === "created").length, 1);
+  const first = (await getImpressionShare(firstAttempts[0]!.shareId))!;
+  await saveSeasonImpression("owner", input({ revision: 1, note: "second", spoiler: "no_spoiler" }));
+  const updated = await publishImpressionShare("owner", {
+    ...selection(2), targetShareId: first.shareId, expectedUpdatedAt: first.updatedAt
+  });
+  assert.equal(updated?.operation, "updated");
+  assert.equal(await publishImpressionShare("owner", {
+    ...selection(2), targetShareId: first.shareId, expectedUpdatedAt: first.updatedAt
+  }), null, "a stale tab cannot overwrite the winning snapshot");
+  assert.equal((await getImpressionShare(first.shareId))!.items[0].note, "second");
+  assert.equal(await stopImpressionShare("owner", first.shareId), true);
+  assert.equal(await publishImpressionShare("owner", {
+    ...selection(2), targetShareId: first.shareId, expectedUpdatedAt: updated!.updatedAt
+  }), null, "delete-before-update cannot resurrect the URL");
+  const replacement = await publishImpressionShare("owner", selection(2));
+  assert.equal(replacement?.operation, "created");
+  assert.notEqual(replacement?.shareId, first.shareId);
+  assert.equal(await getImpressionShare(first.shareId), null);
+});
+
+test("schema migration adopts the newest legacy impression URL without rewriting older public URLs", async () => {
+  const client = getTursoClient();
+  await client.execute(`create table board_shares (
+    share_id text primary key, user_id text, board_json text not null, items_json text not null,
+    created_at text not null, updated_at text not null)`);
+  const board = JSON.stringify({ kind: "season-impressions", version: 1, ...key });
+  await client.execute({ sql: "insert into board_shares values (?, ?, ?, '[]', ?, ?)",
+    args: ["legacy-old", "owner", board, "2026-10-01T00:00:00.000Z", "2026-10-01T00:00:00.000Z"] });
+  await client.execute({ sql: "insert into board_shares values (?, ?, ?, '[]', ?, ?)",
+    args: ["legacy-new", "owner", board, "2026-10-02T00:00:00.000Z", "2026-10-02T00:00:00.000Z"] });
+  const history = await listImpressionShares("owner");
+  assert.equal(history.find((share) => share.canonical)?.shareId, "legacy-new");
+  assert.ok(await getImpressionShare("legacy-old"));
+  assert.ok(await getImpressionShare("legacy-new"));
 });
 
 test("share route validates explicit fields, authentication, origin, bytes and rate limit", async () => {
