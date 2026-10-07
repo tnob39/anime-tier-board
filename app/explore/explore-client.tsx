@@ -4,6 +4,7 @@ import { ExternalLink, Loader2, PlayCircle, Plus, Search, Star, TrendingUp } fro
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AnimeCardPlaceholder from "@/components/AnimeCardPlaceholder";
+import { useDisplayMode } from "@/components/display-mode/DisplayModeProvider";
 import { SeasonContextControl } from "@/components/SeasonContextControl";
 import { track } from "@/lib/analytics";
 import { filterAnimeItems } from "@/lib/anime-filters";
@@ -42,6 +43,9 @@ type ExploreNotice = {
 };
 
 const PAGE_SIZE = 50;
+const PRIORITY_IMAGE_COUNT = 4;
+const EXPLORE_IMAGE_WIDTH = 96;
+const EXPLORE_IMAGE_RETINA_WIDTH = 192;
 
 const UNAVAILABLE_NOTICE_TEXT =
   "季節データを取得できませんでした。時間をおいて「さがす」を押してください。";
@@ -359,6 +363,7 @@ export function ExploreClient({
   initialSeason: SeasonRef["season"];
   initialYearScope: boolean;
 }) {
+  const { mode: displayMode, hydrated: displayModeHydrated } = useDisplayMode();
   const current = getCurrentAnimeSeason();
   const currentYear = current.year;
   const [year, setYear] = useState(initialYear);
@@ -731,11 +736,13 @@ export function ExploreClient({
         <section className="explore-grid" aria-label="作品候補">
           {visibleItems.map((entry, index) => (
             <article key={entry.item.id} className="explore-card">
-              {entry.item.proxiedImageUrl ? (
-                <img src={entry.item.proxiedImageUrl} alt={entry.item.title} loading="lazy" />
-              ) : (
-                <AnimeCardPlaceholder title={entry.item.title} />
-              )}
+              {displayModeHydrated && displayMode === "visual" ? (
+                <ExploreCardImage
+                  src={entry.item.proxiedImageUrl}
+                  title={entry.item.title}
+                  priority={index < PRIORITY_IMAGE_COUNT}
+                />
+              ) : null}
               <div className="explore-card-body">
                 <div className="explore-rank">#{index + 1}</div>
                 <h2>{entry.item.title}</h2>
@@ -800,6 +807,57 @@ export function ExploreClient({
       ) : null}
     </main>
   );
+}
+
+function ExploreCardImage({
+  src,
+  title,
+  priority
+}: {
+  src: string;
+  title: string;
+  priority: boolean;
+}) {
+  const [state, setState] = useState<"loading" | "loaded" | "error">(
+    src ? "loading" : "error"
+  );
+
+  if (state === "error") {
+    return (
+      <div className="explore-card-image" data-image-state="error">
+        <AnimeCardPlaceholder title={title} />
+      </div>
+    );
+  }
+
+  const standardSrc = imageWidthUrl(src, EXPLORE_IMAGE_WIDTH);
+  const retinaSrc = imageWidthUrl(src, EXPLORE_IMAGE_RETINA_WIDTH);
+
+  return (
+    <div className="explore-card-image" data-image-state={state}>
+      <div aria-hidden="true">
+        <AnimeCardPlaceholder title={title} />
+      </div>
+      <img
+        src={standardSrc}
+        srcSet={`${standardSrc} 1x, ${retinaSrc} 2x`}
+        sizes="(max-width: 640px) 82px, 96px"
+        alt={title}
+        width={96}
+        height={136}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
+        onLoad={() => setState("loaded")}
+        onError={() => setState("error")}
+      />
+    </div>
+  );
+}
+
+function imageWidthUrl(src: string, width: number): string {
+  const separator = src.includes("?") ? "&" : "?";
+  return `${src}${separator}w=${width}`;
 }
 
 function StreamingPlatformPills({ item }: { item: AnimeItem }) {
