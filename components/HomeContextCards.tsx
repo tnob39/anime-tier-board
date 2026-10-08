@@ -159,7 +159,7 @@ export default function HomeContextCards({ now: nowProp }: HomeContextCardsProps
             </button>
           </div>
           <Link
-            href="/dashboard?section=subscriptions"
+            href="/subscriptions"
             className="hcc-cta"
             onClick={() => track({ name: "home_card_tap", card_type: "context_subsc" })}
           >

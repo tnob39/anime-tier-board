@@ -48,10 +48,31 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.58",
+    date: "2026-10-08",
+    label: "正式5タブとサブスク診断へ整理",
+    isLatest: true,
+    changes: [
+      {
+        icon: ListChecks,
+        iconTone: "indigo",
+        title: "主要ナビを行動中心の5タブに統一",
+        description: "分析タブを終了し、ホーム・今期チェック・さがす・マイリスト・マイページを全ユーザー共通の正式ナビにしました。",
+      },
+      {
+        icon: CreditCard,
+        iconTone: "emerald",
+        title: "サブスク診断を独立ページへ",
+        description: "配信先を確認できた作品だけでカバー率を計算し、未確認作品は結果と分けて表示します。",
+        href: "/subscriptions",
+      },
+    ],
+  },
+  {
     version: "1.57",
     date: "2026-08-22",
     label: "利用者の声でスマホ画像を自動圧縮",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: Smartphone,
@@ -1423,7 +1444,7 @@ export default function UpdatesPage() {
   return (
     <main className="app-main updates-main">
       <header className="updates-header">
-        <Link className="updates-back" href="/dashboard">← 戻る</Link>
+        <Link className="updates-back" href="/">← 戻る</Link>
         <h1>更新情報</h1>
       </header>
 

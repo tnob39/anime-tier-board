@@ -206,8 +206,8 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
           <h1>設定</h1>
           <p>加入中のストリーミングサービスを管理します。</p>
         </div>
-        <Link className="command-button" href="/dashboard">
-          分析へ
+        <Link className="command-button" href="/subscriptions">
+          サブスクへ
         </Link>
       </header>
 
@@ -408,7 +408,7 @@ export function SettingsClient({ initialServiceIds }: { initialServiceIds: strin
       <section className="settings-panel">
         <h2>サブスク診断</h2>
         <p>マイリストと照合して、見放題カバー率を確認できます。</p>
-        <Link className="command-button emphasis-button" href="/dashboard?section=subscriptions">
+        <Link className="command-button emphasis-button" href="/subscriptions">
           サブスク診断を見る
         </Link>
       </section>

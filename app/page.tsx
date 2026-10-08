@@ -13,6 +13,7 @@ import { HomeGuest } from "./home-guest";
 /** Allowlisted protected routes only — exact path match; no query/hash/open redirect. */
 const ALLOWED_RETURN_TO = new Set([
   "/dashboard",
+  "/subscriptions",
   "/watchlist",
   "/settings",
   "/voice-actors",
