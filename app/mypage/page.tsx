@@ -65,6 +65,7 @@ export default async function MyPage() {
         serviceCount: subscriptionState.subscriptions.length,
         coveragePercentage: stats.coveragePercentage,
         watchlistCount: stats.watchlistCount,
+        confirmedCount: stats.confirmedCount,
         coveredCount: stats.coveredCount
       };
     } else {
@@ -72,6 +73,7 @@ export default async function MyPage() {
         serviceCount: 0,
         coveragePercentage: 0,
         watchlistCount: 0,
+        confirmedCount: 0,
         coveredCount: 0
       };
     }

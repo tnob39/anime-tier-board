@@ -31,12 +31,15 @@ export type ExclusiveServiceCoverage = {
 
 export type SubscriptionStats = {
   watchlistCount: number;
+  confirmedCount: number;
+  unknownCount: number;
   coveredCount: number;
   coveragePercentage: number;
   subscribedCoverage: ServiceCoverage[];
   exclusiveByService: ExclusiveServiceCoverage[];
   additionalByService: AdditionalServiceEffect[];
   uncoveredAnime: AnimeItem[];
+  unknownAnime: AnimeItem[];
 };
 
 export type PublicServiceCoverage = {
@@ -68,6 +71,8 @@ export type PublicExclusiveServiceCoverage = {
 
 export type PublicSubscriptionDiagnosis = {
   watchlistCount: number;
+  confirmedCount: number;
+  unknownCount: number;
   coveredCount: number;
   coveragePercentage: number;
   recommendedServiceId: string | null;
@@ -76,6 +81,7 @@ export type PublicSubscriptionDiagnosis = {
   exclusiveByService: PublicExclusiveServiceCoverage[];
   additionalByService: PublicAdditionalServiceEffect[];
   uncoveredAnime: AnimeItem[];
+  unknownAnime: AnimeItem[];
 };
 
 export function getAnimeTmdbProviderIds(anime: AnimeItem): number[] {
@@ -120,20 +126,22 @@ export function calcSubscriptionStats(
     .filter((service): service is StreamingService => Boolean(service));
 
   const subscribedProviderIds = subscribedServices.flatMap((service) => service.tmdbProviderIds);
-  const coveredAnime = watchlist.filter((anime) =>
-    subscribedProviderIds.some((providerId) => animeMatchesProvider(anime, providerId))
+  const confirmedAnime = watchlist.filter((anime) => anime.streamingProvidersJp !== undefined);
+  const unknownAnime = watchlist.filter((anime) => anime.streamingProvidersJp === undefined);
+  const coveredAnime = confirmedAnime.filter((anime) =>
+    subscribedProviderIds.some((providerId) => animeMatchesProviderStrict(anime, providerId))
   );
   const coveredIds = new Set(coveredAnime.map((anime) => anime.id));
 
   const subscribedCoverage = subscribedServices.map((service) => {
-    const covered = watchlist.filter((anime) =>
-      service.tmdbProviderIds.some((id) => animeMatchesProvider(anime, id))
+    const covered = confirmedAnime.filter((anime) =>
+      service.tmdbProviderIds.some((id) => animeMatchesProviderStrict(anime, id))
     );
 
     return {
       service,
       count: covered.length,
-      percentage: watchlist.length ? Math.round((covered.length / watchlist.length) * 100) : 0,
+      percentage: confirmedAnime.length ? Math.round((covered.length / confirmedAnime.length) * 100) : 0,
       coveredAnime: covered
     };
   });
@@ -141,7 +149,7 @@ export function calcSubscriptionStats(
   // 独占判定: 加入中サービスの中でTMDb flatrateデータ上ちょうど1サービスのみ一致する作品を
   // そのサービスの「ここだけ視聴可」とする。AniListフォールバック一致のみの作品は対象外。
   const exclusiveByService: ExclusiveServiceCoverage[] = subscribedServices.map((service) => {
-    const exclusiveAnime = watchlist.filter((anime) => {
+    const exclusiveAnime = confirmedAnime.filter((anime) => {
       const strictMatchCount = subscribedServices.filter((candidate) =>
         candidate.tmdbProviderIds.some((id) => animeMatchesProviderStrict(anime, id))
       ).length;
@@ -160,10 +168,10 @@ export function calcSubscriptionStats(
 
   const additionalByService = unsubscribed
     .map((service) => {
-      const additional = watchlist.filter(
+      const additional = confirmedAnime.filter(
         (anime) =>
           !coveredIds.has(anime.id) &&
-          service.tmdbProviderIds.some((id) => animeMatchesProvider(anime, id))
+          service.tmdbProviderIds.some((id) => animeMatchesProviderStrict(anime, id))
       );
       return {
         service,
@@ -174,18 +182,22 @@ export function calcSubscriptionStats(
     .sort((left, right) => right.additionalCount - left.additionalCount);
 
   const watchlistCount = watchlist.length;
+  const confirmedCount = confirmedAnime.length;
   const coveredCount = coveredAnime.length;
 
-  const uncoveredAnime = watchlist.filter((anime) => !coveredIds.has(anime.id));
+  const uncoveredAnime = confirmedAnime.filter((anime) => !coveredIds.has(anime.id));
 
   return {
     watchlistCount,
+    confirmedCount,
+    unknownCount: unknownAnime.length,
     coveredCount,
-    coveragePercentage: watchlistCount ? Math.round((coveredCount / watchlistCount) * 100) : 0,
+    coveragePercentage: confirmedCount ? Math.round((coveredCount / confirmedCount) * 100) : 0,
     subscribedCoverage,
     exclusiveByService,
     additionalByService,
-    uncoveredAnime
+    uncoveredAnime,
+    unknownAnime
   };
 }
 
@@ -194,6 +206,8 @@ export function toPublicSubscriptionDiagnosis(stats: SubscriptionStats): PublicS
 
   return {
     watchlistCount: stats.watchlistCount,
+    confirmedCount: stats.confirmedCount,
+    unknownCount: stats.unknownCount,
     coveredCount: stats.coveredCount,
     coveragePercentage: stats.coveragePercentage,
     recommendedServiceId: recommended?.service.id ?? null,
@@ -218,7 +232,8 @@ export function toPublicSubscriptionDiagnosis(stats: SubscriptionStats): PublicS
       additionalCount: entry.additionalCount,
       additionalAnime: entry.additionalAnime
     })),
-    uncoveredAnime: stats.uncoveredAnime
+    uncoveredAnime: stats.uncoveredAnime,
+    unknownAnime: stats.unknownAnime
   };
 }
 

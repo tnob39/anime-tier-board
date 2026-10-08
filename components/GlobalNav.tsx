@@ -6,16 +6,15 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { HamburgerMenu } from "./HamburgerMenu";
-import { useNavV5 } from "@/lib/nav-flag";
-import { isOwnerEmail } from "@/lib/owner";
+
 import { seasonAwareHref } from "@/lib/season-url";
 
 const NAV_ITEMS = [
   { href: "/", label: "ホーム", exact: true },
-  { href: "/tier", label: "Tier", exact: false },
-  { href: "/dashboard", label: "分析", exact: false },
+  { href: "/tier/impressions", label: "今期チェック", exact: false },
+  { href: "/explore", label: "さがす", exact: false },
   { href: "/watchlist", label: "マイリスト", exact: false },
-  { href: "/explore", label: "さがす", exact: false, ownerOnly: true },
+  { href: "/mypage", label: "マイページ", exact: false },
 ];
 
 export function GlobalNav() {
@@ -26,9 +25,7 @@ export function GlobalNav() {
   const isAuthenticated = status === "authenticated";
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isOwner = isOwnerEmail(session?.user?.email);
-  const navV5 = useNavV5();
-  const visibleNavItems = NAV_ITEMS.filter((item) => !item.ownerOnly || isOwner);
+
   const userMenuFirstItemRef = useRef<HTMLAnchorElement>(null);
   const userMenuPanelRef = useRef<HTMLDivElement>(null);
 
@@ -86,27 +83,21 @@ export function GlobalNav() {
         aria-label="グローバルナビゲーション"
       >
         <div className="global-nav-left">
-          {navV5 ? (
-            <Link href="/mypage" className="global-nav-btn" aria-label="マイページ">
-              <User size={20} />
-            </Link>
-          ) : (
-            <button
-              type="button"
-              className="global-nav-btn"
-              onClick={() => setIsDrawerOpen(true)}
-              aria-label="メニューを開く"
-              aria-expanded={isDrawerOpen}
-              aria-controls="global-nav-drawer"
-            >
-              <Menu size={20} />
-            </button>
-          )}
+          <button
+            type="button"
+            className="global-nav-btn"
+            onClick={() => setIsDrawerOpen(true)}
+            aria-label="メニューを開く"
+            aria-expanded={isDrawerOpen}
+            aria-controls="global-nav-drawer"
+          >
+            <Menu size={20} />
+          </button>
           <Link href={seasonAwareHref("/", pathname, new URLSearchParams(searchParams.toString()))} className="global-nav-logo" aria-label="numanie トップへ">
             numanie
           </Link>
           <nav className="global-nav-links" aria-label="主要ページ（デスクトップ）">
-            {visibleNavItems.map((item) => {
+            {NAV_ITEMS.map((item) => {
               const active = item.exact
                 ? pathname === item.href
                 : pathname === item.href || pathname.startsWith(item.href + "/");
@@ -208,12 +199,10 @@ export function GlobalNav() {
         </div>
       </nav>
 
-      {!navV5 ? (
-        <HamburgerMenu
-          isOpen={isDrawerOpen}
-          onClose={() => setIsDrawerOpen(false)}
-        />
-      ) : null}
+      <HamburgerMenu
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </>
   );
 }

@@ -5,6 +5,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 const PROTECTED_GATES = [
   { path: "/dashboard", returnTo: "/dashboard" },
+  { path: "/subscriptions", returnTo: "/subscriptions" },
   { path: "/watchlist", returnTo: "/watchlist" },
   { path: "/settings", returnTo: "/settings" },
   { path: "/voice-actors", returnTo: "/voice-actors" },

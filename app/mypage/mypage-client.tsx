@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BarChart3,
   BookOpen,
   ChevronRight,
   CreditCard,
@@ -17,7 +16,7 @@ import { ThemeSwitch } from "@/components/ThemeSwitch";
 const links = [
   { href: "/watchlist", label: "マイリスト", icon: ListChecks },
   { href: "/guide", label: "使い方", icon: BookOpen },
-  { href: "/dashboard", label: "分析", icon: BarChart3 },
+
   { href: "/voice-actors", label: "声優", icon: Mic2 },
   { href: "/settings", label: "設定", icon: Settings },
   { href: "/updates", label: "更新情報", icon: Megaphone },
@@ -35,6 +34,7 @@ type MyPageClientProps = {
     serviceCount: number;
     coveragePercentage: number;
     watchlistCount: number;
+    confirmedCount: number;
     coveredCount: number;
   } | null;
   tierDistribution?: Array<{
@@ -134,11 +134,7 @@ export function MyPageClient({
             <span>マイリストを見る（全{total}件）</span>
             <ChevronRight size={18} className="mypage-link-arrow" aria-hidden="true" />
           </Link>
-          <Link href="/dashboard" className="hamburger-nav-item">
-            <BarChart3 size={18} className="hamburger-nav-icon" aria-hidden="true" />
-            <span>分析で詳細を見る</span>
-            <ChevronRight size={18} className="mypage-link-arrow" aria-hidden="true" />
-          </Link>
+
         </section>
       ) : null}
 
@@ -149,12 +145,12 @@ export function MyPageClient({
             <>
               <p className="mypage-subs-summary">
                 加入中 {subscriptionSummary.serviceCount}サービス
-                {subscriptionSummary.watchlistCount > 0
-                  ? `・見放題カバー率 ${subscriptionSummary.coveragePercentage}%（${subscriptionSummary.coveredCount}/${subscriptionSummary.watchlistCount}作品）`
+                {subscriptionSummary.confirmedCount > 0
+                  ? `・確認済み作品の見放題カバー率 ${subscriptionSummary.coveragePercentage}%（${subscriptionSummary.coveredCount}/${subscriptionSummary.confirmedCount}作品）`
                   : null}
               </p>
               <Link
-                href="/dashboard?section=subscriptions"
+                href="/subscriptions"
                 className="hamburger-nav-item"
               >
                 <CreditCard size={18} className="hamburger-nav-icon" aria-hidden="true" />
@@ -164,7 +160,7 @@ export function MyPageClient({
             </>
           ) : (
             <Link
-              href="/dashboard?section=subscriptions"
+              href="/subscriptions"
               className="hamburger-nav-item"
             >
               <CreditCard size={18} className="hamburger-nav-icon" aria-hidden="true" />

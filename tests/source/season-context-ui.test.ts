@@ -27,16 +27,25 @@ test("season context control is keyboard-accessible with 44px targets", () => {
   assert.match(css, /grid-template-columns: 1fr 1fr/);
 });
 
-test("five-tab global nav is preserved and receives season-aware hrefs", () => {
+test("canonical five-tab nav has no analysis or feature-flag branch", () => {
   const globalNav = read("components/GlobalNav.tsx");
   assert.match(globalNav, /label: "ホーム"/);
-  assert.match(globalNav, /label: "Tier"/);
-  assert.match(globalNav, /label: "分析"/);
+  assert.match(globalNav, /label: "今期チェック"/);
   assert.match(globalNav, /label: "マイリスト"/);
   assert.match(globalNav, /label: "さがす"/);
+  assert.match(globalNav, /label: "マイページ"/);
+  assert.doesNotMatch(globalNav, /label: "分析"|useNavV5|ownerOnly/);
   assert.match(globalNav, /seasonAwareHref/);
   const mobileNav = read("components/MobileNav.tsx");
   assert.match(mobileNav, /seasonAwareHref/);
+  assert.doesNotMatch(mobileNav, /NAV_ITEMS_V5|useNavV5|numanie:nav-v5|label: "分析"/);
+});
+
+test("active subscription navigation bypasses the retired dashboard route", () => {
+  const manifest = read("app/manifest.ts");
+  const hamburger = read("components/HamburgerMenu.tsx");
+  assert.match(manifest, /url:\s*"\/subscriptions"/);
+  assert.doesNotMatch(manifest + hamburger, /\/dashboard\?section=subscriptions/);
 });
 
 test("canonical parser is used by seasonal API, boards, and season landing", () => {
@@ -82,8 +91,8 @@ test("season writers compose the next URL from live location or latest committed
 
 test("mobile Tier destination is discoverable in all display modes without a sixth global slot", () => {
   const nav = read("components/MobileNav.tsx");
-  const v5 = nav.match(/const NAV_ITEMS_V5: NavItem\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
-  assert.deepEqual([...v5.matchAll(/href: "([^"]+)"/g)].map((match) => match[1]),
+  const canonical = nav.match(/const NAV_ITEMS: NavItem\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
+  assert.deepEqual([...canonical.matchAll(/href: "([^"]+)"/g)].map((match) => match[1]),
     ["/", "/tier", "/explore", "/watchlist", "/mypage"]);
   assert.match(nav, /今期チェック/);
   assert.match(nav, /"\/tier\/impressions"/);
