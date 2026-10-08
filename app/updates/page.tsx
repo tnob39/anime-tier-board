@@ -48,10 +48,25 @@ type Release = {
 
 const RELEASES: Release[] = [
   {
+    version: "1.59",
+    date: "2026-10-08",
+    label: "設定をデータ管理へ整理",
+    isLatest: true,
+    changes: [
+      {
+        icon: ShieldCheck,
+        iconTone: "indigo",
+        title: "設定画面をシンプルに",
+        description: "エクスポートとアカウントデータ削除を1つの「データ管理」にまとめ、削除範囲の詳細は確認時に表示するようにしました。",
+        href: "/settings",
+      },
+    ],
+  },
+  {
     version: "1.58",
     date: "2026-10-08",
     label: "正式5タブとサブスク診断へ整理",
-    isLatest: true,
+    isLatest: false,
     changes: [
       {
         icon: ListChecks,

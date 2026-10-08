@@ -373,7 +373,7 @@ test("source contract: export lib never selects secret columns", () => {
 test("source contract: settings UI separates export and delete failure states", () => {
   const ui = readProjectFile("app/settings/settings-client.tsx");
 
-  assert.match(ui, /データエクスポート|アカウントデータのエクスポート/);
+  assert.match(ui, /データをエクスポート/);
   assert.match(ui, /method:\s*["']GET["']/);
   assert.match(ui, /\/api\/account/);
   assert.match(ui, /exportPending|exportError|exportSuccess|retry/);

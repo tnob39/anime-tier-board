@@ -625,9 +625,8 @@ test("source contract: settings UI two-step deletion and signOut only after succ
   assert.match(ui, /openDeleteConfirm|setShowDeleteConfirm\(true\)/);
   assert.match(ui, /disabled=\{!canSubmitDeletion\}|disabled=\{!canSubmit/);
 
-  // Logout section retained
-  assert.match(ui, /ログアウト/);
-  assert.match(ui, /signOut\(\)/);
+  // The duplicate logout section is gone; sign-out remains scoped to post-delete cleanup/retry.
+  assert.doesNotMatch(ui, /onClick=\{\(\) => void signOut\(\)\}/);
 });
 
 test("source contract: lib uses single write transaction and sqlite_schema", () => {

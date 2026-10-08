@@ -333,13 +333,11 @@ test.describe("ATB-780 season context", () => {
   });
 
   for (const mode of ["simple", "visual"]) {
-    for (const navV5 of [false, true]) {
-      test(`375px ${mode} navV5=${navV5} exposes one-tap 今期チェック in the existing Tier slot`, async ({ page }, testInfo) => {
+      test(`375px ${mode} exposes one-tap 今期チェック in the canonical Tier slot`, async ({ page }, testInfo) => {
         await page.setViewportSize({ width: 375, height: 812 });
-        await page.addInitScript(({ mode, navV5 }) => {
+        await page.addInitScript((mode) => {
           localStorage.setItem("numanie-display-mode", mode);
-          localStorage.setItem("numanie:nav-v5", navV5 ? "1" : "0");
-        }, { mode, navV5 });
+        }, mode);
         await page.route("**/api/auth/session", (route) => route.fulfill({ json: {
           user: { name: "Local owner fixture", email: "tnob38@gmail.com" },
           expires: "2099-01-01T00:00:00.000Z"
@@ -348,7 +346,7 @@ test.describe("ATB-780 season context", () => {
         await waitForSeasonControl(page);
         await expect(page.locator("html")).toHaveAttribute("data-display-mode", mode);
         const nav = page.getByRole("navigation", { name: "主要ページ", exact: true });
-        await expect(nav.getByRole("link")).toHaveCount(navV5 ? 5 : 4);
+        await expect(nav.getByRole("link")).toHaveCount(5);
         const check = nav.getByRole("link", { name: "Tier 今期チェック" });
         await expect(check).toBeVisible();
         await expect(check).toHaveAttribute("href", "/tier/impressions?year=2024&season=SUMMER");
@@ -374,7 +372,7 @@ test.describe("ATB-780 season context", () => {
         await expect(area.getByRole("link", { name: "今期チェック", exact: true })).toHaveAttribute(
           "href", "/tier/impressions?year=2024&season=SUMMER"
         );
-        await page.screenshot({ path: testInfo.outputPath(`tier-nav-${mode}-${navV5}.png`) });
+        await page.screenshot({ path: testInfo.outputPath(`tier-nav-${mode}.png`) });
 
         await page.goto("/tier/impressions?year=2024&season=SUMMER");
         await expect(check).toHaveAttribute("aria-current", "page");
@@ -384,13 +382,11 @@ test.describe("ATB-780 season context", () => {
           "href", "/tier?year=2024&season=SUMMER"
         );
       });
-    }
 
     test(`post-779 ${mode}: one tap opens impressions and preserves active state and season on return`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width: 375, height: 812 });
       await page.addInitScript((mode) => {
         localStorage.setItem("numanie-display-mode", mode);
-        localStorage.setItem("numanie:nav-v5", "1");
       }, mode);
       await page.goto("/?year=2024&season=SUMMER");
       await waitForSeasonControl(page);
