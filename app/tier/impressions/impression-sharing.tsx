@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { ImpressionCardContent, ImpressionSnapshotView } from "@/components/ImpressionSnapshotView";
+import { ImpressionSnapshotView } from "@/components/ImpressionSnapshotView";
 import { buildImpressionSnapshot, type ImpressionSeason, type SeasonImpression, type ImpressionSelection,
   type ImpressionShareHistory, type ImpressionShareInput, type ImpressionSnapshot } from "@/lib/season-impressions-model";
 import { seasonHeadingJa } from "@/lib/season";
@@ -12,9 +12,10 @@ import { resolveSeasonQuery } from "@/lib/season-url";
 import { impressionError, impressionRequest } from "./impressions-request";
 import { IMPRESSION_SHARE_INITIAL_LIMIT, sortImpressionRecords } from "@/lib/season-impressions-view";
 import { track } from "@/lib/analytics";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 
-type Step = "select" | "preview" | "result" | "manage";
-const steps: Step[] = ["select", "preview", "result", "manage"];
+type Step = "select" | "result" | "manage";
+const steps: Step[] = ["select", "result", "manage"];
 function statusOf(error: unknown) { return error instanceof Error ? (error as Error & { status?: number }).status : undefined; }
 
 export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, recordsReady, hasDrafts, entryVisible, offline, onReturn }: {
@@ -47,7 +48,7 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
   const initialized = useRef(false);
   const step = steps.includes(requestedStep as Step) ? requestedStep as Step : null;
   // URLs hold only steps and seasons. Private selections and receipts stay in this owner/season mount.
-  const validStep = step === "preview" && !preview ? "select" : step === "result" && !createdId ? "manage" : step;
+  const validStep = step === "result" && !createdId ? "manage" : step;
   const navigate = useCallback((next: Step | null, replace = false) => {
     const url = new URL(window.location.href);
     const liveSeason = resolveSeasonQuery(url.searchParams).ref;
@@ -72,6 +73,12 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
     else if (validStep) heading.current?.focus();
     else if (previousStep.current) entry.current?.focus();
     previousStep.current = validStep;
+  }, [validStep]);
+  useEffect(() => {
+    if (validStep !== "select") return;
+    setSelections((current) => Object.fromEntries(Object.entries(current).map(([animeId, selection]) => [animeId, {
+      ...selection, includeNote: false, includeRating: false
+    }])));
   }, [validStep]);
   useEffect(() => {
     if (validStep === "select" && recordsReady && !initialized.current) {
@@ -140,15 +147,14 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
       return copy;
     });
   }
-  function makePreview() {
-    if (!recordsReady) return;
+  function composeProjection() {
+    if (!recordsReady) return null;
     const input: ImpressionShareInput = { kind: "season-impressions", ...seasonKey, selections: Object.values(selections) };
-    if (!input.selections.length) { setError("公開する作品を選んでください。"); return; }
+    if (!input.selections.length) return null;
     const snapshot = buildImpressionSnapshot(input, records);
-    if (!snapshot) { setConflict(true); setError("記録が変更されています。最新の記録を確認してください。"); return; }
-    setPreview({ input, snapshot }); setError(""); setCreatedId(null); navigate("preview");
-    track({ name: "impression_share", action: "preview", count: input.selections.length });
+    return snapshot ? { input, snapshot } : null;
   }
+  const projection = useMemo(composeProjection, [recordsReady, seasonKey, selections, records]);
   async function refreshSelection() {
     if (busy.current) return;
     busy.current = true; setPending(true);
@@ -175,12 +181,12 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
     } finally { busy.current = false; if (mounted.current) setPending(false); }
   }
   async function publish() {
-    if (!preview || busy.current || createdId || unknownResult || conflict || authRequired || !recordsReady || offline) return;
+    if (!projection || busy.current || createdId || unknownResult || conflict || authRequired || !recordsReady || offline) return;
     busy.current = true; setPending(true); setError("");
     try {
       const result = await impressionRequest<{ shareId: string; operation: "created" | "updated" | "existing"; updatedAt: string }>("/api/shares", {
         method: "POST", headers: { "Content-Type": "application/json", "X-Impression-Owner": encodeURIComponent(userId) },
-        body: JSON.stringify({ ...preview.input, targetShareId: canonicalTarget?.shareId ?? null, expectedUpdatedAt: canonicalTarget?.updatedAt ?? null })
+        body: JSON.stringify({ ...projection.input, targetShareId: canonicalTarget?.shareId ?? null, expectedUpdatedAt: canonicalTarget?.updatedAt ?? null })
       });
       if (!mounted.current) return;
       if (typeof result.shareId !== "string" || !/^[a-zA-Z0-9_-]+$/.test(result.shareId)
@@ -188,16 +194,23 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
       setCreatedId(result.shareId); setLastOperation(result.operation); setCanonicalTarget({ shareId: result.shareId, updatedAt: result.updatedAt });
       setMessage(result.operation === "created" ? "共有URLを作成しました。" : result.operation === "updated" ? "同じ共有URLの公開内容を更新しました。" : "同じ共有URLがすでに公開されています。内容を確認してから更新してください。");
       navigate("result");
-      track({ name: "impression_share", action: "published", count: preview.input.selections.length });
+      track({ name: "impression_share", action: "published", count: projection.input.selections.length });
     } catch (failure) {
       if (!mounted.current) return;
       const status = statusOf(failure);
       if (status === 401) requireLogin();
-      else if (status === 409) { setConflict(true); setError("記録が変更または削除されています。最新の記録を確認してから公開してください。"); }
+      else if (status === 409) {
+        setSelections((current) => Object.fromEntries(Object.entries(current).map(([animeId, selection]) => [animeId, {
+          ...selection, includeNote: false, includeRating: false
+        }])));
+        setPreview(null);
+        setConflict(true);
+        setError("記録が変更または削除されています。最新の記録を確認してから公開してください。");
+      }
       else if (status === 429) setError("共有の作成が混み合っています。しばらく待ってから、もう一度公開してください。");
       else if (status && status >= 400 && status < 500) setError(impressionError(failure));
       else { setUnknownResult(true); setError("公開結果を確認できませんでした。重複作成を避けるため、共有の管理・履歴で作成済みのURLを確認してください。"); }
-      track({ name: "impression_share", action: status && status < 500 ? "rejected" : "unknown", count: preview.input.selections.length });
+      track({ name: "impression_share", action: status && status < 500 ? "rejected" : "unknown", count: projection.input.selections.length });
     } finally { busy.current = false; if (mounted.current) setPending(false); }
   }
   async function stop(shareId: string) {
@@ -220,6 +233,12 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
       if (mounted.current) setMessage("共有URLをコピーしました。");
     } catch { if (mounted.current) setMessage("コピーできませんでした。共有リンクを開いてURLをコピーしてください。"); }
   }
+  async function shareNative(shareId: string) {
+    const url = `${window.location.origin}/share/impressions/${shareId}`;
+    if (!navigator.share) { await copy(shareId); return; }
+    try { await navigator.share({ title: `${seasonHeadingJa(seasonKey)} 今期チェック`, url }); }
+    catch (failure) { if ((failure as Error)?.name !== "AbortError" && mounted.current) setMessage("共有できませんでした。URLをコピーして共有してください。"); }
+  }
 
   return <section className="impressions-sharing" aria-labelledby="impressions-sharing-title" hidden={!validStep && !entryVisible}>
     <h2 id="impressions-sharing-title" ref={heading} tabIndex={-1}>{validStep === "manage" ? "共有の管理・履歴" : "今の保存済み記録を共有"}</h2>
@@ -233,55 +252,45 @@ export function ImpressionSharing({ userId, seasonKey, records, reloadRecords, r
         <button ref={entry} type="button" className="impressions-primary" disabled={!recordsReady || !records.length || pending || unknownResult} onClick={start}>今の{records.length}作品を共有</button>
         <button type="button" onClick={() => navigate("manage")}>共有の管理・履歴</button>
       </div>{!recordsReady ? <p>保存済みの記録を確認してから共有できます。</p> : !records.length && <p>まず1作品を保存すると共有できます。</p>}</>}
-      {validStep && <button type="button" disabled={pending} onClick={() => { onReturn(); navigate(null); }}>自分の今期カードに戻る</button>}
-      {validStep && validStep !== "manage" && <p className="impressions-steps" aria-label="共有の手順">
-        <span aria-current={validStep === "select" ? "step" : undefined}>1 選択</span><span aria-current={validStep === "preview" ? "step" : undefined}>2 プレビュー</span><span aria-current={validStep === "result" ? "step" : undefined}>3 URL受領</span>
-      </p>}
-      {validStep === "select" && <>
-        {!recordsReady ? <p>保存済みの記録を確認しています。</p> : <>
+      <BottomSheet open={validStep === "select" || validStep === "result"} onOpenChange={(open) => {
+        if (!open) { selectRecords(Object.values(selections).flatMap((selection) => records.find((record) => record.anime.id === selection.animeId) ?? [])); onReturn(); navigate(null); }
+      }} title={validStep === "result" ? "共有しました" : canonicalTarget ? "共有を更新" : "今期チェックを共有"}
+        description={validStep === "result" ? "URLをコピーするか、そのまま共有できます。" : "保存済みの内容だけを公開します。"}
+        initialFocusRef={validStep === "result" ? receipt : undefined} className="impressions-share-sheet">
+        {validStep === "select" && <div className="impressions-share-compose">
+          <div className="impressions-share-notices"><strong>保存済みの内容だけ</strong><span>未保存入力は含まれない</span>{canonicalTarget && <span>既存URLを更新</span>}</div>
+          <p>最近保存した最大6作品を選んでいます。作品を外したり、公開する一言・評価を追加できます。</p>
           <div className="impressions-actions"><button type="button" disabled={pending || unknownResult} onClick={() => selectRecords(records)}>保存済みをすべて選ぶ</button>
             <button type="button" disabled={pending || unknownResult} onClick={() => selectRecords(records.filter((record) => record.rating === "liked"))}>「好き」の作品を選ぶ</button></div>
-          <p>最近記録した最大6作品を選んでいます。最初は作品情報のみ。一言・評価は作品ごとに追加できます。</p>
-          <p>一言は非公開です。「ネタバレなし」の一言だけ、作品ごとに追加できます。</p>
           <div className="impressions-share-options">{sortImpressionRecords(records).map((record) => {
             const selection = selections[record.anime.id];
             const canPublishNote = record.spoiler === "no_spoiler" && !!record.note;
             return <fieldset key={record.anime.id} disabled={pending || unknownResult}>
               <legend>{record.anime.title}</legend>
-              <div className="impressions-card impressions-card--checked impressions-share-owner-card">
-                <ImpressionCardContent anime={record.anime} note={record.note} rating={record.rating} />
-              </div>
               <label className="impressions-select-row"><input type="checkbox" checked={!!selection} onChange={(event) => change(record, "selected", event.target.checked)} />この作品を公開<span>{record.anime.title}</span></label>
               <label><input type="checkbox" disabled={!selection || !canPublishNote} checked={canPublishNote && (selection?.includeNote ?? false)} onChange={(event) => change(record, "includeNote", event.target.checked)} />一言も公開</label>
               <label><input type="checkbox" disabled={!selection || !record.rating} checked={selection?.includeRating ?? false} onChange={(event) => change(record, "includeRating", event.target.checked)} />評価も公開</label>
-              {!canPublishNote && <p>一言は非公開（未入力・未指定・ネタバレあり）</p>}
+              {!canPublishNote && <p>一言は公開できません（未入力・未指定・ネタバレあり）</p>}
             </fieldset>;
           })}</div>
-          {!records.length && <p>まず1作品を保存してください。</p>}
-          <button className="impressions-primary" type="button" disabled={pending || conflict || unknownResult || !Object.keys(selections).length} onClick={makePreview}>公開内容をプレビュー</button>
-        </>}
-      </>}
-      {validStep === "preview" && preview && <section className="impressions-preview" aria-label="公開内容のプレビュー">
-        <h3>公開内容のプレビュー</h3>
-        <ImpressionSnapshotView snapshot={preview.snapshot} />
-        <p>URLを知っている人が見られます。</p>
-        <p>初回はURLを作成し、同じ期の公開中URLがある場合はそのURLの内容を更新します。</p>
-        <p>記録の編集・削除だけでは公開内容は変わりません。更新はこの画面の明示操作だけで行います。</p>
-        <p>公開はあとから停止できます。コメント・リアクションはありません。</p>
-        <div className="impressions-actions"><button type="button" disabled={pending} onClick={() => navigate("select")}>選択に戻る</button>
-          {createdId ? <button type="button" onClick={() => navigate("result")}>公開中のURLを確認</button> : <button className="impressions-primary" type="button" disabled={pending || conflict || unknownResult || !recordsReady || offline} onClick={() => void publish()}>{pending ? "公開しています…" : "この内容で共有URLを作成・更新"}</button>}</div>
-      </section>}
-      {validStep === "result" && createdId && <div className="impressions-receipt">
-        <p>{lastOperation === "created" ? "共有URLを作成しました。" : lastOperation === "updated" ? "同じ共有URLを更新しました。" : "同じ共有URLがすでに公開されています。"}</p>
-        <button ref={receipt} className="impressions-primary" type="button" onClick={() => void copy(createdId)}>URLをコピー</button>
-        <label>共有URL<input readOnly value={typeof window === "undefined" ? "" : `${window.location.origin}/share/impressions/${createdId}`} onFocus={(event) => event.target.select()} /></label>
-        <Link className="impressions-link" href={`/share/impressions/${createdId}`} prefetch={false}>公開中の共有を開く</Link>
-        <button type="button" onClick={() => navigate("manage")}>共有の管理・履歴</button>
-      </div>}
-      {error && <div role="alert"><p>{error}</p>
-        {conflict && <button type="button" disabled={pending} onClick={() => void refreshSelection()}>最新の記録を確認して選択を見直す</button>}
-      </div>}
-      {unknownResult && validStep !== "manage" && <button type="button" onClick={() => navigate("manage")}>共有の管理・履歴で確認</button>}
+          <section className="impressions-preview" aria-label="実際に公開される内容">
+            <h3>実際に公開される内容</h3>
+            {projection ? <ImpressionSnapshotView snapshot={projection.snapshot} /> : <p>公開する作品を選んでください。</p>}
+          </section>
+          <details className="impressions-share-details"><summary>公開について詳しく</summary><p>URLを知っている人が見られます。記録を編集しても公開内容は自動更新されません。公開はあとから停止できます。</p></details>
+          {error && <div role="alert"><p>{error}</p>{conflict && <button type="button" disabled={pending} onClick={() => void refreshSelection()}>最新の記録を確認して選択を見直す</button>}</div>}
+          {unknownResult && <button type="button" onClick={() => navigate("manage")}>共有の管理・履歴で確認</button>}
+          <div className="impressions-share-cta"><button className="impressions-primary" type="button" disabled={pending || conflict || unknownResult || !projection || offline} onClick={() => void publish()}>{pending ? "公開しています…" : canonicalTarget ? `選んだ${projection?.input.selections.length ?? 0}作品で共有を更新` : `選んだ${projection?.input.selections.length ?? 0}作品を公開`}</button></div>
+        </div>}
+        {validStep === "result" && createdId && <div className="impressions-receipt" aria-live="polite">
+          <p>{lastOperation === "created" ? "共有URLを作成しました。" : lastOperation === "updated" ? "同じ共有URLを更新しました。" : "同じ共有URLがすでに公開されています。"}</p>
+          <button ref={receipt} className="impressions-primary" type="button" onClick={() => void copy(createdId)}>URLをコピー</button>
+          <Link className="impressions-link" href={`/share/impressions/${createdId}`} prefetch={false}>公開中の共有を開く</Link>
+          <button type="button" onClick={() => void shareNative(createdId)}>OSの共有を使う</button>
+          <button type="button" onClick={() => navigate("manage")}>共有の管理・履歴</button>
+        </div>}
+      </BottomSheet>
+      {validStep === "manage" && <button type="button" disabled={pending} onClick={() => { onReturn(); navigate(null); }}>自分の今期カードに戻る</button>}
       {validStep === "manage" && <>
         <p>公開内容は明示的に更新するまで固定されています。同じ期は同じURLを更新します。</p>
         {(historyState === "idle" || historyState === "loading") && <p role="status">公開履歴を読み込んでいます…</p>}
