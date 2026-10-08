@@ -10,7 +10,7 @@ sources:
   - ../docs/orchestration/AGENT_EXECUTION_CONTRACT.md
   - ../AGENTS.md
   - ../components/MobileNav.tsx
-  - ../lib/nav-flag.ts
+
 ---
 
 # Current Project State
@@ -28,7 +28,7 @@ sources:
 ## Implemented（Current fact）
 
 - Web: Next.js 16 / React 19 / Turso / NextAuth Google。ルート群は `app/` に存在（`/mypage`・`/watchlist`・`/tier` 等）。
-- `components/MobileNav.tsx` は **4 タブ配列と 5 タブ配列（V5）の両方を保持**。V5 は `lib/nav-flag.ts` の `numanie:nav-v5`（localStorage）で切替。フラグ未設定時のデフォルト表示は 4 タブ側。
+- `components/MobileNav.tsx` は **ホーム / 今期チェック / さがす / マイリスト / マイページ** の正式5タブに統一済み。端末localStorageによる旧ナビ切替は廃止。
 - ネイティブクライアントコードは `apps/native/` に存在（公開ゲートは別 SSOT / Issue 群で管理）。
 - マルチエージェント実行契約 Contract v1.0 が [`docs/orchestration/AGENT_EXECUTION_CONTRACT.md`](../docs/orchestration/AGENT_EXECUTION_CONTRACT.md) にあり、編集または Issue claim の前に ACK 検証が必須（読み取り・質問回答・読み取り専用レビューでは不要）。
 - 季節データ方針の規範文書: [`docs/architecture/release-data-ssot.md`](../docs/architecture/release-data-ssot.md)（Jikan cutoff `2026-09-15T00:00:00Z`）。実装の追随状況はコードと関連 Issue で確認する。

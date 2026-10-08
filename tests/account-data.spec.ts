@@ -80,7 +80,22 @@ async function mockAccountDeleteFailure(page: Page) {
   });
 }
 
-test.describe("ATB-757 account export/delete settings UX", () => {
+test.describe("ATB-800 simplified account data settings UX", () => {
+  test("desktop: initial settings surface is compact and excludes retired controls", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/settings");
+
+    await expect(page.getByRole("heading", { name: "データ管理" })).toBeVisible();
+    await expect(page.getByLabel("確認入力")).toHaveCount(0);
+    await expect(page.getByText("バックアップ／障害復旧用の複製")).toHaveCount(0);
+    await expect(page.getByText("プッシュ通知", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("サブスク設定", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("サブスク診断", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("ベータ機能", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "ログアウト", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "サブスクへ" })).toHaveCount(0);
+  });
+
   test("desktop: export success announces and downloads without signing out", async ({
     page
   }) => {
@@ -89,7 +104,7 @@ test.describe("ATB-757 account export/delete settings UX", () => {
     await page.goto("/settings");
 
     await expect(
-      page.getByRole("heading", { name: "アカウントデータのエクスポート" })
+      page.getByRole("heading", { name: "データをエクスポート" })
     ).toBeVisible();
 
     const responsePromise = page.waitForResponse(
@@ -106,7 +121,7 @@ test.describe("ATB-757 account export/delete settings UX", () => {
 
     await expect(exportNotice(page)).toContainText("エクスポートが完了しました");
     await expect(page).toHaveURL(/\/settings/);
-    await expect(page.getByRole("button", { name: "ログアウト" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "ログアウト", exact: true })).toHaveCount(0);
   });
 
   test("desktop: export failure shows retry and does not open delete confirm", async ({
@@ -271,6 +286,7 @@ test.describe("ATB-757 account export/delete settings UX", () => {
     await page.goto("/");
 
     await page.getByRole("button", { name: "ユーザーメニュー" }).click();
+    await expect(page.getByRole("menuitem", { name: "ログアウト" })).toBeVisible();
     const settingsItem = page.getByRole("menuitem", { name: "設定" });
     await expect(settingsItem).toBeVisible();
     await Promise.all([
@@ -290,7 +306,7 @@ test.describe("ATB-757 account export/delete settings UX", () => {
     const exportBox = await exportButton.boundingBox();
     expect(exportBox).not.toBeNull();
     if (exportBox) {
-      expect(exportBox.height).toBeGreaterThanOrEqual(40);
+      expect(exportBox.height).toBeGreaterThanOrEqual(44);
       expect(exportBox.width).toBeLessThanOrEqual(375);
     }
 
@@ -314,10 +330,6 @@ test.describe("ATB-757 account export/delete settings UX", () => {
           "base64"
         )
       });
-    });
-    // Ensure legacy drawer (nav v5 off) before first paint.
-    await page.addInitScript(() => {
-      window.localStorage.removeItem("anime-tier-board:navV5");
     });
     await page.goto("/");
 

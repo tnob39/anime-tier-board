@@ -63,7 +63,7 @@ async function harness({ items = [], theme = "dark", width = 375, session = "aut
   await page.goto("https://inbox.test/dashboard");
   await page.evaluate(({ theme, session }) => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem("numanie:nav-v5", "1");
+
     window.fixture = { session: { status: session, data: session === "authenticated" ? { user: { id: "owner-a" } } : null } };
   }, { theme, session });
   await page.addStyleTag({ content: readFileSync(path.join(root, "app/globals.css"), "utf8") });

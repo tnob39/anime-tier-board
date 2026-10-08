@@ -9,7 +9,7 @@ const AUDITABLE_ROUTES = [...PUBLIC_ROUTES, ...AUTH_ROUTES] as const;
 const EVIDENCE_ROOT =
   process.env.ATB_709_EVIDENCE_ROOT ||
   "C:/Users/Nobu/AppData/Local/Temp/atb-709-loop-evidence";
-const NAV_V5_KEY = "numanie:nav-v5";
+
 const LONG_JP =
   "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん一二三四五六七八九十";
 const CARD_SELECTOR = [
@@ -82,19 +82,6 @@ function appendLog(filePath: string, line: string) {
   fs.appendFileSync(filePath, line + "\n", "utf8");
 }
 
-async function setNavV5(page: Page, enabled: boolean) {
-  await page.addInitScript(
-    ([key, value]) => {
-      try {
-        if (value) localStorage.setItem(key, "1");
-        else localStorage.removeItem(key);
-      } catch {
-        /* ignore */
-      }
-    },
-    [NAV_V5_KEY, enabled] as const
-  );
-}
 
 /**
  * Force CSS-px viewport so requested width === window.innerWidth.
@@ -973,13 +960,12 @@ test.describe("L2 375px long title + provider badge wrapping", () => {
 // L3 — 390px Home and /tier fixed MobileNav overlap
 // ---------------------------------------------------------------------------
 test.describe("L3 390px Home and /tier fixed MobileNav overlap", () => {
-  for (const navV5 of [false, true]) {
-    test.describe(`navV5=${navV5}`, () => {
+  for (const canonicalNav of [true]) {
+    test.describe(`canonicalNav=${canonicalNav}`, () => {
       test.use({ viewport: { width: 390, height: 844 } });
 
-      test(`L3 audit navV5=${navV5}`, async ({ page }, testInfo) => {
-        await setNavV5(page, navV5);
-        const logPath = path.join(loopDir(3), `audit-navv5-${navV5}.log`);
+      test(`L3 audit canonicalNav=${canonicalNav}`, async ({ page }, testInfo) => {
+        const logPath = path.join(loopDir(3), `audit-navv5-${canonicalNav}.log`);
         ensureDir(loopDir(3));
         const matrix: MetricRow[] = [];
         for (const width of WIDTHS) {
@@ -991,7 +977,7 @@ test.describe("L3 390px Home and /tier fixed MobileNav overlap", () => {
             const nav = await measureNav(page);
             const overflow = await measureOverflow(page);
             const inner = await page.evaluate(() => window.innerWidth);
-            const label = `L3 ${route}@${width} navV5=${navV5}`;
+            const label = `L3 ${route}@${width} canonicalNav=${canonicalNav}`;
             expect(inner, label).toBe(width);
             expect(overflow.innerWidth, label).toBe(width);
             assertNoHorizontalOverflow(overflow, label);
@@ -1002,7 +988,7 @@ test.describe("L3 390px Home and /tier fixed MobileNav overlap", () => {
               width,
               requestedWidth: width,
               innerWidth: inner,
-              navV5,
+              canonicalNav,
               ...nav,
             };
             matrix.push(row as MetricRow);
@@ -1012,7 +998,7 @@ test.describe("L3 390px Home and /tier fixed MobileNav overlap", () => {
               await screenshotAttach(
                 page,
                 testInfo,
-                `L3-${route.replace(/\//g, "_") || "home"}-390-v5-${navV5}`,
+                `L3-${route.replace(/\//g, "_") || "home"}-390-v5-${canonicalNav}`,
                 3
               );
             }
@@ -1022,8 +1008,8 @@ test.describe("L3 390px Home and /tier fixed MobileNav overlap", () => {
         await page.setViewportSize({ width: 1280, height: 800 });
         await gotoReady(page, "/");
         const desktop = await measureNav(page);
-        matrix.push({ loop: 3, route: "/", width: 1280, navV5, ...desktop } as MetricRow);
-        writeJson(path.join(loopDir(3), `matrix-navv5-${navV5}.json`), matrix);
+        matrix.push({ loop: 3, route: "/", width: 1280, canonicalNav, ...desktop } as MetricRow);
+        writeJson(path.join(loopDir(3), `matrix-navv5-${canonicalNav}.json`), matrix);
         const mobileRows = matrix.filter((m) => (m.width as number) < 1280);
         expect(mobileRows.length).toBe(WIDTHS.length * 2);
         for (const row of mobileRows) {
@@ -1046,8 +1032,7 @@ test.describe("L4 430px safe-area + last CTA + page-end spacing", () => {
   test("L4 audit matrix", async ({ page }, testInfo) => {
     ensureDir(loopDir(4));
     const matrix: MetricRow[] = [];
-    for (const navV5 of [false, true]) {
-      await setNavV5(page, navV5);
+    for (const canonicalNav of [true]) {
       for (const width of WIDTHS) {
         await setExactViewport(page, width);
         for (const route of PUBLIC_ROUTES) {
@@ -1057,7 +1042,7 @@ test.describe("L4 430px safe-area + last CTA + page-end spacing", () => {
           const nav = await measureNav(page);
           const overflow = await measureOverflow(page);
           const inner = await page.evaluate(() => window.innerWidth);
-          const label = `L4 ${route}@${width} navV5=${navV5}`;
+          const label = `L4 ${route}@${width} canonicalNav=${canonicalNav}`;
           expect(inner, label).toBe(width);
           expect(overflow.innerWidth, label).toBe(width);
           assertNoHorizontalOverflow(overflow, label);
@@ -1080,7 +1065,7 @@ test.describe("L4 430px safe-area + last CTA + page-end spacing", () => {
             width,
             requestedWidth: width,
             innerWidth: inner,
-            navV5,
+            canonicalNav,
             ...nav,
           };
           matrix.push(row as MetricRow);
@@ -1093,7 +1078,7 @@ test.describe("L4 430px safe-area + last CTA + page-end spacing", () => {
     await gotoReady(page, "/");
     await screenshotAttach(page, testInfo, "L4-home-430", 4);
     writeJson(path.join(loopDir(4), "matrix.json"), matrix);
-    expect(matrix.length).toBe(PUBLIC_ROUTES.length * WIDTHS.length * 2);
+    expect(matrix.length).toBe(PUBLIC_ROUTES.length * WIDTHS.length);
     for (const row of matrix) {
       expect(row.reservedOk, `L4 reserved ${row.route}@${row.width}`).toBe(true);
       expect(row.navOverlapsLast, `L4 overlap ${row.route}@${row.width}`).toBe(false);
