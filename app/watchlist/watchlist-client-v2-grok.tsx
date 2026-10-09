@@ -978,43 +978,9 @@ export function PosterCard({
     return null;
   }
 
-  // Simple: text-first row — no img, Next/Image, background-image, or empty poster frame.
-  if (!showImages) {
-    return (
-      <div
-        className={`wl2g-poster wl2g-poster--simple${menuOpen ? " wl2g-poster--simple-menu-open" : ""}`}
-        onClick={onOpen}
-        role="button"
-        tabIndex={0}
-        aria-label={`${anime.title}の詳細を開く`}
-        onKeyDown={(event) => {
-          if (event.target !== event.currentTarget) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onOpen();
-          }
-        }}
-      >
-        <div className="wl2g-simple-body">
-          <div className="wl2g-simple-main">
-            <div className="wl2g-ptitle">{anime.title}</div>
-            <div className="wl2g-simple-meta">
-              <span className={`wl2g-badge ${badge}`}>{label}</span>
-              {tier ? (
-                <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
-              ) : null}
-            </div>
-            {renderProgress()}
-          </div>
-          {renderMenu()}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
-      className="wl2g-poster"
+      className={`wl2g-poster${showImages ? "" : " wl2g-poster--simple"}${menuOpen ? " wl2g-poster--menu-open" : ""}`}
       onClick={onOpen}
       role="button"
       tabIndex={0}
@@ -1027,44 +993,53 @@ export function PosterCard({
         }
       }}
     >
-      {anime.proxiedImageUrl ? (
-        <div
-          className="pic"
-          style={{ backgroundImage: `url(${anime.proxiedImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }}
-        >
+      {showImages ? (
+        <WatchlistArtwork
+          key={anime.proxiedImageUrl || anime.imageUrl || anime.id}
+          title={anime.title}
+          src={anime.proxiedImageUrl || anime.imageUrl || null}
+        />
+      ) : null}
+      <div className="wl2g-card-body">
+        <div className="wl2g-ptitle">{anime.title}</div>
+        <div className="wl2g-card-meta">
           <span className={`wl2g-badge ${badge}`}>{label}</span>
           {tier ? (
             <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
           ) : null}
-          {provider?.logoUrl ? (
-            <span className={tier ? "wl2g-provider wl2g-provider--below" : "wl2g-provider"} title={provider.name}>
+          {showImages && provider?.logoUrl ? (
+            <span className="wl2g-card-provider" title={provider.name}>
               <img src={provider.logoUrl} alt={provider.name} width={16} height={16} loading="lazy" />
             </span>
           ) : null}
-          {renderMenu()}
-          <div className="wl2g-meta">
-            <div className="wl2g-ptitle">{anime.title}</div>
-            {renderProgress()}
-          </div>
         </div>
-      ) : (
-        <div className="pic" style={{ background: "var(--surface-soft)" }}>
-          <AnimeCardPlaceholder title={anime.title} />
-          <span className={`wl2g-badge ${badge}`} style={{ zIndex: 3 }}>{label}</span>
-          {tier ? (
-            <span className="wl2g-tier" style={{ background: tier.color }}>{tier.label}</span>
-          ) : null}
-          {provider?.logoUrl ? (
-            <span className={tier ? "wl2g-provider wl2g-provider--below" : "wl2g-provider"} title={provider.name}>
-              <img src={provider.logoUrl} alt={provider.name} width={16} height={16} loading="lazy" />
-            </span>
-          ) : null}
+        <div className="wl2g-card-actions">
+          {renderProgress()}
           {renderMenu()}
-          <div className="wl2g-meta">
-            <div className="wl2g-ptitle" style={{ textShadow: "none" }}>{anime.title}</div>
-          </div>
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
+
+function WatchlistArtwork({ src, title }: { src: string | null; title: string }) {
+  const [imageState, setImageState] = useState<"loading" | "loaded" | "error">(src ? "loading" : "error");
+  return (
+    <div className="wl2g-artwork" data-image-state={imageState}>
+      <div aria-hidden="true"><AnimeCardPlaceholder title={title} /></div>
+      {src && imageState !== "error" ? (
+        <Image
+          src={src}
+          alt={title}
+          width={96}
+          height={136}
+          unoptimized
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setImageState("loaded")}
+          onError={() => setImageState("error")}
+        />
+      ) : null}
     </div>
   );
 }
