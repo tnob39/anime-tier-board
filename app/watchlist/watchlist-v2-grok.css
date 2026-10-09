@@ -79,6 +79,7 @@
 
 .wl2g-search input {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   color: var(--ink);
@@ -177,10 +178,8 @@
 }
 
 .wl2g-badge {
-  position: absolute;
-  top: 7px;
-  right: 7px;
-  font-size: 10px;
+  position: static;
+  font-size: 0.75rem;
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 999px;
@@ -237,9 +236,9 @@
 
 /* Card ⋯ menu (status sheet entry) */
 .wl2g-more {
-  position: absolute;
-  top: 6px;
-  right: 6px;
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
   z-index: 4;
 }
 
@@ -251,14 +250,15 @@
   min-height: 44px;
   border: 0;
   border-radius: 8px;
-  background: var(--watchlist-poster-action-surface);
-  color: var(--watchlist-tier-ink);
-  cursor: pointer;
-}
+  background: var(--surface-soft);
+    color: var(--ink);
+    cursor: pointer;
+  }
 
 .wl2g-more-trigger:hover,
 .wl2g-more-trigger[aria-expanded="true"] {
-  background: var(--watchlist-poster-menu-hover-surface);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .wl2g-more-trigger:active {
@@ -270,7 +270,7 @@
   top: calc(100% + 4px);
   right: 0;
   z-index: 5;
-  min-width: 168px;
+  width: min(220px, calc(100vw - 64px));
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -283,7 +283,7 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   padding: 8px 10px;
   border: 0;
   border-radius: 8px;
@@ -291,7 +291,8 @@
   color: var(--ink);
   text-align: left;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
@@ -348,7 +349,7 @@
 }
 
 .wl2g-pnum {
-  font-size: 9px;
+  font-size: 0.75rem;
   color: var(--muted);
   margin-top: 2px;
   letter-spacing: 0.2px;
@@ -592,15 +593,15 @@
 }
 
 .wl2g-sheet-head h3 {
-  font-size: 15px;
+  font-size: 1rem;
   font-weight: 700;
-  max-width: 80%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .wl2g-close {
+  flex: 0 0 44px;
   display: grid;
   place-items: center;
   width: 44px;
@@ -734,6 +735,7 @@
 
 .wl2g-btn {
   flex: 1;
+  min-height: 44px;
   padding: 11px 14px;
   border-radius: 10px;
   font-size: 14px;
@@ -773,10 +775,8 @@
 }
 
 .wl2g-tier {
-  position: absolute;
-  top: 7px;
-  left: 7px;
-  font-size: 10px;
+  position: static;
+  font-size: 0.75rem;
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 999px;
@@ -898,13 +898,108 @@
 /* Catch-up badge */
 .wl2g-catchup {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--muted);
 }
 
 .wl2g-catchup--behind {
   color: var(--accent);
+}
+
+/* Separate artwork from readable card content in both display modes. */
+.wl2g-root .wl2g-lane,
+.wl2g-root .wl2g-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  align-items: start;
+  overflow: visible;
+}
+
+.wl2g-root .wl2g-poster {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 8px;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.wl2g-artwork {
+  position: relative;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 102px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.wl2g-artwork > div,
+.wl2g-artwork img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wl2g-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.wl2g-root .wl2g-poster .wl2g-ptitle {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink);
+  text-shadow: none;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 3;
+}
+
+.wl2g-card-meta,
+.wl2g-card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.wl2g-card-actions .wl2g-prog {
+  flex: 1;
+  min-width: 48px;
+}
+
+.wl2g-card-provider {
+  display: inline-flex;
+}
+
+.wl2g-root .command-button span {
+  display: inline;
+}
+
+.wl2g-root .command-button {
+  min-width: 0;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+
+.wl2g-root .wl2g-more-panel {
+  animation: none;
+}
+
+.wl2g-root .wl2g-poster:active,
+.wl2g-root .wl2g-poster:hover {
+  transform: none;
+}
+
+.wl2g-root .wl2g-poster--menu-open {
+  padding-bottom: 112px;
 }
 
 /* Watch chips (EditSheet) */
