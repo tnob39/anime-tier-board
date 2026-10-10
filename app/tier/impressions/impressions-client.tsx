@@ -35,7 +35,7 @@ export function ImpressionsClient(props: Props) {
   if (status === "loading") return <div className="impressions-page" role="status">今期チェックを準備しています…</div>;
   const userId = status === "authenticated" ? (session?.user as { id?: string } | undefined)?.id ?? null : null;
   return <div className="impressions-page">
-    <header className="impressions-header"><h1>今期チェック</h1><PersonalAiEntry purpose="reaction" works={[]} seasonKey={ref} contextKey={`${userId ?? "guest"}:${ref.year}:${ref.season}`} /><p>{ref.year}年{({ WINTER: "冬", SPRING: "春", SUMMER: "夏", FALL: "秋" } as const)[ref.season]}の作品に、いまの一言を残す</p></header>
+    <header className="impressions-header"><h1>今期チェック</h1><PersonalAiEntry purposes={["reaction"]} works={[]} seasonKey={ref} contextKey={`${userId ?? "guest"}:${ref.year}:${ref.season}`} /><p>{ref.year}年{({ WINTER: "冬", SPRING: "春", SUMMER: "夏", FALL: "秋" } as const)[ref.season]}の作品に、いまの一言を残す</p></header>
     <details className="impressions-settings"><summary>期と表示を変更</summary><div className="impressions-settings-content"><SeasonContextControl value={ref} explicit={explicit} disabled={pending} onChange={(next) => {
       if (!canChangeSeason.current()) return false;
       const params = new URLSearchParams(window.location.search);

@@ -120,6 +120,7 @@ test("production season heading → public reactions: mandatory range/platform, 
   const h = await harness({ initialRecords: [record(candidates[0], { note: "PRIVATE_SAVED_NOTE", rating: "liked", spoiler: "no_spoiler" })] });
   try {
     const { page, state } = h;
+    await page.getByRole("button", { name: "AIに相談", exact: true }).click();
     await page.getByRole("button", { name: "今期の反応を調べる", exact: true }).click();
     await expect(page.getByRole("button", { name: "プロンプトをコピー" })).toBeDisabled();
     await page.getByLabel("開始日（JST）").fill("2026-10-01");
@@ -133,6 +134,7 @@ test("production season heading → public reactions: mandatory range/platform, 
     assert.equal(await page.evaluate(() => window.copiedUrl), prompt);
     assert.equal(state.writes.length, 0);
     await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "AIに相談", exact: true }).click();
     await page.getByRole("button", { name: "今期の反応を調べる", exact: true }).click();
     await expect(page.getByLabel("開始日（JST）")).toHaveValue("");
     assert.equal(state.images, 0);

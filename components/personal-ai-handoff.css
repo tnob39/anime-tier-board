@@ -1,4 +1,8 @@
 .personal-ai-sheet { max-width: 680px; }
+.personal-ai-purpose-list { display: grid; gap: 8px; }
+.personal-ai-purpose-list button { min-height: 48px; text-align: left; }
+.personal-ai-content select { text-overflow: ellipsis; }
+.personal-ai-content > button, .personal-ai-content > a { display: block; margin-block: 8px; min-height: 44px; }
 .personal-ai-entry { min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--border, #ddd); border-radius: 8px; background: var(--surface, #fff); color: inherit; font: inherit; text-align: left; }
 .personal-ai-entries { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .75rem; }
 .sbs-root[hidden] { display: none; }

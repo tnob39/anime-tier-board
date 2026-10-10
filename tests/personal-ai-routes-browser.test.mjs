@@ -55,29 +55,34 @@ async function harness(routeName) {
 for(const label of ["作品を知る","似た作品を探す"]) test(`production shared detail → ${label}: exact copy, Escape returns to detail, private tracking excluded`,async()=>{
   const h=await harness("detail");try{
     await h.page.getByRole("button",{name:"作品詳細を開く"}).click();
+    await h.page.getByRole("button",{name:"AIに相談",exact:true}).click();
     await h.page.getByRole("button",{name:label,exact:true}).click();
     const prompt=await h.page.getByLabel("プロンプト全文（この文字列をコピー）").inputValue();
     assert.ok(prompt.includes("根拠の作品"));assert.ok(!prompt.includes("PRIVATE_"));
     await h.page.getByRole("button",{name:"プロンプトをコピー"}).click();
-    await expect(h.page.getByText("コピーしました。まだAIには送信していません。",{exact:true})).toBeVisible();
+    await expect(h.page.getByText("全文をコピーしました。このコピー操作ではAIに送信しません。",{exact:true})).toBeVisible();
     assert.equal(await h.page.evaluate(()=>window.copiedPrompt),prompt);
     await h.page.keyboard.press("Escape");
-    await expect(h.page.getByRole("button",{name:label,exact:true})).toBeVisible();
+    await expect(h.page.getByRole("button",{name:"AIに相談",exact:true})).toBeVisible();
     assert.equal(h.requests.length,0);
   }finally{await h.close();}
 });
 test("production /explore heading → taste: explicit saved-title evidence, no private tracking, reopen resets",async()=>{
   const h=await harness("explore");try{
     await expect(h.page.getByText("読み込み中",{exact:true})).toHaveCount(0);
+    await h.page.getByRole("button",{name:"AIに相談",exact:true}).click();
+    await expect(h.page.getByRole("button",{name:"作品を知る",exact:true})).toBeDisabled();
     await h.page.getByRole("button",{name:"好きそうな作品を探す",exact:true}).click();
     await expect(h.page.getByRole("button",{name:"プロンプトをコピー"})).toBeDisabled();
     await h.page.getByLabel("根拠の作品を根拠にする").check();
     const prompt=await h.page.getByLabel("プロンプト全文（この文字列をコピー）").inputValue();
     assert.ok(prompt.includes("根拠の作品"));assert.ok(!prompt.includes("PRIVATE_"));
     await h.page.getByRole("button",{name:"プロンプトをコピー"}).click();
-    await expect(h.page.getByText("コピーしました。まだAIには送信していません。",{exact:true})).toBeVisible();
+    await expect(h.page.getByText("全文をコピーしました。このコピー操作ではAIに送信しません。",{exact:true})).toBeVisible();
     assert.equal(await h.page.evaluate(()=>window.copiedPrompt),prompt);
     await h.page.keyboard.press("Escape");
+    await h.page.getByRole("button",{name:"AIに相談",exact:true}).click();
+    await expect(h.page.getByRole("button",{name:"作品を知る",exact:true})).toBeDisabled();
     await h.page.getByRole("button",{name:"好きそうな作品を探す",exact:true}).click();
     await expect(h.page.getByLabel("根拠の作品を根拠にする")).not.toBeChecked();
   }finally{await h.close();}

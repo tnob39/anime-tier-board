@@ -599,7 +599,7 @@ export function ExploreClient({
         <div>
           <p className="eyebrow">過去作品探索</p>
           <h1>年代を選んで作品をさがす</h1>
-          <PersonalAiEntry purpose="taste" contextKey={`explore:${year}:${season}:${yearScope}`} works={initialStatuses.flatMap((record) => record.anime ? [{ id: record.anime.id, title: record.anime.title }] : [])} />
+          <PersonalAiEntry purposes={["taste", "know", "similar"]} contextKey={`explore:${year}:${season}:${yearScope}`} works={initialStatuses.flatMap((record) => record.anime ? [{ id: record.anime.id, title: record.anime.title }] : [])} />
           <p>選んだ年の作品を、人気・評価・あなたの好みで並べます。</p>
         </div>
       </header>
