@@ -11,7 +11,7 @@ const root = path.resolve(import.meta.dirname, "..");
 const output = path.join(root, "test-results", "impressions-offline");
 let browser;
 let bundle;
-const styles = ["app/globals.css", "components/ui/bottom-sheet.css", "components/display-mode/display-mode.css", "components/tier-area-nav.css", "app/tier/impressions/impressions.css"]
+const styles = ["app/globals.css", "components/ui/bottom-sheet.css", "components/display-mode/display-mode.css", "components/tier-area-nav.css", "app/tier/impressions/impressions.css", "components/personal-ai-handoff.css"]
   .map((file) => readFileSync(path.join(root, file), "utf8")).join("\n");
 before(async () => {
   mkdirSync(output, { recursive: true });
@@ -115,6 +115,29 @@ async function harness({ guest = false, mode = "simple", initialRecords = [], wi
   else await expect(page.getByText("作品と記録を読み込んでいます…", { exact: true })).toHaveCount(0);
   return { page, state, errors, close: async () => { assert.deepEqual(errors, []); await context.close(); } };
 }
+
+test("production season heading → public reactions: mandatory range/platform, exact copy, no records/drafts/writes", async () => {
+  const h = await harness({ initialRecords: [record(candidates[0], { note: "PRIVATE_SAVED_NOTE", rating: "liked", spoiler: "no_spoiler" })] });
+  try {
+    const { page, state } = h;
+    await page.getByRole("button", { name: "今期の反応を調べる", exact: true }).click();
+    await expect(page.getByRole("button", { name: "プロンプトをコピー" })).toBeDisabled();
+    await page.getByLabel("開始日（JST）").fill("2026-10-01");
+    await page.getByLabel("終了日（JST）").fill("2026-10-10");
+    await page.getByLabel("プラットフォーム").selectOption("Xの公開投稿");
+    const prompt = await page.getByLabel("プロンプト全文（この文字列をコピー）").inputValue();
+    assert.ok(prompt.includes("全体の世論を代表しません"));
+    assert.ok(!prompt.includes("PRIVATE_") && !prompt.includes("日本語アニメ一"));
+    await page.getByRole("button", { name: "プロンプトをコピー" }).click();
+    await expect(page.getByText("コピーしました。まだAIには送信していません。", { exact: true })).toBeVisible();
+    assert.equal(await page.evaluate(() => window.copiedUrl), prompt);
+    assert.equal(state.writes.length, 0);
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "今期の反応を調べる", exact: true }).click();
+    await expect(page.getByLabel("開始日（JST）")).toHaveValue("");
+    assert.equal(state.images, 0);
+  } finally { await h.close(); }
+});
 
 test("375px Simple: retry retains draft/card, save alone activates, reopen/edit/delete and keyboard work", async () => {
   const h = await harness();
