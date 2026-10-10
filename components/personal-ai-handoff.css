@@ -1,0 +1,12 @@
+.personal-ai-sheet { max-width: 680px; }
+.personal-ai-entry { min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--border, #ddd); border-radius: 8px; background: var(--surface, #fff); color: inherit; font: inherit; text-align: left; }
+.personal-ai-entries { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .75rem; }
+.sbs-root[hidden] { display: none; }
+.personal-ai-content { min-width: 0; overflow-wrap: anywhere; }
+.personal-ai-content fieldset { min-width: 0; margin: 16px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.personal-ai-content label { display: block; margin: 12px 0; }
+.personal-ai-content input:not([type="checkbox"]), .personal-ai-content select, .personal-ai-content textarea { display: block; width: 100%; min-width: 0; max-width: 100%; padding: 8px; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.personal-ai-content input, .personal-ai-content select, .personal-ai-content button { min-height: 44px; }
+.personal-ai-content input[type="checkbox"] { vertical-align: middle; margin-right: 8px; }
+.personal-ai-content button { max-width: 100%; white-space: normal; padding: 8px 12px; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.personal-ai-work + .personal-ai-work { border-top: 1px solid var(--border); padding-top: 12px; }

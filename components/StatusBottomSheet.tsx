@@ -1,6 +1,7 @@
 "use client";
 
 import "./status-bottom-sheet.css";
+import { PersonalAiHandoff } from "./PersonalAiHandoff";
 import { ExternalLink, Minus, Plus, X } from "lucide-react";
 import {
   useCallback,
@@ -64,6 +65,8 @@ export default function StatusBottomSheet({
   onStatusSaved,
   onEpisodesSaved,
 }: StatusBottomSheetProps) {
+  const [aiPurpose, setAiPurpose] = useState<"know" | "similar" | null>(null);
+  useEffect(() => { setAiPurpose(null); }, [open, record?.animeId]);
   const titleId = useId();
   const { mode, hydrated } = useDisplayMode();
   const showImages = hydrated && mode === "visual";
@@ -280,7 +283,7 @@ export default function StatusBottomSheet({
 
   // Escape + body scroll lock + initial focus
   useEffect(() => {
-    if (!mounted || !visible) return;
+    if (!mounted || !visible || aiPurpose) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -317,7 +320,7 @@ export default function StatusBottomSheet({
       window.removeEventListener("keydown", onKeyDown);
       previousActiveElement?.focus();
     };
-  }, [mounted, visible]);
+  }, [mounted, visible, aiPurpose]);
 
   useEffect(() => {
     return () => {
@@ -495,7 +498,8 @@ export default function StatusBottomSheet({
     .join(" ");
 
   return (
-    <div ref={rootRef} className={rootClass}>
+    <>
+    <div ref={rootRef} className={rootClass} hidden={!!aiPurpose} inert={!!aiPurpose}>
       <button
         ref={backdropRef}
         type="button"
@@ -554,6 +558,11 @@ export default function StatusBottomSheet({
               {error}
             </p>
           ) : null}
+
+          <div className="personal-ai-entries" aria-label="自分のAIに聞く">
+            <button className="personal-ai-entry" type="button" onClick={() => setAiPurpose("know")}>作品を知る</button>
+            <button className="personal-ai-entry" type="button" onClick={() => setAiPurpose("similar")}>似た作品を探す</button>
+          </div>
 
           <p className="sbs-section-label">視聴ステータス</p>
           <div className="sbs-status-grid" role="group" aria-label="視聴ステータス">
@@ -667,5 +676,7 @@ export default function StatusBottomSheet({
         </div>
       </div>
     </div>
+    {open && aiPurpose && <PersonalAiHandoff purpose={aiPurpose} works={[{ id: anime.id, title: anime.title }]} contextKey={`detail:${record.animeId}`} onClose={() => setAiPurpose(null)} />}
+    </>
   );
 }
