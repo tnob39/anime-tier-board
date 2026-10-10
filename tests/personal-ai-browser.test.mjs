@@ -24,16 +24,16 @@ before(async () => {
   browser = await chromium.launch({ headless: true, args: ["--disable-background-networking"] });
 });
 after(async () => { await browser?.close(); });
-async function harness() {
+async function harness(hash = "") {
   const context = await browser.newContext({ viewport: { width: 375, height: 812 }, serviceWorkers: "block" });
   const page = await context.newPage(), requests = [], errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await context.route("**/*", (route) => {
     if (route.request().url() === "https://personal-ai.test/") return route.fulfill({ contentType: "text/html", body: '<!doctype html><html lang="ja"><meta name="viewport" content="width=device-width,initial-scale=1"><body><div id="root"></div></body></html>' });
-    if (route.request().url().startsWith("https://chatgpt.com/")) return route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Local handoff transport only</title>" });
+    if (["https://chatgpt.com/", "https://claude.ai/", "https://gemini.google.com/"].some((home) => route.request().url().startsWith(home))) return route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Local handoff transport only</title>" });
     requests.push(route.request().url()); return route.abort();
   });
-  await page.goto("https://personal-ai.test/");
+  await page.goto("https://personal-ai.test/" + hash);
   await page.evaluate(() => {
     document.documentElement.dataset.theme = "light";
     window.storageWrites = 0;
@@ -180,5 +180,108 @@ test("late clipboard completion cannot announce success after context reset", as
     await expect(page.getByText("コピー中…", { exact: true })).toHaveCount(0);
     await page.evaluate(() => window.finishCopy());
     await expect(page.getByText("コピーしました。まだAIには送信していません。", { exact: true })).toHaveCount(0);
+  } finally { await h.close(); }
+});
+
+
+for (const [purpose, label] of [["know", "作品を知る"], ["similar", "似た作品を探す"], ["taste", "好きそうな作品を探す"], ["reaction", "今期の反応を調べる"]]) {
+  test(`unified entry → ${purpose}: explicit evidence, every destination exact payload and mobile chooser`, async () => {
+    const h = await harness("#unified"), { page } = h;
+    try {
+      const entry = page.getByRole("button", { name: "AIに相談", exact: true });
+      await expect(entry).toHaveCount(1);
+      assert.ok((await entry.boundingBox()).height >= 44);
+      await entry.click();
+      const sheet = page.getByRole("dialog");
+      await expect(sheet.getByRole("button", { name: "作品を知る", exact: true })).toBeDisabled();
+      await expect(sheet.getByRole("button", { name: "似た作品を探す", exact: true })).toBeDisabled();
+      assert.equal(page.context().pages().length, 1);
+      await page.addStyleTag({ content: "html { font-size: 200%; }" });
+      await page.setViewportSize({ width: 375, height: 380 });
+      assert.ok(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth));
+      for (const button of await sheet.locator(".personal-ai-purpose-list button").all()) assert.ok((await button.boundingBox()).height >= 48);
+      await page.screenshot({ path: path.join(output, `unified-${purpose}-chooser-375-200.png`) });
+      if (purpose === "know" || purpose === "similar") await sheet.getByLabel("相談する作品（明示選択）").selectOption("anilist-1");
+      await sheet.getByRole("button", { name: label, exact: true }).click();
+      if (purpose === "taste") await sheet.getByLabel(/日本語作品.*を根拠にする/).check();
+      if (purpose === "reaction") {
+        await sheet.getByLabel("開始日（JST）").fill("2026-10-01");
+        await sheet.getByLabel("終了日（JST）").fill("2026-10-10");
+        await sheet.getByLabel("プラットフォーム").selectOption("Xの公開投稿");
+      }
+      const preview = sheet.getByLabel("プロンプト全文（この文字列をコピー）");
+      const text = await preview.inputValue();
+      assert.ok(text); assert.ok(!text.includes("PRIVATE_OWNER")); assert.ok(!text.includes("sentinel.test"));
+      assert.ok(!text.includes("保存済みの好きな会話")); assert.ok(!text.includes('"rating"'));
+      for (const destination of ["copy", "claude", "gemini", "chatgpt"]) {
+        await sheet.getByLabel("渡し先").selectOption(destination);
+        assert.equal(await preview.inputValue(), text);
+        if (destination === "copy") {
+          await sheet.getByRole("button", { name: "プロンプトをコピー", exact: true }).click();
+          await expect(sheet.getByText("全文をコピーしました。このコピー操作ではAIに送信しません。", { exact: true })).toBeVisible();
+          assert.equal(await page.evaluate(() => window.copiedPrompt), text);
+          assert.equal(page.context().pages().length, 1);
+        } else {
+          const home = destination === "claude" ? "https://claude.ai/" : destination === "gemini" ? "https://gemini.google.com/" : "https://chatgpt.com/";
+          const expected = destination === "chatgpt" ? home + "?q=" + encodeURIComponent(text) : home;
+          const popupEvent = page.context().waitForEvent("page");
+          await sheet.getByRole("button", { name: destination === "chatgpt" ? "ChatGPTで開く" : `${destination === "claude" ? "Claude" : "Gemini"}にコピーして開く・貼り付けが必要`, exact: true }).click();
+          const popup = await popupEvent;
+          await popup.waitForURL(expected); await popup.waitForLoadState("domcontentloaded");
+          assert.equal(popup.url(), expected); assert.equal(await popup.evaluate(() => window.opener), null);
+          if (destination !== "chatgpt") {
+            assert.equal(new URL(popup.url()).search, "");
+            await expect(sheet.getByText(/全文をコピーしました。プロンプトはURLで送信していません/)).toBeVisible();
+            assert.equal(await page.evaluate(() => window.copiedPrompt), text);
+          } else assert.equal(new URL(popup.url()).searchParams.get("q"), text);
+          await expect(sheet.getByText(/新しいタブが開いたかは確認できません/)).toBeVisible();
+          await popup.close();
+        }
+        assert.ok(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth));
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      }
+      await page.screenshot({ path: path.join(output, `unified-${purpose}-handoff-375-200.png`) });
+    } finally { await h.close(); }
+  });
+}
+test("unified purpose/reopen/context changes discard consent; no implicit history; provider clipboard failure is manual", async () => {
+  const h = await harness("#unified"), { page } = h;
+  try {
+    await page.getByRole("button", { name: "AIに相談", exact: true }).click();
+    const sheet = page.getByRole("dialog");
+    await sheet.getByLabel("相談する作品（明示選択）").selectOption("anilist-1");
+    await sheet.getByRole("button", { name: "作品を知る", exact: true }).click();
+    await sheet.getByLabel("保存済みネタバレなしメモを含める").check();
+    await sheet.getByLabel("保存済み評価を含める").check();
+    await sheet.getByRole("button", { name: "用途を選び直す" }).click();
+    await sheet.getByRole("button", { name: "好きそうな作品を探す", exact: true }).click();
+    await expect(sheet.getByRole("button", { name: "プロンプトをコピー" })).toBeDisabled();
+    await sheet.getByLabel(/日本語作品.*を根拠にする/).check();
+    await expect(sheet.getByLabel("保存済みネタバレなしメモを含める")).not.toBeChecked();
+    await expect(sheet.getByLabel("保存済み評価を含める")).not.toBeChecked();
+    await sheet.getByLabel("保存済みネタバレなしメモを含める").check();
+    await page.evaluate(() => window.changeOwner());
+    await expect(sheet).toHaveCount(0);
+    await page.getByRole("button", { name: "AIに相談", exact: true }).click();
+    await sheet.getByRole("button", { name: "好きそうな作品を探す", exact: true }).click();
+    await expect(sheet.getByLabel(/日本語作品.*を根拠にする/)).not.toBeChecked();
+    await sheet.getByLabel(/日本語作品.*を根拠にする/).check();
+    await expect(sheet.getByLabel("保存済みネタバレなしメモを含める")).not.toBeChecked();
+    for (const destination of ["claude", "gemini"]) {
+      await sheet.getByLabel("渡し先").selectOption(destination);
+      await page.evaluate(() => {
+        window.open = () => null;
+        Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async () => { throw new Error("denied"); } } });
+      });
+      await sheet.getByRole("button", { name: /にコピーして開く・貼り付けが必要/ }).click();
+      await expect(sheet.getByText(/コピーできませんでした.*新しいタブが開いたかは確認できません/)).toBeVisible();
+      const preview = sheet.getByLabel("プロンプト全文（この文字列をコピー）"), text = await preview.inputValue();
+      assert.deepEqual(await preview.evaluate(el => [el.selectionStart, el.selectionEnd, document.activeElement === el]), [0, text.length, true]);
+      await expect(sheet.getByRole("link", { name: /通常の.*を開く/ })).toHaveAttribute("href", destination === "claude" ? "https://claude.ai/" : "https://gemini.google.com/");
+    }
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "AIに相談", exact: true }).click();
+    await sheet.getByRole("button", { name: "好きそうな作品を探す", exact: true }).click();
+    await expect(sheet.getByLabel(/日本語作品.*を根拠にする/)).not.toBeChecked();
   } finally { await h.close(); }
 });

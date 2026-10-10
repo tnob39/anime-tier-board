@@ -2,6 +2,7 @@
 
 import "./status-bottom-sheet.css";
 import { PersonalAiHandoff } from "./PersonalAiHandoff";
+import { PersonalAiPurposeChooser } from "./PersonalAiEntry";
 import { ExternalLink, Minus, Plus, X } from "lucide-react";
 import {
   useCallback,
@@ -65,7 +66,7 @@ export default function StatusBottomSheet({
   onStatusSaved,
   onEpisodesSaved,
 }: StatusBottomSheetProps) {
-  const [aiPurpose, setAiPurpose] = useState<"know" | "similar" | null>(null);
+  const [aiPurpose, setAiPurpose] = useState<"choose" | "know" | "similar" | null>(null);
   useEffect(() => { setAiPurpose(null); }, [open, record?.animeId]);
   const titleId = useId();
   const { mode, hydrated } = useDisplayMode();
@@ -559,9 +560,8 @@ export default function StatusBottomSheet({
             </p>
           ) : null}
 
-          <div className="personal-ai-entries" aria-label="自分のAIに聞く">
-            <button className="personal-ai-entry" type="button" onClick={() => setAiPurpose("know")}>作品を知る</button>
-            <button className="personal-ai-entry" type="button" onClick={() => setAiPurpose("similar")}>似た作品を探す</button>
+          <div className="personal-ai-entries">
+            <button className="personal-ai-entry" type="button" onClick={() => setAiPurpose("choose")}>AIに相談</button>
           </div>
 
           <p className="sbs-section-label">視聴ステータス</p>
@@ -676,7 +676,8 @@ export default function StatusBottomSheet({
         </div>
       </div>
     </div>
-    {open && aiPurpose && <PersonalAiHandoff purpose={aiPurpose} works={[{ id: anime.id, title: anime.title }]} contextKey={`detail:${record.animeId}`} onClose={() => setAiPurpose(null)} />}
+    {open && aiPurpose === "choose" && <PersonalAiPurposeChooser purposes={["know", "similar"]} works={[{ id: anime.id, title: anime.title }]} selectedWork={{ id: anime.id, title: anime.title }} onChoose={(purpose) => { if (purpose === "know" || purpose === "similar") setAiPurpose(purpose); }} onClose={() => setAiPurpose(null)} />}
+    {open && aiPurpose && aiPurpose !== "choose" && <PersonalAiHandoff purpose={aiPurpose} works={[{ id: anime.id, title: anime.title }]} contextKey={`detail:${record.animeId}`} onClose={() => setAiPurpose(null)} onChangePurpose={() => setAiPurpose("choose")} />}
     </>
   );
 }
