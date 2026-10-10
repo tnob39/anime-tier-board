@@ -10,7 +10,7 @@ function Harness() {
   const [context, setContext] = useState("owner-a");
   (window as unknown as { changeOwner: () => void }).changeOwner = () => setContext("owner-b");
   return <main><h1>実コンポーネントの検証</h1>{Object.entries(PERSONAL_AI_PURPOSES).map(([key, label]) => <button key={key} onClick={() => setPurpose(key as PersonalAiPurpose)}>{label}</button>)}
-    {purpose && <PersonalAiHandoff purpose={purpose} works={works} seasonKey={{ year: 2026, season: "FALL" }} contextKey={context} onClose={() => setPurpose(null)} />}
+    {purpose && <PersonalAiHandoff purpose={purpose} works={(window.location.hash === "#long" ? Array.from({ length: 6 }, (_, i) => ({ ...works[0], id: `anilist-${i + 1}`, title: "日本語作品".repeat(60), saved: { ...works[0].saved!, note: "長いメモ".repeat(35) } })) : works)} seasonKey={{ year: 2026, season: "FALL" }} contextKey={context} onClose={() => setPurpose(null)} />}
   </main>;
 }
 createRoot(document.getElementById("root")!).render(<Harness />);

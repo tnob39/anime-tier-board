@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { buildPersonalAiPrompt, PERSONAL_AI_PLATFORMS, PERSONAL_AI_PURPOSES,
   type PersonalAiPurpose, type PersonalAiSeason, type PersonalAiSelection, type PersonalAiWork } from "@/lib/personal-ai-context";
+import { buildChatGptLink, CHATGPT_HOME, openPersonalAiWindow } from "@/lib/personal-ai-link";
 import "./personal-ai-handoff.css";
 
 export type PersonalAiHandoffProps = {
@@ -31,11 +32,36 @@ function Session({ purpose, works, seasonKey, onClose }: PersonalAiHandoffProps)
   let prompt = "", error = "";
   try { prompt = buildPersonalAiPrompt({ purpose, works, selections, seasonKey, reaction: { from, to, platform } }); }
   catch (failure) { error = failure instanceof Error ? failure.message : "渡す内容を確認してください。"; }
-  function change(update: () => void) { epoch.current++; setStatus(""); update(); }
+  function change(update: () => void) { epoch.current++; setStatus(""); setOpenUnconfirmed(false); update(); }
   function close() { active.current = false; epoch.current++; onClose(); }
   function opt(id: string, field: "includeNote" | "includeRating", checked: boolean) {
     change(() => setSelections((current) => current.map((s) => s.id === id
       ? { ...s, [field]: checked, revision: works.find((w) => w.id === id)?.saved?.revision } : s)));
+  }
+  const chatGptLink = buildChatGptLink(prompt);
+  const [openUnconfirmed, setOpenUnconfirmed] = useState(false);
+  async function handoff() {
+    if (!prompt) return;
+    const token = ++epoch.current;
+    const outcome = openPersonalAiWindow(chatGptLink ?? CHATGPT_HOME);
+    setOpenUnconfirmed(true);
+    const recovery = outcome === "exception"
+      ? " 新しいタブを開く操作でエラーが発生しました。下のリンクから開き、全文を貼り付けてください。"
+      : " 新しいタブが開いたかは確認できません。開いていなければ下のリンクから開き、全文を貼り付けてください。";
+    if (chatGptLink) {
+      setStatus("全文を含むURLでChatGPTを開く操作を試みました。送信・入力・処理開始は確認できません。反映されなければ全文をコピーして貼り付けてください。" + recovery);
+      return;
+    }
+    setStatus("コピー中…");
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("unavailable");
+      await navigator.clipboard.writeText(prompt);
+      if (active.current && epoch.current === token) setStatus("全文をコピーしました。プロンプトはURLで送信していません。ChatGPTに貼り付けてください。" + recovery);
+    } catch {
+      if (!active.current || epoch.current !== token) return;
+      preview.current?.focus(); preview.current?.select();
+      setStatus("コピーできませんでした。全文を選択しました。Ctrl+C / ⌘C、または長押しで手動コピーし、ChatGPTに貼り付けてください。プロンプトはURLで送信していません。" + recovery);
+    }
   }
   async function copy() {
     if (!prompt) return;
@@ -44,7 +70,7 @@ function Session({ purpose, works, seasonKey, onClose }: PersonalAiHandoffProps)
     try {
       if (!navigator.clipboard?.writeText) throw new Error("unavailable");
       await navigator.clipboard.writeText(prompt);
-      if (active.current && epoch.current === token) setStatus("コピーしました。まだAIには送信していません。");
+      if (active.current && epoch.current === token) setStatus("全文をコピーしました。このコピー操作ではAIに送信しません。");
     } catch {
       if (!active.current || epoch.current !== token) return;
       preview.current?.focus(); preview.current?.select();
@@ -53,7 +79,7 @@ function Session({ purpose, works, seasonKey, onClose }: PersonalAiHandoffProps)
   }
   return <BottomSheet open onOpenChange={(open) => { if (!open) close(); }} title={PERSONAL_AI_PURPOSES[purpose]} className="personal-ai-sheet">
     <div className="personal-ai-content">
-      <p>この画面からAIへの送信や公開はしません。コピー後、貼り付け先のAIサービスに情報が渡り、その事業者の保存・利用規約が適用されます。未保存の入力は含みません。</p>
+      <p>未保存の入力は含みません。「ChatGPTで開く」を押すと、下の全文をURLでChatGPTに送信し、処理が始まる可能性があります。URLはブラウザ履歴やサービスのログ等に残る可能性があります。アプリの方針上限はエンコード後のURL全体で12000文字です。サービスやブラウザの対応を保証する上限ではなく、送信・入力の反映・処理開始は確認できません。渡した情報にはAI事業者の保存・利用規約が適用されます。「全文をコピーしてChatGPTを開く」は通常のページを開くだけで、プロンプトをURLでは送りません。コピーだけではAIに送信しません。</p>
       {seasonKey && <p>対象：{seasonKey.year}年{({ WINTER: "冬", SPRING: "春", SUMMER: "夏", FALL: "秋" } as const)[seasonKey.season]}</p>}
       {purpose === "reaction" ? <fieldset><legend>調べる範囲（すべて必須）</legend>
         <label>開始日（JST）<input type="date" value={from} onChange={(e) => change(() => setFrom(e.target.value))} /></label>
@@ -75,7 +101,10 @@ function Session({ purpose, works, seasonKey, onClose }: PersonalAiHandoffProps)
       <p role="status">{error}</p>
       <label htmlFor={`${id}-prompt`}>プロンプト全文（この文字列をコピー）</label>
       <textarea id={`${id}-prompt`} ref={preview} readOnly spellCheck={false} value={prompt} rows={14} />
+      {prompt && !chatGptLink && <p>全文を含むURLがアプリの方針上限（エンコード後12000文字・サービス側の対応保証ではありません）を超えるため、短縮せず全文をコピーして通常のChatGPTを開きます。URLではプロンプトを送りません。コピーに失敗した場合は手動コピーしてください。</p>}
+      <button type="button" disabled={!prompt} onClick={() => void handoff()}>{chatGptLink || !prompt ? "ChatGPTで開く" : "全文をコピーしてChatGPTを開く"}</button>
       <button type="button" disabled={!prompt} onClick={() => void copy()}>プロンプトをコピー</button>
+      {openUnconfirmed && <a href={CHATGPT_HOME} target="_blank" rel="noopener noreferrer">通常のChatGPTを開く（全文は手動で貼り付け）</a>}
       <p role="status" aria-live="polite">{status}</p>
     </div>
   </BottomSheet>;
